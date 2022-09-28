@@ -7,17 +7,14 @@ import math
 import numpy as np
 from binary import binary
 from scipy.stats import binom
+from hashing import sha1
 
 random.seed(a=261135)  # useful for debugging, should be omitted for practical uses
 
-# Let's set up the quantum channel (BB84)
-# basis_names = ['rectilinear', 'diagonal']
-basis_mapping = {'rectilinear': 0, 'diagonal': 1}  # useful
-# basis_vectors_mapping = {'0': '0', '90': '1', '+45': '+', '-45': '-'}
-# bits_mapping = {'0': 0, '90': 1, '+45': 0, '-45': 1}
-states_mapping = {'0': 0, '1': 1, '+': 0, '-': 1}  # useful
-
-quantum_channel = {  # useful
+"""Let's set up the quantum channel (BB84)"""
+basis_mapping = {'rectilinear': 0, 'diagonal': 1}
+states_mapping = {'0': 0, '1': 1, '+': 0, '-': 1}
+quantum_channel = {
     'rectilinear': {
         'basis_vectors': {'first_state': '0', 'second_state': '1'}
     },
@@ -25,6 +22,10 @@ quantum_channel = {  # useful
         'basis_vectors': {'first_state': '+', 'second_state': '-'}
     }
 }
+'''basis_vectors_mapping = {'0': '0', '90': '1', '+45': '+', '-45': '-'}
+bits_mapping = {'0': 0, '90': 1, '+45': 0, '-45': 1}
+basis_names = ['rectilinear', 'diagonal']
+'''
 
 
 def qc_gain(mean_photon_number=1., fiber_loss=1., detection_efficiency=1., k_dead=1.,
@@ -139,7 +140,7 @@ def cascade_blocks_generator(string_length, blocks_size):
         yield blocks[j:j + blocks_size]
 
 
-# Start of program
+"""Start of program"""
 gain = 1
 print('Hello. This is a program for QKD. '
       '\nRectilinear basis is encoded by 0, diagonal by 1. States 0, 1 are encoded 0, 1.'
@@ -297,11 +298,10 @@ if alice_bits_length == 0:  # if it's 0, then we didn't get the bits form the us
     alice_bits = random_choice(alice_bits_length)
     print('Random choices of bits for Alice are: {}'.format(alice_bits))
 
-'''
-At this point it is impractical to encode states as bits because Bob's measurements results depend on both basis
+"""At this point it is impractical to encode states as bits because Bob's measurements results depend on both basis
 and bit choice of Alice, but he shouldn't know the first one. Because of that we will now translate Alice's bits
 to proper states, changing 0 and 1 into + and - for the diagonal basis.
-'''
+"""
 
 i = 0
 alice_states_list = list(alice_bits)
@@ -320,12 +320,11 @@ print("Alice's states are: {}, where U stands for unknown states due to incorrec
     alice_states
 ))
 
-'''
-Now that we have Alice's data rate, quantum channel's gain and Alice's states,
+"""Now that we have Alice's data rate, quantum channel's gain and Alice's states,
 we can randomly choose m (Alice's basis choices number) bases for Bob. While he performs his measurements,
 a portion of Alice's photons do not reach him due to loss on quantum channel. We will reflect that by choosing Bob's
 bases inside a for loop instead of using random_choice function defined earlier.
-'''
+"""
 
 bob_basis = ''
 for i in range(alice_basis_length):
@@ -337,9 +336,9 @@ for i in range(alice_basis_length):
 print("Bob's basis choices are: {}, where L stands for measurement that cannot be done".format(bob_basis),
       "\ndue to quantum channel loss.")
 
-'''
-There's a probability that due to disturbances in quantum channel or eavesdropping some bits change while being sent.
-'''
+"""There's a probability that due to disturbances in quantum channel or eavesdropping 
+some bits change while being sent.
+"""
 
 change_probability = 0.1
 print(
@@ -368,9 +367,7 @@ if answer4 == 'yes':
             print('Please enter a numerical value between 0 and 1:')
             continue
 
-'''
-Now that we know the probability of change, we can perform such disturbances:
-'''
+"""Now that we know the probability of change, we can perform such disturbances:"""
 
 received_states = ''
 change_states = {'0': '0', '1': '1', '2': '+', '3': '-'}  # dictionary for randomizing changed states
@@ -393,17 +390,16 @@ for state in alice_states:  # to be updated following concrete attack strategies
 
 print("States received by Bob before measurement are: {}".format(received_states))
 
-'''
-After Bob chose a basis and a photon has reached him, he performs his measurement. If for this particular photon 
+"""After Bob chose a basis and a photon has reached him, he performs his measurement. If for this particular photon 
 he chooses the same basis as Alice chose before, his measurement result will be the same - that's because
-in reality Bob is choosing polarizators for photons to go through. If photon's polarization is the same as
-polarizators, then there's 100% probability of preserving this polarization. This is reflected by the same bit
+in reality Bob is choosing polarisators for photons to go through. If photon's polarization is the same as
+polarisators, then there's 100% probability of preserving this polarization. This is reflected by the same bit
 as before the measurement. Otherwise polarization after measurement is random. This mechanism is implemented in
 "measurement" function.
 
 Results of Bob's measurements are states - either 0 for |0> or 1 for |1> or + for |+> or - for |->. If he couldn't
 perform the measurement (encoded by basis L) then the result will be encoded in the string by L as well.
-'''
+"""
 
 bob_states = ''
 for i in range(alice_basis_length):  # it's the same length as of Bob's basis choices
@@ -411,9 +407,8 @@ for i in range(alice_basis_length):  # it's the same length as of Bob's basis ch
 
 print("Bob's measurement results are: {}".format(bob_states))
 
-'''
-Now, having Bob's measurement results, we can translate states into bits.
-'''
+"""Now, having Bob's measurement results, we can translate states into bits.
+"""
 
 bob_bits = ''
 for state in bob_states:
@@ -426,13 +421,12 @@ for state in bob_states:
 
 print("Bob's bits are: {}".format(bob_bits))
 
-'''
-Alice and Bob have each a string of bits, which will shortly become a key for cipher.
+"""Alice and Bob have each a string of bits, which will shortly become a key for cipher.
 At this point Alice and Bob can switch to communicating on a public channel. Their first step is to 
 perform sifting - decide which bits to keep in their key.
 
 Bob begins by telling Alice, which photons he measured. He then tells her which bases were used in each measurement.
-'''
+"""
 
 bob_measurement_indicators = ''
 for bit in bob_bits:  # is it possible to optimise length of such an indicator?
@@ -455,10 +449,9 @@ for indicator in bob_measurement_indicators:  # in optimised approach send only 
 
 print("[Bob] I used bases: {}".format(bob_indicated_basis))
 
-'''
-Now it's Alice's turn to send Bob her bases and to cancel out bits (representing states!) from her string that do not
+"""Now it's Alice's turn to send Bob her bases and to cancel out bits (representing states!) from her string that do not
 match both successful Bob's measurement and his usage of the same basis in each case.
-'''
+"""
 
 alice_indicated_bits = ''
 alice_indicated_basis = ''
@@ -479,10 +472,9 @@ for basis in alice_indicated_basis:
         alice_sifted_key += alice_indicated_bits[index]
     index += 1
 
-'''
-No Bob gets info from Alice about her choices of bases, so that he can omit bits resulting from measurements
+"""No Bob gets info from Alice about her choices of bases, so that he can omit bits resulting from measurements
 when he used different basis than Alice.
-'''
+"""
 
 bob_sifted_key = ''
 
@@ -496,8 +488,7 @@ print("Alice's sifted key is {}, while Bob's sifted key is {}.".format(
     alice_sifted_key, bob_sifted_key
 ))
 
-'''
-Sifted keys generally differ from each other due to changes between states sent by Alice and received by Bob.
+"""Sifted keys generally differ from each other due to changes between states sent by Alice and received by Bob.
 In order to estimate empirical probability of error occurrence in the sifted keys we can publish parts
 of keys, compare them and calculate numbers of errors. Then published parts of key should be deleted, as
 they have just been exchanged via the public channel.
@@ -513,7 +504,7 @@ A refined estimation is based on two subsets: one of the sifted key and the othe
 measurements with different basis (Alice's and Bob's). First we present the 'naive' estimation.
 
 Let's randomly publish subsets of bits of matching positions in the sifted keys strings.
-'''
+"""
 
 published_key_length_ratio = 0.2
 print("Default ratio of length of published part of the key to it's full length is 0.2.",
@@ -558,11 +549,11 @@ for index in range(len(alice_sifted_key)):  # could be bob_sifted_key as well
         alice_bit = alice_sifted_key[index]
         bob_bit = bob_sifted_key[index]
 
-        # First we add those bits to strings meant for publication
+        """First we add those bits to strings meant for publication"""
         alice_published_bits += alice_bit
         bob_published_bits += bob_bit
 
-        # Now for the estimation of the error:
+        """Now for the estimation of the error:"""
         if alice_bit != bob_bit:
             naive_error_estimate += 1
     else:  # if a bit wasn't published, we reuse it in the sifted key
@@ -571,38 +562,35 @@ for index in range(len(alice_sifted_key)):  # could be bob_sifted_key as well
 
 naive_error_estimate = naive_error_estimate / len(alice_published_bits)
 
+"""At this point we begin counting the number of bits exchanged between Alice and Bob via the public channel,
+for future estimation of Eve's knowledge of the key in creation.
+
+Bits published during error rate estimation do not count, as they have been deleted from the raw key afterwards.
+"""
+exchanged_bits_counter = 0
+
 print("[Alice] My subset of bits is: {}.".format(alice_published_bits))
+exchanged_bits_counter += len(alice_published_bits)
+
 print("[Bob] My subset of bits is: {}.".format(bob_published_bits))
-print("Estimate of error empirical probability is: {}".format(naive_error_estimate))
+exchanged_bits_counter += len(bob_published_bits)
+
+print("Estimate of error empirical probability is: {}".format(naive_error_estimate))  # no bits exchanged!
 
 if naive_error_estimate >= 0.11:
     print("The estimate of empirical error probability is equal to or greater then 11% threshold.",
           "\nAs the best error correction code approaches a maximal tolerated error rate of 12.9%",
           "\nAlice and Bob should restart the whole procedure on another quantum channel.")
 
-'''
-Assuming the estimate of empirical probability of error is reasonably small we can continue
+"""Assuming the estimate of empirical probability of error is reasonably small we can continue
 with the error correction. Naturally we assume it's Bob's key that's flawed.
 
-We begin by checking the parity of Alice's and Bob's sifted keys, shortened by the subsets used for error estimation.
-'''
+We begin by checking the parity of Alice's and Bob's sifted keys, 
+shortened by the subsets used for error estimation.
 
-alice_parity_list = []
-bob_parity_list = []
-for index in range(len(alice_sifted_key_after_error_estimation)):
-    alice_parity_list.append(int(alice_sifted_key_after_error_estimation[index]))
-    bob_parity_list.append((int(bob_sifted_key_after_error_estimation[index])))
-
-alice_parity = sum(alice_parity_list) % 2
-bob_parity = sum(bob_parity_list) % 2
-
-print("[Alice] My parity is {}.".format(alice_parity))
-print("[Bob] My parity is {}.".format(bob_parity))
-
-'''
 CASCADE: 1st I need to assign bits to their indexes in original strings. Therefore I create dictionaries
 for Alice and for Bob.
-'''
+"""
 n = len(alice_sifted_key_after_error_estimation)
 alice_cascade = {}
 bob_cascade = {}
@@ -611,18 +599,16 @@ for i in range(n):  # I dynamically create dictionaries with indexes as keys and
     alice_cascade[str(i)] = alice_sifted_key_after_error_estimation[i]
     bob_cascade[str(i)] = bob_sifted_key_after_error_estimation[i]
 
-'''
-Now we need to set up CASCADE itself: sizes of blocks in each pass, numeration of passes and a distionary
+"""Now we need to set up CASCADE itself: sizes of blocks in each pass, numeration of passes and a distionary
 for corrected bits with their indexes from original Bob's string as keys and correct bits as values.
-'''
+"""
 
 blocks_sizes = cascade_blocks_sizes(qber=naive_error_estimate, key_length=n)
 bob_corrected_bits = {}
 
-'''
-In order to return to blocks from earlier passes of CASCADE we need a history of blocks with indexes and bits,
+"""In order to return to blocks from earlier passes of CASCADE we need a history of blocks with indexes and bits,
 so implemented by dictionaries as list elements per pass, nested in general history list:
-'''
+"""
 history = []
 pass_number = 0
 
@@ -646,25 +632,11 @@ for size in blocks_sizes:
             alice_block[str(index)] = alice_cascade[str(index)]
             bob_block[str(index)] = bob_cascade[str(index)]
 
-        # I append single blocks created for given indexes to lists of block for this particular CASCADE's pass
+        """I append single blocks created for given indexes to lists of block for this particular CASCADE's pass"""
         alice_blocks.append(alice_block)
         bob_blocks.append(bob_block)
 
     for i in range(pass_number_of_blocks):
-
-        '''
-        alice_pass_strings.append(alice_sifted_key_after_error_estimation[start_index:stop_index:1])
-        alice_current_bits = []
-        for bit in alice_pass_strings[i]:  # te dwie pętle do połączenia w celu optymalizacji
-            alice_current_bits.append(int(bit))
-        alice_pass_parity_list.append(sum(alice_current_bits) % 2)
-
-        bob_pass_strings.append(bob_sifted_key_after_error_estimation[start_index:stop_index:1])
-        bob_current_bits = []
-        for bit in bob_pass_strings[i]:  # te dwie pętle do połączenia w celu optymalizacji
-            bob_current_bits.append(int(bit))
-        bob_pass_parity_list.append(sum(bob_current_bits) % 2)
-        '''
 
         current_indexes = list(alice_blocks[i].keys())  # same as Bob's
 
@@ -682,126 +654,66 @@ for size in blocks_sizes:
         bob_pass_parity_list.append(sum(bob_bit_values) % 2)
 
         if alice_pass_parity_list[i] != bob_pass_parity_list[i]:  # we check if we should perform BINARY
-            '''
-            # We perform BINARY
-            is_binary = True
-            number_of_runs = 0
-            alice_current_string = ''.join(alice_current_bits)
-            alice_current_block = alice_blocks[i]
-            bob_current_string = ''.join(bob_current_bits)
-            bob_current_block = bob_blocks[i]
 
-            while is_binary:
-                # Alice starts by sending Bob parity of the first half of her string
-                half_index = len(alice_current_block) // 2  # same as Bob's
-                first_half_indexes = current_indexes[0:half_index:1]  # same as Bob's
-                alice_first_half_list = []
-
-                for index in first_half_indexes:
-                    alice_first_half_list.append(int(alice_current_block[index]))
-
-                alice_first_half_parity = sum(alice_first_half_list) % 2
-                print("[Alice] My string's first half has a parity: {}".format(alice_first_half_parity))
-
-                # Now Bob determines whether an odd number of errors occurred in the first or in the
-                # second half by testing the parity of his string and comparing it to the parity sent
-                # by Alice
-
-                bob_first_half_list = []
-
-                for index in first_half_indexes:
-                    bob_first_half_list.append(int(bob_current_block[index]))
-
-                bob_first_half_parity = sum(bob_first_half_list) % 2
-
-                # Single (at least) error is in the 'half' of a different parity; we change current strings
-                # that are analysed into halves of different parities until one bit is left - the error
-
-                if bob_first_half_parity != alice_first_half_parity:
-                    print("[Bob] I have an odd number of errors in my first half.")
-
-                    alice_subscription_block = {}
-                    bob_subscription_block = {}
-
-                    for index in first_half_indexes:
-                        bob_subscription_block[index] = bob_current_block[index]
-                        alice_subscription_block[index] = alice_current_block[index]
-
-                    alice_current_block = alice_subscription_block
-                    bob_current_block = bob_subscription_block
-
-                    current_indexes = list(alice_current_block.keys())  # same as Bob's
-
-                    first_half = True
-                else:
-                    print("[Bob] I have an odd number of errors in my second half.")
-
-                    # We have to repeat the whole procedure for the second halves
-                    second_half_indexes = current_indexes[half_index::1]
-                    alice_subscription_block = {}
-                    bob_subscription_block = {}
-
-                    for index in second_half_indexes:
-                        bob_subscription_block[index] = bob_current_block[index]
-                        alice_subscription_block[index] = alice_current_block[index]
-
-                    alice_current_block = alice_subscription_block
-                    bob_current_block = bob_subscription_block
-
-                    current_indexes = list(alice_current_block.keys())  # same as Bob's
-
-                    first_half = False
-
-                if len(bob_current_block) == 1:  # at some point this clause will be true
-                    print("[Bob] I have one bit left, I'm changing it.")
-
-                    # Firstly we change the error bit in Bob's original dictionary of all bits
-                    if bob_current_block[current_indexes[0]] == '0':
-                        bob_cascade[current_indexes[0]] = '1'
-                    else:
-                        bob_cascade[current_indexes[0]] = '0'
-
-                    # Secondly we change the error bit in blocks' history
-                    # We need to perform BINARY on all blocks which we correct in history list
-                    # history[number of pass][owner][number of block]
-
-                    is_binary = False  # we break the loop, end of BINARY
-                    '''
             binary_results = binary(
                 sender_block=alice_blocks[i],
                 receiver_block=bob_blocks[i],
                 indexes=current_indexes
             )
 
-            # Firstly we change main dictionary with final results and current blocks for history
+            """Firstly we add the number of exchanged bits during this BINARY performance to the general number
+            of bits exchanged via the public channel.
+            """
+            exchanged_bits_counter += binary_results[2]
+
+            """Secondly we change main dictionary with final results and current blocks for history"""
             bob_cascade[binary_results[1]] = binary_results[0]
             bob_blocks[i][binary_results[1]] = binary_results[0]
 
-            # Secondly we change the error bit in blocks' history
-            # We need to perform BINARY on all blocks which we correct in history list
-            # history[number of pass][owner][number of block]
+            """Thirdly we change the error bit in blocks' history
+            We need to perform BINARY on all blocks which we correct in history list
+            history[number of pass][owner][number of block]
+            """
             if pass_number > 0:  # in the first pass of CASCADE there are no previous blocks
                 for n_pass in range(pass_number):  # we check all previous passes
-                    for n_block in range(len(history[0][n_pass][1])):  # we check all Bob's blocks in each prevoius pass
+                    for n_block in range(len(history[0][n_pass][1])):  # we check all Bob's blocks in each previous pass
                         if binary_results[1] in history[n_pass][1][n_block]:
                             history[n_pass][1][n_block] = binary_results[0]
+
                             binary_previous = binary(
                                 sender_block=history[n_pass][0][n_block],
                                 receiver_block=history[n_pass][1][n_block],
                                 indexes=history[n_pass][1][n_block].keys()
                             )
 
+                            exchanged_bits_counter += binary_previous[2]
+                            bob_cascade[binary_previous[1]] = binary_previous[0]
+                            bob_blocks[i][binary_previous[1]] = binary_previous[0]
+
+
     history.append([alice_blocks, bob_blocks])
     pass_number += 1
 
-# All that remains is to create strings from cascade dictionaries into corrected keys
+"""All that remains is to create strings from cascade dictionaries into corrected keys"""
 
 alice_correct_key = ''.join(list(alice_cascade.values()))
 bob_correct_key = ''.join(list(bob_cascade.values()))
 
 print("Alice's correct key:", "\n{}".format(alice_correct_key))
 print("Bob's key after performing CASCADE error correction:", "\n{}".format(bob_correct_key))
+print("Number of bits exchanged during error correction: {}".format(exchanged_bits_counter))
 
 print("History:", "\n{}".format(history))
 
-# Finally we perform privacy amplification
+"""Finally we perform privacy amplification. In order to to that efficiently we need an estimate of how many bits
+of the current key (after sifting & the error correction) does Eve know.
+
+For now, let's use a naive estimator, i.e. number of bits of information (parity etc.) exchanged by Alice and Bob
+while performing BINARY.
+"""
+
+alice_digest = sha1(alice_correct_key)
+print("Alice's correct key's digest is: {}".format(alice_digest))
+
+bob_digest = sha1(bob_correct_key)
+print("Bob's correct key's digest is: {}".format(bob_digest))
