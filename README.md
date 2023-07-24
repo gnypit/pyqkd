@@ -1,3 +1,8 @@
+24 VII 2023:
+I've uploaded a Python notebook (.ipynb) with a full BB84 protocol: measurements of states, simulating disturbances and losses in quantum channel, performing naive or refined error estimation, CASCADE error correction algorithm and privacy amplification with hashing functions.
+
+User can define gain of the quantum channel, the length of Alice's basis choicec, probabilities of using rectilinear (and so, diagonal) basis, probability of disturbances in the quantum channel, probability of publication of bits for both error estimation methods and number of CASCADE passes.
+
 28 IX 2022:
 Currently there's a bb84 protocol implemented with CASCADE error correction and naive error rate estimator; bb84.py is the main file, the others contain hashing functions and some functions for CASCADE.
 
