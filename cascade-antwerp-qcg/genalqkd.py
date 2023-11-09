@@ -5,11 +5,23 @@ import numpy as np
 
 from numpy.random import binomial as np_binom
 from scipy.special import binom as newton_binom  # wyrażenie Newtona (n nad k)
-from fitness_functions import factored_fit
+from bb84 import simulation_bb84
+from fitness_functions import factored_fit, fitness_negative_time, fitness_inv, evaluation
 
 
 def sort_dict_by_fit(dictionary):
     return dictionary['fitness value']
+
+
+def run_simulation(process_id, chromosome, protocol, quantum_gain, disturbance_prob, work_begin, work_end, flag):
+    protocol_results = simulation_bb84(gain=quantum_gain,
+                                       alice_basis_length=chromosome.genes.get('length'),
+                                       rectilinear_basis_prob=chromosome.genes.get('rect_basis_prob'),
+                                       disturbance_probability=disturbance_prob,
+                                       publication_probability_rectilinear=chromosome.genes.get('pub_prob_rect'),
+                                       publication_probability_diagonal=chromosome.genes.get('pub_prob_diag'),
+                                       cascade_n_passes=chromosome.genes.get('no_pass'))
+    chromosome.set_results(protocol_results)
 
 
 class Chromosome:
