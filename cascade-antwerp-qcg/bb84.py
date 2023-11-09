@@ -5,15 +5,12 @@ Author: Jakub Gnyp; contact: gnyp.jakub@gmail.com, LinkedIn: https://www.linkedi
 import ast
 import random
 import math
+import time
 import numpy as np
-from PyQt6.QtCore import pyqtSignal, QThread, QMutex
-from PyQt6.QtWidgets import QTableWidgetItem
 
 from binary import binary
 from scipy.stats import binom
-import time
 
-random.seed(a=261135)  # useful for debugging, should be omitted for practical uses
 
 """Let's set up the quantum channel (BB84)"""
 basis_mapping = {'rectilinear': 0, 'diagonal': 1}
@@ -30,6 +27,7 @@ quantum_channel = {
 bits_mapping = {'0': 0, '90': 1, '+45': 0, '-45': 1}
 basis_names = ['rectilinear', 'diagonal']
 '''
+possible_states = ['0', '1', '+', '-']
 
 
 def qc_gain(mean_photon_number=1., fiber_loss=1., detection_efficiency=1., k_dead=1.,
@@ -199,8 +197,6 @@ def naive_error(alice_key, bob_key, publication_prob_rect):
     for future estimation of the computational cost."""
 
     no_published_bits = len(alice_published_bits) + len(bob_published_bits)
-    print('The probability of bit publishing was {}. In actuality {} bits were published out of {} bits succesfully '
-          'sent & received.'.format(publication_prob_rect, no_published_bits, len(alice_key)))
 
     results = {
         'error estimator': naive_error_estimate,
@@ -508,7 +504,7 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     for corrected bits with their indexes from original Bob's string as keys and correct bits as values.
     """
 
-    blocks_sizes = cascade_blocks_sizes(qber=error_estimate, key_length=n, n_passes=cascade_n_passes)
+    blocks_sizes = cascade_blocks_sizes(quantum_bit_error_rate=error_estimate, key_length=n, n_passes=cascade_n_passes)
 
     """In order to return to blocks from earlier passes of CASCADE we need a history of blocks with indexes and bits,
     so implemented by dictionaries as list elements per pass, nested in general history list:
@@ -736,4 +732,3 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     }
 
     return results
-

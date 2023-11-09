@@ -1,8 +1,15 @@
 from PyQt6.QtCore import pyqtSignal, QThread, QMutex
 from PyQt6.QtWidgets import QTableWidgetItem
 from demonstrator_gui import QKDWindow
-from bb84 import qc_gain, received_key_material, random_choice, measurement, numerical_error_prob, cascade_blocks_sizes
+from binary import binary
+import bb84
+import random
+import ast
 import numpy as np
+
+
+possible_states = ['0', '1', '+', '-']
+
 
 class DataFiller(QThread):
     data_updated = pyqtSignal(str)
@@ -144,7 +151,7 @@ class ModelControllerBB84:
         self.publication_probability_rectilinear = float(self.view.rect_pub_prob_input.text())
         self.publication_probability_diagonal = float(self.view.diag_pub_prob_input.text())
         self.cascade_n_passes = int(self.view.no_cascade_input.text())
-        self.error_estimation = refined_average_error
+        self.error_estimation = bb84.refined_average_error
 
         """Let's inform the user that something is happening:"""
         self.add_status_update("Preparing the simulation - please wait.")
@@ -363,8 +370,8 @@ class ModelControllerBB84:
         self.add_status_update("Step 4/7 completed.")
 
     def estimate_error(self):
-        if self.error_estimation == refined_average_error:
-            error_estimation_results = refined_average_error(
+        if self.error_estimation == bb84.refined_average_error:
+            error_estimation_results = bb84.refined_average_error(
                 rect_prob=self.rectilinear_basis_prob,
                 rect_pub_prob=self.publication_probability_rectilinear,
                 diag_pub_prob=self.publication_probability_diagonal,
@@ -374,7 +381,7 @@ class ModelControllerBB84:
                 bob_basis=self.bob_sifted_basis
             )
         else:
-            error_estimation_results = naive_error(
+            error_estimation_results = bb84.naive_error(
                 alice_key=self.alice_sifted_key,
                 bob_key=self.bob_sifted_key,
                 publication_prob_rect=self.publication_probability_rectilinear
@@ -395,7 +402,7 @@ class ModelControllerBB84:
             self.alice_cascade[str(i)] = self.alice_sifted_key_after_error_estimation[i]
             self.bob_cascade[str(i)] = self.bob_sifted_key_after_error_estimation[i]
 
-        self.blocks_sizes = cascade_blocks_sizes(
+        self.blocks_sizes = bb84.cascade_blocks_sizes(
             qber=self.error_estimate,
             key_length=self.length_of_key_into_cascade,
             n_passes=self.cascade_n_passes)
@@ -425,7 +432,7 @@ class ModelControllerBB84:
             alice_blocks = []
             bob_blocks = []
 
-            for block_index in cascade_blocks_generator(
+            for block_index in bb84.cascade_blocks_generator(
                     string_length=self.length_of_key_into_cascade, blocks_size=size):
 
                 alice_block = {}  # a dictionary for a single block for Alice
