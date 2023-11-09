@@ -27,7 +27,6 @@ quantum_channel = {
 bits_mapping = {'0': 0, '90': 1, '+45': 0, '-45': 1}
 basis_names = ['rectilinear', 'diagonal']
 '''
-possible_states = ['0', '1', '+', '-']
 
 
 def qc_gain(mean_photon_number=1., fiber_loss=1., detection_efficiency=1., k_dead=1.,
