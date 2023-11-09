@@ -3,10 +3,11 @@ from multiprocessing import Process
 from threading import Thread
 from time import perf_counter
 
+
 # Computables
 
 class Computable():
-    '''Base Computable class'''
+    """Base Computable class"""
 
     def __init__(self, **kwargs) -> None:
         self.arguments = kwargs
@@ -26,7 +27,8 @@ class ComputeSum(Computable):
 
         sum = self.arguments['a'] + self.arguments['b'] + self.arguments['c']
         return f'Simple sum: {sum}'
-    
+
+
 class ComputePowerManyTimes(Computable):
 
     def compute(self):
@@ -42,20 +44,21 @@ class ComputePowerManyTimes(Computable):
         iterations = self.arguments['iterations']
 
         sum = 0
-        for i in range (0, iterations):
+        for i in range(0, iterations):
             sum += base ** exp
 
         return f'Complex sum: {sum}'
 
+
 # Executors
 
-class BaseExecutor():
-    '''Base Excecutor class'''
+class BaseExecutor:
+    """Base Excecutor class"""
 
     threads = []
 
     def __init__(self, computables: list[Computable]) -> None:
-        '''Pass here the list of objects imlementing the Computable'''
+        """Pass here the list of objects imlementing the Computable"""
 
         self.computables = computables
 
@@ -71,8 +74,9 @@ class BaseExecutor():
         end_time = perf_counter()
         print(f'It took {end_time - start_time: 0.2f} second(s) to complete.')
 
+
 class SerialExecutor(BaseExecutor):
-    '''This class computes the Computables in a simple loop'''
+    """This class computes the Computables in a simple loop"""
 
     def execute(self):
         for computable in self.computables:
@@ -93,7 +97,7 @@ class ProcessPoolParallelExecutor(BaseExecutor):
 
         # use map to run `exec_single` for each of `computables`
         results = executor.map(self.exec_single, self.computables)
-        
+
         for result in results:
             print(result)
 
@@ -106,6 +110,7 @@ class ThreadParallelExecutor(BaseExecutor):
             th.start()
             self.threads.append(th)
 
+
 class ProcessParallelExecutor(BaseExecutor):
 
     def execute(self):
@@ -116,19 +121,18 @@ class ProcessParallelExecutor(BaseExecutor):
 
 
 if __name__ == '__main__':
-
     computables_list = []
 
     # building the sample list of Computable objects
-    computables_list.append(ComputePowerManyTimes(base = 5, exp = 10, iterations = 20000000))
-    computables_list.append(ComputeSum(a = 1, b = 2, c = 3))
-    computables_list.append(ComputePowerManyTimes(base = 5, exp = 10, iterations = 20000000))
-    computables_list.append(ComputeSum(a = 4, b = 5, c = 6))
-    computables_list.append(ComputePowerManyTimes(base = 5, exp = 10, iterations = 20000000))
-    computables_list.append(ComputeSum(a = 7, b = 8, c = 9))
-    computables_list.append(ComputePowerManyTimes(base = 5, exp = 10, iterations = 20000000))
-    computables_list.append(ComputePowerManyTimes(base = 5, exp = 10, iterations = 20000000))
-    computables_list.append(ComputePowerManyTimes(base = 5, exp = 10, iterations = 20000000))
+    computables_list.append(ComputePowerManyTimes(base=5, exp=10, iterations=20000000))
+    computables_list.append(ComputeSum(a=1, b=2, c=3))
+    computables_list.append(ComputePowerManyTimes(base=5, exp=10, iterations=20000000))
+    computables_list.append(ComputeSum(a=4, b=5, c=6))
+    computables_list.append(ComputePowerManyTimes(base=5, exp=10, iterations=20000000))
+    computables_list.append(ComputeSum(a=7, b=8, c=9))
+    computables_list.append(ComputePowerManyTimes(base=5, exp=10, iterations=20000000))
+    computables_list.append(ComputePowerManyTimes(base=5, exp=10, iterations=20000000))
+    computables_list.append(ComputePowerManyTimes(base=5, exp=10, iterations=20000000))
 
     serial_executor = SerialExecutor(computables_list)
     serial_executor.run()
