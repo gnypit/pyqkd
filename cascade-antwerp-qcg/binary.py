@@ -23,7 +23,7 @@ def binary(sender_block, receiver_block, indexes, receiver_name='Bob'):
             sender_first_half_list.append(int(sender_current_block[index]))
 
         sender_first_half_parity = sum(sender_first_half_list) % 2
-        print("[Alice] My string's first half has a parity: {}".format(sender_first_half_parity))
+        # print("[Alice] My string's first half has a parity: {}".format(sender_first_half_parity))
         bit_counter += 1  # At this point sender informs receiver about their 1st half's parity
 
         """Now Receiver determines whether an odd number of errors occurred in the first or in the
@@ -43,9 +43,10 @@ def binary(sender_block, receiver_block, indexes, receiver_name='Bob'):
         """
 
         if receiver_first_half_parity != sender_first_half_parity:
-            print('[{}] I have an odd number of errors in my first half.'.format(
+            """print('[{}] I have an odd number of errors in my first half.'.format(
                 receiver_name
             ))
+            """
             bit_counter += 1  # At this point receiver would send a message about an odd number of errors in 1st half
 
             sender_subscription_block = {}
@@ -60,9 +61,10 @@ def binary(sender_block, receiver_block, indexes, receiver_name='Bob'):
 
             indexes = list(sender_current_block.keys())  # same as Bob's
         else:
-            print('[{}] I have an odd number of errors in my second half.'.format(
+            """print('[{}] I have an odd number of errors in my second half.'.format(
                 receiver_name
             ))
+            """
             bit_counter += 1  # At this point receiver would send a message about an odd number of errors in 2nd half
 
             """We have to repeat the whole procedure for the second halves"""
@@ -80,9 +82,10 @@ def binary(sender_block, receiver_block, indexes, receiver_name='Bob'):
             indexes = list(sender_current_block.keys())  # same as Bob's
 
         if len(receiver_current_block) == 1:  # at some point this clause will be true
-            print("[{}] I have one bit left, I'm changing it.".format(
+            """print("[{}] I have one bit left, I'm changing it.".format(
                 receiver_name
             ))
+            """
             bit_counter += 1  # At this point receiver would send a message (?) about one bit left and changing it
 
             """Firstly we change the error bit in Bob's original dictionary of all bits"""
