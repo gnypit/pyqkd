@@ -70,8 +70,8 @@ labyrinth = np.array([
 gene_space = [0, 1, 2, 3, 4]
 num_generations = 3000
 sol_per_pop = 500
-num_parents_mating = 250
-elite_size = 20
+# num_parents_mating = 250
+elite_size = 2
 num_genes = 30
 
 population = genetic_algorithm.Population(
@@ -102,4 +102,5 @@ for _ in range(num_generations):
     population.reset_parents()
     population.reset_children()
 
-print(solutions)
+print(solutions[-1])
+population.fitness_plot()

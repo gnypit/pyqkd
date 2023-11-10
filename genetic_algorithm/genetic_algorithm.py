@@ -1,5 +1,7 @@
 """Author: Jakub Gnyp; contact: gnyp.jakub@gmail.com, LinkedIn: https://www.linkedin.com/in/gnypit/"""
 import random
+import matplotlib.pyplot as plt
+import numpy as np
 from numpy.random import binomial as np_binom
 from numpy import floor
 
@@ -494,3 +496,15 @@ class Population:
 
     def change_population_size(self, pop_size):
         self.pop_size = pop_size
+
+    # TODO: add fitness history plotting
+
+    def fitness_plot(self):
+        historic_best_fits = []
+        for old_fitness_ranking in self.fitness_rankings:
+            historic_best_fits.append(old_fitness_ranking[0].get('fitness value'))
+
+        generation_indexes = np.arange(start=0, stop=len(historic_best_fits), step=1)
+
+        plt.plot(generation_indexes, historic_best_fits)
+        plt.show()
