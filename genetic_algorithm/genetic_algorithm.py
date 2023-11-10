@@ -236,15 +236,6 @@ class Population:
         for crossover performed later. Only then will the 'elite' members be copy-pasted."""
         member_counter = 0
 
-        while member_counter < self.elite_size:
-            self.current_parents.append(
-                self.current_generation.members[self.current_fitness_ranking[member_counter].get('index')]
-            )
-            self.current_parents.append(
-                self.current_generation.members[self.current_fitness_ranking[member_counter + 1].get('index')]
-            )
-            member_counter += 2
-
         """As every other one, this selection operator creates his own list of candidates for parents of the future
         generation from the current generation and appends it to the 'parents' field in this class:"""
         parents_candidates = []
@@ -254,8 +245,9 @@ class Population:
         
         We'll have elite_size number of elite Members copied, elite_size number of Members being the children of the 
         elite, and that leaves us with (pop_size - 2 * elite_size) number of places in the generation. Since the
-        member_counter is at this point equal to the elite_size, we have to subtract the other elite_size from the
-        loop limit to preserve the right size of generation:
+        elite-parents will be added now, we have to subtract the 'other' elite_size number of Members from the
+        loop limit to preserve the right size of generation - for when the elite will be copied directly
+        into children's list:
         """
         while member_counter < self.current_generation.size - self.elite_size:
             parent1 = self.current_generation.members[self.current_fitness_ranking[member_counter].get('index')]
@@ -469,7 +461,7 @@ class Population:
             new_generation.add_member(
                 genome=self.current_generation.members[self.current_fitness_ranking[index].get('index')].genes
             )
-            self.current_parents.append(
+            new_generation.add_member(
                 genome=self.current_generation.members[self.current_fitness_ranking[index + 1].get('index')].genes
             )
             index += 2

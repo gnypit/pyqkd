@@ -101,3 +101,5 @@ for _ in range(num_generations):
 
     population.reset_parents()
     population.reset_children()
+
+print(solutions)
