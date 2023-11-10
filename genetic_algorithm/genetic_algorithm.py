@@ -359,8 +359,8 @@ class Population:
             for parents_pair in list_of_parents_pairs:  # this loop end way to soon, I think
                 children_candidates.append(
                     crossover_operator(
-                        parents_pair[0].get('parent1'),
-                        parents_pair[0].get('parent2')
+                        parents_pair.get('parent1'),
+                        parents_pair.get('parent2')
                     )
                 )
             self.current_children.append(
