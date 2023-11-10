@@ -353,7 +353,7 @@ class Population:
         children_candidates = []
         for parents_candidates in self.current_parents:
             list_of_parents_pairs = parents_candidates.values()
-            for parents_pair in list_of_parents_pairs:
+            for parents_pair in list_of_parents_pairs:  # this loop end way to soon, I think
                 children_candidates.append(
                     crossover_operator(
                         parents_pair[0].get('parent1'),
@@ -372,7 +372,7 @@ class Population:
         For the moment we are assuming that there will be a single list of children candidates.
         Firstly we have to match the selection operator; then in each case we have to match the crossover operator:"""
 
-        if selection_operator == 'sus':
+        if selection_operator == 'sus':  # wtf did I mean here
             print('yes')
 
         match str(selection_operator):
