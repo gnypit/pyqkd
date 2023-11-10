@@ -226,7 +226,7 @@ class Population:
         size for the whole population, we simply copy-paste the old members into the new generation. That's why
         we automatically calculate it and focus on selecting pairs of members from the current generation as parents
         for crossover performed later. Only then will the 'elite' members be copy-pasted."""
-        member_counter = 2 * self.elite_size
+        member_counter = self.elite_size
 
         """
         while member_counter < self.elite_size:
