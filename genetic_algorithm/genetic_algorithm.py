@@ -57,7 +57,7 @@ class Generation:
         self.genome_generator = genome_generator
         self.genome_generator_args = args
 
-        if self.genome_generator is not None:
+        if self.genome_generator is not None:  # ONLY for the initial generation within the population
             for index in range(self.size):
                 new_member = Member(self.genome_generator(self.genome_generator_args), identification)
                 identification += 1
@@ -183,9 +183,17 @@ class Population:
             random.seed(a=seed)  # temporary, for debugging
 
         self.pop_size = pop_size
+        self.fit_fun = fit_fun
         self.elite_size = elite_size
         self.mutation_prob = mutation_prob
-        self.fit_fun = fit_fun
+
+        """Even though for the initial population we can pass the genome generator with it's arguments
+        directly to the __init__ method within the Generation class, we need to memorise these two variables
+        for mutation later on."""
+        self.genome_generator = genome_generator
+        self.genome_generator_args = args
+
+        """Creating the first - initial - generation in this population and lists to handle future generations"""
         self.current_generation = Generation(size=pop_size, genome_generator=genome_generator, args=args)
         self.generations = [self.current_generation]
         self.current_parents = []
@@ -462,7 +470,7 @@ class Population:
         """For new (mutated) genome creation I use the generator passed to the superclass in it's initialisation:"""
         for index in indexes:
             self.current_generation.members[index].change_genes(
-                self.current_generation.genome_generator(self.current_generation.genome_generator_args)
+                self.genome_generator(self.genome_generator_args)
             )
 
     def reset_parents(self):
