@@ -249,7 +249,15 @@ class Population:
         generation from the current generation and appends it to the 'parents' field in this class:"""
         parents_candidates = []
 
-        while member_counter < self.current_generation.size:
+        """Because I decided to not only preserve the elite, but also perform crossover on it, I'll disregard
+        a part of current generation's members with worst fitness, so that the size os population is constant.
+        
+        We'll have elite_size number of elite Members copied, elite_size number of Members being the children of the 
+        elite, and that leaves us with (pop_size - 2 * elite_size) number of places in the generation. Since the
+        member_counter is at this point equal to the elite_size, we have to subtract the other elite_size from the
+        loop limit to preserve the right size of generation:
+        """
+        while member_counter < self.current_generation.size - self.elite_size:
             parent1 = self.current_generation.members[self.current_fitness_ranking[member_counter].get('index')]
             parent2 = self.current_generation.members[self.current_fitness_ranking[member_counter + 1].get('index')]
             parents_candidates.append({'parent1': parent1, 'parent2': parent2})
@@ -454,7 +462,19 @@ class Population:
             new_generation.add_member(genome=pair[0])
             new_generation.add_member(genome=pair[1])
 
-        """Thirdly, we overwrite the current generation with the new one:"""
+        """Thirdly, we add the elite - it doesn't matter that it's at the end of the new generation, because it'll be
+        sorted anyway after new Members evaluation."""
+        index = 0
+        while index < self.elite_size:
+            new_generation.add_member(
+                genome=self.current_generation.members[self.current_fitness_ranking[index].get('index')].genes
+            )
+            self.current_parents.append(
+                genome=self.current_generation.members[self.current_fitness_ranking[index + 1].get('index')].genes
+            )
+            index += 2
+
+        """Finally, we overwrite the current generation with the new one:"""
         self.current_generation = new_generation
 
     def mutate(self):
