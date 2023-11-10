@@ -465,7 +465,10 @@ class Population:
         of members to be mutated and then generate pseudo-randomly a list of member indexes in the current generation
         to be mutated."""
         number_of_mutations = floor(self.mutation_prob * self.current_generation.size)
-        indexes = random.sample(range(self.current_generation.size), int(number_of_mutations))  # has to be an integer
+        indexes = random.sample(
+            range(self.current_generation.size - self.elite_size),  # size of generation is a constant, it has to be adjusted to the lack of elite; after all we want to mutate all but the elite members
+            int(number_of_mutations)  # has to be an integer, e.g., you can't make half of a mutation
+        )
 
         """For new (mutated) genome creation I use the generator passed to the superclass in it's initialisation:"""
         for index in indexes:
