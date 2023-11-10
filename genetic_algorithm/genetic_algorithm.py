@@ -234,18 +234,16 @@ class Population:
         size for the whole population, we simply copy-paste the old members into the new generation. That's why
         we automatically calculate it and focus on selecting pairs of members from the current generation as parents
         for crossover performed later. Only then will the 'elite' members be copy-pasted."""
-        member_counter = self.elite_size
+        member_counter = 0
 
-        """
         while member_counter < self.elite_size:
             self.current_parents.append(
-                self.current_generation[self.current_fitness_ranking[member_counter].get('index')]
+                self.current_generation.members[self.current_fitness_ranking[member_counter].get('index')]
             )
             self.current_parents.append(
-                self.current_generation[self.current_fitness_ranking[member_counter + 1].get('index')]
+                self.current_generation.members[self.current_fitness_ranking[member_counter + 1].get('index')]
             )
             member_counter += 2
-        """
 
         """As every other one, this selection operator creates his own list of candidates for parents of the future
         generation from the current generation and appends it to the 'parents' field in this class:"""
@@ -258,7 +256,7 @@ class Population:
             member_counter += 2
 
         self.current_parents.append({'ranking': parents_candidates})
-        # TODO: why where there three lists from ranking selection alone???
+        # TODO: why where there three lists from ranking selection alone??? -> probably resolved by now 10/11/2023
 
     def roulette_wheel_selection(self):  # probability-based
         """The conspicuous characteristic of this selection method is the fact that it gives to
