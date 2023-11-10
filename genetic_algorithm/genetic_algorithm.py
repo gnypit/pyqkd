@@ -349,10 +349,13 @@ class Population:
         """...and append it to the list of candidate parents lists:"""
         self.current_parents.append({'sus': parents_candidates})
 
-    def perform_crossover(self, crossover_operator):
+    def perform_crossover(self, crossover_operator, selection_operator_name):
+        """Let's try passing the selection operator info into the crossover operator, so that instead of forcing
+        taking a list of dict_values we simply call the value with a key."""
         children_candidates = []
         for parents_candidates in self.current_parents:
-            list_of_parents_pairs = parents_candidates.values()
+            # list_of_parents_pairs = list(parents_candidates.values())  # I'm forcing it to be a list object
+            list_of_parents_pairs = parents_candidates.get(selection_operator_name)
             for parents_pair in list_of_parents_pairs:  # this loop end way to soon, I think
                 children_candidates.append(
                     crossover_operator(
@@ -370,7 +373,13 @@ class Population:
     def create_new_generation(self, selection_operator, crossover_operator):  # for single new generation creation
         """A method for combining selection and crossover operators over the current population to create a new one.
         For the moment we are assuming that there will be a single list of children candidates.
-        Firstly we have to match the selection operator; then in each case we have to match the crossover operator:"""
+        Firstly we have to match the selection operator; then in each case we have to match the crossover operator.
+
+        In each of the selection-oriented cases we feed the selection operator name to the crossover operator
+        method, so that it takes the parents lists designated for a given new generation creation, i.e., to
+        always connect the chosen crossover to chosen selection and yet keep all probable parents lists
+        from different selection processes in one object for multiple processes to access.
+        """
 
         if selection_operator == 'sus':  # wtf did I mean here
             print('yes')
@@ -380,29 +389,56 @@ class Population:
                 self.ranking_selection()
                 match crossover_operator:
                     case 'single point':
-                        self.perform_crossover(crossover_operator=single_point_crossover)
+                        self.perform_crossover(
+                            crossover_operator=single_point_crossover,
+                            selection_operator_name='ranking'
+                        )
                     case 'uniform':
-                        self.perform_crossover(crossover_operator=uniform_crossover)
+                        self.perform_crossover(
+                            crossover_operator=uniform_crossover,
+                            selection_operator_name='ranking'
+                        )
                     case 'plco':
-                        self.perform_crossover(crossover_operator=plco)
+                        self.perform_crossover(
+                            crossover_operator=plco,
+                            selection_operator_name='ranking'
+                        )
             case 'roulette wheel':
                 self.roulette_wheel_selection()
                 match crossover_operator:
                     case 'single point':
-                        self.perform_crossover(crossover_operator=single_point_crossover)
+                        self.perform_crossover(
+                            crossover_operator=single_point_crossover,
+                            selection_operator_name='roulette wheel'
+                        )
                     case 'uniform':
-                        self.perform_crossover(crossover_operator=uniform_crossover)
+                        self.perform_crossover(
+                            crossover_operator=uniform_crossover,
+                            selection_operator_name='roulette wheel'
+                        )
                     case 'plco':
-                        self.perform_crossover(crossover_operator=plco)
+                        self.perform_crossover(
+                            crossover_operator=plco,
+                            selection_operator_name='roulette wheel'
+                        )
             case 'sus':  # abbreviation for stochastic universal sampling
                 self.stochastic_universal_sampling()
                 match crossover_operator:
                     case 'single point':
-                        self.perform_crossover(crossover_operator=single_point_crossover)
+                        self.perform_crossover(
+                            crossover_operator=single_point_crossover,
+                            selection_operator_name='sus'
+                        )
                     case 'uniform':
-                        self.perform_crossover(crossover_operator=uniform_crossover)
+                        self.perform_crossover(
+                            crossover_operator=uniform_crossover,
+                            selection_operator_name='sus'
+                        )
                     case 'plco':
-                        self.perform_crossover(crossover_operator=plco)
+                        self.perform_crossover(
+                            crossover_operator=plco,
+                            selection_operator_name='sus'
+                        )
 
         """Secondly, we create the new generation with children being a result od selection and crossover operators
         on the current population:"""
