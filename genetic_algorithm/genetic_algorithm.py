@@ -415,3 +415,14 @@ class Population:
 
         plt.plot(generation_indexes, historic_best_fits)
         plt.show()
+
+
+class ParallelPopulation(Population):
+    """This class is supposed to enable creating new generations in parallel, as a result of different combinations
+    of selection & crossover operators. They can be passed to a class instance as lists; if they contain only
+    one element each, a regular genetic algorithm will be performed, not a parallel one."""
+    def __init__(self, selection_operators: list, crossover_operators: list,
+                 pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=0.0, seed=None):
+        super().__init__(pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=mutation_prob, seed=seed)
+
+
