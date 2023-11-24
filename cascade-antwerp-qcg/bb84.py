@@ -150,7 +150,38 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=1):
 
 
 def cascade_blocks_sizes_improved(quantum_bit_error_rate, key_length, n_passes=1):
-    pass
+    """In this improved vesrion of cascade_blocks_sizes functon the 2nd check for the (2) condition from the '93
+    CASCADE paper is simplified, resulting in lesser computational complexity."""
+    max_expected_value = -1 * math.log(0.5, math.e)
+    # best_expected_value = max_expected_value
+    best_size = key_length
+
+    for size in range(key_length // 2):  # we need at lest 2 blocks to begin with
+
+        # Firstly we check condition for expected values - (3) in the paper
+        expected_value = 0
+
+        for j in range(size // 2):
+            expected_value += 2 * (j + 1) * numerical_error_prob(n_errors=(j + 1), pass_size=size,
+                                                                 qber=quantum_bit_error_rate)
+
+        if expected_value <= max_expected_value:
+            first_condition = True
+        else:
+            first_condition = False
+
+    # TODO: simplified 2nd check
+
+    sizes = [best_size]
+
+    for j in range(n_passes - 1):  # corrected interpretation of number of passes
+        next_size = 2 * sizes[-1]
+        if next_size <= key_length:
+            sizes.append(next_size)
+        else:
+            break
+
+    return sizes
 
 
 def cascade_blocks_generator(string_length, blocks_size):
