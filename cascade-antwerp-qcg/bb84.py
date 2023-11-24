@@ -95,13 +95,20 @@ def numerical_error_prob(n_errors, pass_size, qber):  # probability that 2*n_err
 
 
 def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=1):
+    """An iterative procedure to find the largest initial block size for the CASCADE algorithm,
+    fulfilling conditions (2) and (3) as described in 1993 paper "Secret Key Reconciliation by Public Discussion"
+    by Gilles Brassard and Louis Salvail, published in "Advances in Cryptography" proceedings.
+
+    This function searches in nested loops all possible combinations of numbers of errors and block sizes to identify
+    the largest one suitable for the whole algorithm to be performed.
+    """
     max_expected_value = -1 * math.log(0.5, math.e)
     # best_expected_value = max_expected_value
     best_size = key_length
 
     for size in range(key_length // 2):  # we need at lest 2 blocks to begin with
 
-        # Firstly we check condition for expected values
+        # Firstly we check condition for expected values - (3) in the paper
         expected_value = 0
 
         for j in range(size // 2):
@@ -113,7 +120,7 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=1):
         else:
             first_condition = False
 
-        # Secondly we check condition for probabilities per se
+        # Secondly we check condition for probabilities per se - (2) in the paper
         second_condition = False
         for j in range(size // 2):
             prob_sum = 0
@@ -140,6 +147,10 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=1):
             break
 
     return sizes
+
+
+def cascade_blocks_sizes_improved(quantum_bit_error_rate, key_length, n_passes=1):
+    pass
 
 
 def cascade_blocks_generator(string_length, blocks_size):
