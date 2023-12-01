@@ -95,7 +95,17 @@ def numerical_error_prob(n_errors, pass_size, qber):  # probability that 2*n_err
     return prob
 
 
-def sum_error_prob_betainc(pass_size, max_sum_index, qber):  # simplified left side of (2) inequality for CASCADE blocks
+def sum_error_prob_betainc(pass_size, max_sum_index, qber):
+    """Simplified left side of (2) inequality for CASCADE blocks. It uses regularised incomplete beta function as a
+    representation of binomial distribution CDF; after proposed [paper is currently being written] representation of (2)
+    inequality this way the computations are significantly faster, at least by one order of magnitude for small limits
+    of series and a few orders of magnitude (e.g. 5) for greater (thousands).
+
+    Although by 1993 paper "Secret Key Reconciliation by Public Discussion" by Gilles Brassard and Louis Salvail,
+    published in "Advances in Cryptography" proceedings, for 10 000 qubits the initial block size is only 73, this
+    program aims to be a universal tool for simulations, allowing arbitrarily large amounts of qubits to be sent
+    and post-processed. Moreover, with tens of thousands simulations performed, even one order of magnitude offers
+    a significant speed-up."""
     prob = betainc(pass_size - 2 * max_sum_index - 1, 2 * max_sum_index + 2, 1 - qber)
     prob -= float(binom.pmf(0, pass_size, qber) + binom.pmf(1, pass_size, qber))
     return prob
