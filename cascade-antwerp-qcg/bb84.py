@@ -9,7 +9,8 @@ import time
 import numpy as np
 
 from binary import binary
-from scipy.stats import binom  # it cannot find binom in scipy.stats ?!
+from scipy.stats import binom
+from scipy.special import betainc
 
 
 """Let's set up the quantum channel (BB84)"""
@@ -91,6 +92,12 @@ def measurement(state, basis):  # TODO: update & optimise
 
 def numerical_error_prob(n_errors, pass_size, qber):  # probability that 2*n_errors remain
     prob = binom.pmf(2 * n_errors, pass_size, qber) + binom.pmf(2 * n_errors + 1, pass_size, qber)
+    return prob
+
+
+def sum_error_prob_betainc(pass_size, max_sum_index, qber):  # simplified left side of (2) inequality for CASCADE blocks
+    prob = betainc(pass_size - 2 * max_sum_index - 1, 2 * max_sum_index + 2, 1 - qber)
+    prob -= float(binom.pmf(0, pass_size, qber) + binom.pmf(1, pass_size, qber))
     return prob
 
 
