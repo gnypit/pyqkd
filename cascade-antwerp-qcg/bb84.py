@@ -90,12 +90,12 @@ def measurement(state, basis):  # TODO: update & optimise
     return final_state
 
 
-def numerical_error_prob(n_errors, pass_size, qber):  # probability that 2*n_errors remain
-    prob = binom.pmf(2 * n_errors, pass_size, qber) + binom.pmf(2 * n_errors + 1, pass_size, qber)
+def numerical_error_prob(n_errors, pass_size, qber):  # probability that n_errors remain
+    prob = binom.pmf(n_errors, pass_size, qber) + binom.pmf(n_errors + 1, pass_size, qber)
     return prob
 
 
-def sum_error_prob_betainc(pass_size, max_sum_index, qber):
+def sum_error_prob_betainc(pass_size, max_sum_index, qber, n_errors):
     """Simplified left side of (2) inequality for CASCADE blocks. It uses regularised incomplete beta function as a
     representation of binomial distribution CDF; after proposed [paper is currently being written] representation of (2)
     inequality this way the computations are significantly faster, at least by one order of magnitude for small limits
@@ -106,8 +106,8 @@ def sum_error_prob_betainc(pass_size, max_sum_index, qber):
     program aims to be a universal tool for simulations, allowing arbitrarily large amounts of qubits to be sent
     and post-processed. Moreover, with tens of thousands simulations performed, even one order of magnitude offers
     a significant speed-up."""
-    prob = betainc(pass_size - 2 * max_sum_index - 1, 2 * max_sum_index + 2, 1 - qber)
-    prob -= float(binom.pmf(0, pass_size, qber) + binom.pmf(1, pass_size, qber))
+    prob = betainc(pass_size - 2 * max_sum_index, 2 * max_sum_index + 2, 1 - qber)
+    prob -= betainc(pass_size - n_errors, n_errors + 2, 1 - qber)  # will there be a problem with subtracting small numbers?
     return prob
 
 
@@ -129,7 +129,7 @@ def cascade_blocks_sizes_old(quantum_bit_error_rate, key_length, n_passes=1):
         expected_value = 0
 
         for j in range(size // 2):
-            expected_value += 2 * (j + 1) * numerical_error_prob(n_errors=(j + 1), pass_size=size,
+            expected_value += 2 * (j + 1) * numerical_error_prob(n_errors=2 * (j + 1), pass_size=size,
                                                                  qber=quantum_bit_error_rate)
 
         if expected_value <= max_expected_value:
@@ -142,9 +142,9 @@ def cascade_blocks_sizes_old(quantum_bit_error_rate, key_length, n_passes=1):
         for j in range(size // 2):
             prob_sum = 0
             for k in list(np.arange(j + 1, size // 2 + 1, 1)):
-                prob_sum += numerical_error_prob(n_errors=k, pass_size=size, qber=quantum_bit_error_rate)
+                prob_sum += numerical_error_prob(n_errors=2 * k, pass_size=size, qber=quantum_bit_error_rate)
 
-            if prob_sum <= numerical_error_prob(n_errors=j, pass_size=size, qber=quantum_bit_error_rate) / 4:
+            if prob_sum <= numerical_error_prob(n_errors=2 * j, pass_size=size, qber=quantum_bit_error_rate) / 4:
                 second_condition = True
             else:
                 second_condition = False
@@ -166,7 +166,7 @@ def cascade_blocks_sizes_old(quantum_bit_error_rate, key_length, n_passes=1):
     return sizes
 
 
-def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=1):
+def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=2):
     """An iterative procedure to find the largest initial block size for the CASCADE algorithm,
     fulfilling conditions (2) and (3) as described in 1993 paper "Secret Key Reconciliation by Public Discussion"
     by Gilles Brassard and Louis Salvail, published in "Advances in Cryptography" proceedings.
@@ -174,18 +174,18 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=1):
     In this improved version of cascade_blocks_sizes functon the checks for the (2) & (3) of conditions from the '93
     CASCADE paper are simplified, resulting in lesser computational complexity. For additional context, these
     conditions are a system of non-linear inequalities that need to be fulfilled in order to have the probability
-    of correcting at least 2 errors in a given block in any pass greater than 0.75"""
+    of correcting at least 2 errors in a given block in any pass greater than 0.75
+
+    In this approach we implement regularised incomplete beta function to represent binomial distribution CDF
+    for a simplified left side of the (2) inequality from tha paper.
+
+    Additionally, we use a single formula for the expected value (3) of number of errors in a given block after
+    completion of the first CASCADE pass.
+    """
     max_expected_value = -1 * math.log(0.5, math.e)
     best_size = key_length
 
-    """In this approach we implement dynamical storage of calculated error probabilities. We need to remember both 
-    individual probabilities and their sums (series) for the recurrent formula of the 2nd condition. Additionally, we
-    use a single formula for the expected value of number of errors in a given block after completion of the first
-    CASCADE pass."""
-    number_of_errors_probabilities = []
-    series_of_probabilities = []
-
-    for size in range(key_length // 2):  # we need at lest 2 blocks to begin with
+    for size in range(key_length // 4):  # we need at lest 4 blocks to begin with - then we can perform 2 passes
 
         """Firstly we check condition for the expected value of number of errors remaining in a block
         in the first pass of CASCADE - (3) in the paper"""
@@ -195,20 +195,29 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=1):
         else:
             first_condition = False
 
-        """For the (2) condition (inequality) we first calculate all probabilities of numbers of errors from 0 errors 
-        to size//2 errors and the first sum that appears on the left side of the inequality in the paper 
-        (from 1 to size//2)."""
-        for j in range(size // 2):
-            number_of_errors_probabilities.append(
-                numerical_error_prob(n_errors=j, pass_size=size, qber=quantum_bit_error_rate)
+        """For the (2) condition (inequality)..."""
+        second_condition = False
+        for j in range(size):
+            right_side = numerical_error_prob(
+                n_errors=2 * j,
+                pass_size=size,
+                qber=quantum_bit_error_rate) / 4
+            left_side = sum_error_prob_betainc(
+                pass_size=size,
+                max_sum_index=size // 2,
+                qber=quantum_bit_error_rate,
+                n_errors=2 * j
             )
-        series_of_probabilities.append(sum(number_of_errors_probabilities) - number_of_errors_probabilities[0])
 
-        """Next, in a loop we simply use the stored probabilities and their sums to check (2) for consecutive numbers
-        of errors."""
-        # for j in range(size // 2)
+            """Now we check inequality (2) - must work for all possible numbers of errors in a block of given size."""
+            if left_side <= right_side:
+                second_condition = True
+            else:
+                second_condition = False
 
-    # TODO: simplified 2nd check
+        if first_condition and second_condition:
+            if size > best_size:
+                best_size = size
 
     sizes = [best_size]
 
