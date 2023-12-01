@@ -150,25 +150,40 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=1):
 
 
 def cascade_blocks_sizes_improved(quantum_bit_error_rate, key_length, n_passes=1):
-    """In this improved vesrion of cascade_blocks_sizes functon the 2nd check for the (2) condition from the '93
-    CASCADE paper is simplified, resulting in lesser computational complexity."""
+    """In this improved version of cascade_blocks_sizes functon the checks for the (2) & (3) of conditions from the '93
+    CASCADE paper are simplified, resulting in lesser computational complexity."""
     max_expected_value = -1 * math.log(0.5, math.e)
-    # best_expected_value = max_expected_value
     best_size = key_length
+
+    """In this approach we implement dynamical storage of calculated error probabilities. We need to remember both 
+    individual probabilities and their sums (series) for the recurrent formula of the 2nd condition. Additionally, we
+    use a single formula for the expected value of number of errors in a given block after completion of the first
+    CASCADE pass."""
+    number_of_errors_probabilities = []
+    series_of_probabilities = []
 
     for size in range(key_length // 2):  # we need at lest 2 blocks to begin with
 
-        # Firstly we check condition for expected values - (3) in the paper
-        expected_value = 0
-
-        for j in range(size // 2):
-            expected_value += 2 * (j + 1) * numerical_error_prob(n_errors=(j + 1), pass_size=size,
-                                                                 qber=quantum_bit_error_rate)
-
+        """Firstly we check condition for the expected value of number of errors remaining in a block
+        in the first pass of CASCADE - (3) in the paper"""
+        expected_value = size * quantum_bit_error_rate - (1 - (1 - 2 * quantum_bit_error_rate)**size) / 2
         if expected_value <= max_expected_value:
             first_condition = True
         else:
             first_condition = False
+
+        """For the (2) condition (inequality) we first calculate all probabilities of numbers of errors from 0 errors 
+        to size//2 errors and the first sum that appears on the left side of the inequality in the paper 
+        (from 1 to size//2)."""
+        for j in range(size // 2):
+            number_of_errors_probabilities.append(
+                numerical_error_prob(n_errors=j, pass_size=size, qber=quantum_bit_error_rate)
+            )
+        series_of_probabilities.append(sum(number_of_errors_probabilities) - number_of_errors_probabilities[0])
+
+        """Next, in a loop we simply use the stored probabilities and their sums to check (2) for consecutive numbers
+        of errors."""
+        # for j in range(size // 2)
 
     # TODO: simplified 2nd check
 
