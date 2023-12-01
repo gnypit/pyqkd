@@ -9,7 +9,7 @@ import time
 import numpy as np
 
 from binary import binary
-from scipy.stats import binom
+from scipy.stats import binom  # it cannot find binom in scipy.stats ?!
 
 
 """Let's set up the quantum channel (BB84)"""
@@ -94,7 +94,7 @@ def numerical_error_prob(n_errors, pass_size, qber):  # probability that 2*n_err
     return prob
 
 
-def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=1):
+def cascade_blocks_sizes_old(quantum_bit_error_rate, key_length, n_passes=1):
     """An iterative procedure to find the largest initial block size for the CASCADE algorithm,
     fulfilling conditions (2) and (3) as described in 1993 paper "Secret Key Reconciliation by Public Discussion"
     by Gilles Brassard and Louis Salvail, published in "Advances in Cryptography" proceedings.
@@ -149,9 +149,15 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=1):
     return sizes
 
 
-def cascade_blocks_sizes_improved(quantum_bit_error_rate, key_length, n_passes=1):
-    """In this improved version of cascade_blocks_sizes functon the checks for the (2) & (3) of conditions from the '93
-    CASCADE paper are simplified, resulting in lesser computational complexity."""
+def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=1):
+    """An iterative procedure to find the largest initial block size for the CASCADE algorithm,
+    fulfilling conditions (2) and (3) as described in 1993 paper "Secret Key Reconciliation by Public Discussion"
+    by Gilles Brassard and Louis Salvail, published in "Advances in Cryptography" proceedings.
+
+    In this improved version of cascade_blocks_sizes functon the checks for the (2) & (3) of conditions from the '93
+    CASCADE paper are simplified, resulting in lesser computational complexity. For additional context, these
+    conditions are a system of non-linear inequalities that need to be fulfilled in order to have the probability
+    of correcting at least 2 errors in a given block in any pass greater than 0.75"""
     max_expected_value = -1 * math.log(0.5, math.e)
     best_size = key_length
 
