@@ -121,7 +121,7 @@ def cascade_blocks_sizes_old(quantum_bit_error_rate, key_length, n_passes=1):
     """
     max_expected_value = -1 * math.log(0.5, math.e)
     # best_expected_value = max_expected_value
-    best_size = key_length
+    best_size = 0
 
     for size in range(key_length // 2):  # we need at lest 2 blocks to begin with
 
