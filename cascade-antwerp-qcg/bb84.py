@@ -183,7 +183,7 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=2):
     completion of the first CASCADE pass.
     """
     max_expected_value = -1 * math.log(0.5, math.e)
-    best_size = key_length
+    best_size = 0
 
     for size in range(key_length // 4):  # we need at lest 4 blocks to begin with - then we can perform 2 passes
 
