@@ -126,13 +126,13 @@ def cascade_blocks_sizes_old(quantum_bit_error_rate, key_length, n_passes=1):
     # best_expected_value = max_expected_value
     best_size = 0
 
-    for size in range(key_length // 2):  # we need at lest 2 blocks to begin with
+    for size in list(np.arange(1, key_length // 2 + 1, 1)):  # we need at lest 2 blocks to begin with
 
         # Firstly we check condition for expected values - (3) in the paper
         expected_value = 0
 
-        for j in range(size // 2):
-            expected_value += 2 * (j + 1) * numerical_error_prob(n_errors=2 * (j + 1), pass_size=size,
+        for j in list(np.arange(0, size // 2 + 1, 1)):
+            expected_value += 2 * j * numerical_error_prob(n_errors=2 * j, pass_size=size,
                                                                  qber=quantum_bit_error_rate)
 
         if expected_value <= max_expected_value:
@@ -142,10 +142,10 @@ def cascade_blocks_sizes_old(quantum_bit_error_rate, key_length, n_passes=1):
 
         # Secondly we check condition for probabilities per se - (2) in the paper
         second_condition = False
-        for j in range(size // 2):
+        for j in list(np.arange(0, size // 2 + 1, 1)):
             prob_sum = 0
-            for k in list(np.arange(j + 1, size // 2 + 1, 1)):
-                prob_sum += numerical_error_prob(n_errors=2 * k, pass_size=size, qber=quantum_bit_error_rate)
+            for l in list(np.arange(j + 1, size // 2 + 1, 1)):
+                prob_sum += numerical_error_prob(n_errors=2 * l, pass_size=size, qber=quantum_bit_error_rate)
 
             if prob_sum <= numerical_error_prob(n_errors=2 * j, pass_size=size, qber=quantum_bit_error_rate) / 4:
                 second_condition = True
@@ -159,7 +159,7 @@ def cascade_blocks_sizes_old(quantum_bit_error_rate, key_length, n_passes=1):
 
     sizes = [best_size]
 
-    for j in range(n_passes - 1):  # corrected interpretation of number of passes
+    for _ in range(n_passes - 1):  # corrected interpretation of number of passes
         next_size = 2 * sizes[-1]
         if next_size <= key_length:
             sizes.append(next_size)
@@ -186,12 +186,14 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=2):
     completion of the first CASCADE pass.
     """
     max_expected_value = -1 * math.log(0.5, math.e)
-    best_size = 0
+    best_size = 0  # all sizes fulfilling (2) & (3) ineq. will be greater than that; we're looking fo the greatest
 
-    for size in range(key_length // 4):  # we need at lest 4 blocks to begin with - then we can perform 2 passes
-
-        """Firstly we check condition for the expected value of number of errors remaining in a block
-        in the first pass of CASCADE - (3) in the paper"""
+    for size in list(np.arange(1, key_length // 4 + 1, 1)):
+        """We need at lest 4 blocks to begin with - then we can perform 2 passes.
+        
+        Firstly we check condition for the expected value of number of errors remaining in a block
+        in the first pass of CASCADE - (3) in the paper
+        """
         expected_value = size * quantum_bit_error_rate - (1 - (1 - 2 * quantum_bit_error_rate)**size) / 2
         if expected_value <= max_expected_value:
             first_condition = True
@@ -200,7 +202,7 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=2):
 
         """For the (2) condition (inequality)..."""
         second_condition = False
-        for j in range(size):
+        for j in list(np.arange(1, size + 1, 1)):
             right_side = numerical_error_prob(
                 n_errors=2 * j,
                 pass_size=size,
