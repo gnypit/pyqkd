@@ -95,7 +95,7 @@ def numerical_error_prob(n_errors, pass_size, qber):  # probability that n_error
     return prob
 
 
-def sum_error_prob_betainc(pass_size, max_sum_index, qber, n_errors):
+def sum_error_prob_betainc(key_length, first_pass_size, qber, n_errors):
     """Simplified left side of (2) inequality for CASCADE blocks. It uses regularised incomplete beta function as a
     representation of binomial distribution CDF; after proposed [paper is currently being written] representation of (2)
     inequality this way the computations are significantly faster, at least by one order of magnitude for small limits
@@ -106,8 +106,11 @@ def sum_error_prob_betainc(pass_size, max_sum_index, qber, n_errors):
     program aims to be a universal tool for simulations, allowing arbitrarily large amounts of qubits to be sent
     and post-processed. Moreover, with tens of thousands simulations performed, even one order of magnitude offers
     a significant speed-up."""
-    prob = betainc(pass_size - 2 * max_sum_index, 2 * max_sum_index + 2, 1 - qber)
-    prob -= betainc(pass_size - n_errors, n_errors + 2, 1 - qber)  # will there be a problem with subtracting small numbers?
+    prob = betainc(key_length - 2 * (first_pass_size // 2), 2 * (first_pass_size // 2) + 1, 1 - qber)
+    prob -= betainc(key_length - n_errors, n_errors + 1, 1 - qber)
+
+    # TODO will there be a problem with subtracting small numbers?
+
     return prob
 
 
@@ -203,10 +206,10 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=2):
                 pass_size=size,
                 qber=quantum_bit_error_rate) / 4
             left_side = sum_error_prob_betainc(
-                pass_size=size,
-                max_sum_index=size // 2,
-                qber=quantum_bit_error_rate,
-                n_errors=2 * j
+                key_length=key_length,
+                first_pass_size=size,
+                n_errors=2 * j,
+                qber=quantum_bit_error_rate
             )
 
             """Now we check inequality (2) - must work for all possible numbers of errors in a block of given size."""
