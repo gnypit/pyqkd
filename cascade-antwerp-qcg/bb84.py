@@ -106,7 +106,7 @@ def sum_error_prob_betainc(first_pass_size, qber, n_errors):
     program aims to be a universal tool for simulations, allowing arbitrarily large amounts of qubits to be sent
     and post-processed. Moreover, with tens of thousands simulations performed, even one order of magnitude offers
     a significant speed-up."""
-    prob = 1 - betainc(first_pass_size - n_errors - 1, n_errors + 2, 1 - qber)
+    prob = betainc(n_errors + 2, first_pass_size - n_errors - 1, qber)
 
     # TODO account for margin cases - first pass size equal to 1 or 2 and n_errors being equal or greater than
     # TODO the first pass size
