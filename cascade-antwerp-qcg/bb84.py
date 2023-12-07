@@ -108,9 +108,6 @@ def sum_error_prob_betainc(first_pass_size, qber, n_errors):
     a significant speed-up."""
     prob = betainc(n_errors + 2, first_pass_size - n_errors - 1, qber)
 
-    # TODO account for margin cases - first pass size equal to 1 or 2 and n_errors being equal or greater than
-    # TODO the first pass size
-
     return prob
 
 
@@ -126,12 +123,12 @@ def cascade_blocks_sizes_old(quantum_bit_error_rate, key_length, n_passes=1):
     # best_expected_value = max_expected_value
     best_size = 0
 
-    for size in list(np.arange(1, key_length // 2 + 1, 1)):  # we need at lest 2 blocks to begin with
+    for size in list(np.arange(2, key_length // 4 + 1, 1)):  # we need at lest 2 blocks to begin with
 
         # Firstly we check condition for expected values - (3) in the paper
         expected_value = 0
 
-        for j in list(np.arange(0, size // 2 + 1, 1)):
+        for j in list(np.arange(0, size // 2, 1)):
             expected_value += 2 * j * numerical_error_prob(n_errors=2 * j, pass_size=size, qber=quantum_bit_error_rate)
 
         if expected_value <= max_expected_value:
@@ -201,7 +198,14 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=2):
 
         """For the (2) condition (inequality)..."""
         second_condition = False
-        for j in list(np.arange(1, (size // 2) + 1, 1)):
+        for j in list(np.arange(0, size // 2, 1)):
+            """For number of errors equal to the amount of bits (or one bit fewer) in a block.
+            
+            When you analyse the inequality (2) carefully, you'll notice, that for j = size of the first pass // 2 - 1
+            the sum on the left side contains the probability of having 2 * (j + 1) errors, which is equal to the length
+            of the first block. This means that for any j greater than the size of the first pass // 2 - 1 there are no
+            expressions in the left-side sum "left", rendering it 0, which is always equal to or lesser than 0.
+            """
             right_side = numerical_error_prob(
                 n_errors=2 * j,
                 pass_size=size,
@@ -218,11 +222,9 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=2):
             else:
                 second_condition = False
 
-            """We should check it in every iteration, as we don't want to break the loop for any time that the 
-            conditions are not met, since for the first pass sizes equal to 1 & 2 they will never be."""
-            if first_condition and second_condition:
-                if size > best_size:
-                    best_size = size
+        if first_condition and second_condition:
+            if size > best_size:
+                best_size = size
 
     sizes = [best_size]
 
