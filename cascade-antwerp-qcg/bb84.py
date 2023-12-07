@@ -108,6 +108,9 @@ def sum_error_prob_betainc(first_pass_size, qber, n_errors):
     a significant speed-up."""
     prob = 1 - betainc(first_pass_size - n_errors - 1, n_errors + 2, 1 - qber)
 
+    # TODO account for margin cases - first pass size equal to 1 or 2 and n_errors being equal or greater than
+    # TODO the first pass size
+
     return prob
 
 
@@ -184,7 +187,7 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=2):
     max_expected_value = -1 * math.log(0.5, math.e)
     best_size = 0  # all sizes fulfilling (2) & (3) ineq. will be greater than that; we're looking fo the greatest
 
-    for size in list(np.arange(1, key_length // 4 + 1, 1)):
+    for size in list(np.arange(2, key_length // 4 + 1, 1)):
         """We need at lest 4 blocks to begin with - then we can perform 2 passes.
         
         Firstly we check condition for the expected value of number of errors remaining in a block
@@ -198,7 +201,7 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=2):
 
         """For the (2) condition (inequality)..."""
         second_condition = False
-        for j in list(np.arange(1, size + 1, 1)):
+        for j in list(np.arange(1, (size // 2) + 1, 1)):
             right_side = numerical_error_prob(
                 n_errors=2 * j,
                 pass_size=size,
@@ -215,9 +218,11 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=2):
             else:
                 second_condition = False
 
-        if first_condition and second_condition:
-            if size > best_size:
-                best_size = size
+            """We should check it in every iteration, as we don't want to break the loop for any time that the 
+            conditions are not met, since for the first pass sizes equal to 1 & 2 they will never be."""
+            if first_condition and second_condition:
+                if size > best_size:
+                    best_size = size
 
     sizes = [best_size]
 
