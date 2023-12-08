@@ -88,6 +88,8 @@ class Population:
         of population members, args are arguments to be used in genom_generator, mutation_prob is a probability
         of a single member's genome being initialised from scratch, seed is for pseud-random number generation."""
 
+        # TODO differentiate between initial population size and the population size later on
+
         if seed is not None:
             random.seed(a=seed)  # temporary, for debugging
 
