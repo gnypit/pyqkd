@@ -115,9 +115,7 @@ class Population:
         fitness ranking. Thus, for each generation we create a list of dictionaries for this ranking. 
         These dictionaries shall have just two keys: index (of a chromosome) and a fitness value 
         (of the same chromosome). Once we compute such a fitness ranking for the whole generation, 
-        we shall sort it using sort_dict_by_fit function.
-        """
-
+        we shall sort it using sort_dict_by_fit function."""
         self.fitness_rankings = []
         self.current_fitness_ranking = None
 
@@ -158,8 +156,7 @@ class Population:
         elite, and that leaves us with (pop_size - 2 * elite_size) number of places in the generation. Since the
         elite-parents will be added now, we have to subtract the 'other' elite_size number of Members from the
         loop limit to preserve the right size of generation - for when the elite will be copied directly
-        into children's list:
-        """
+        into children's list:"""
         while member_counter < self.current_generation.size - self.elite_size:
             parent1 = self.current_generation.members[self.current_fitness_ranking[member_counter].get('index')]
             parent2 = self.current_generation.members[self.current_fitness_ranking[member_counter + 1].get('index')]
@@ -193,7 +190,7 @@ class Population:
         size for the whole population, we simply copy-paste the old members into the new generation. That's why
         we automatically calculate it and focus on selecting pairs of members from the current generation as parents
         for crossover performed later. Only then will the 'elite' members be copy-pasted."""
-        member_counter = 2 * self.elite_size
+        member_counter = 0
 
         """As every other one, this selection operator creates his own list of candidates for parents of the future
         generation from the current generation and appends it to the 'parents' field in this class:"""
@@ -239,7 +236,12 @@ class Population:
         random_value = random.uniform(0, 1 / self.current_generation.size)
         parents = []
         index = 0
-        member_counter = 2 * self.elite_size
+
+        """We use 'member_counter' as an index for the fitness ranking. While it's smaller than the elite
+        size for the whole population, we simply copy-paste the old members into the new generation. That's why
+        we automatically calculate it and focus on selecting pairs of members from the current generation as parents
+        for crossover performed later. Only then will the 'elite' members be copy-pasted."""
+        member_counter = 0
 
         """As every other one, this selection operator creates his own list of candidates for parents of the future
         generation from the current generation and appends it to the 'parents' field in this class:"""
@@ -388,9 +390,12 @@ class Population:
         of members to be mutated and then generate pseudo-randomly a list of member indexes in the current generation
         to be mutated."""
         number_of_mutations = floor(self.mutation_prob * self.current_generation.size)
+
+        """Size of generation is a constant, it has to be adjusted to the lack of elite; 
+        after all we want to mutate all but the elite members
+        """
         indexes = random.sample(
             range(self.current_generation.size - self.elite_size),
-            # size of generation is a constant, it has to be adjusted to the lack of elite; after all we want to mutate all but the elite members
             int(number_of_mutations)  # has to be an integer, e.g., you can't make half of a mutation
         )
 
@@ -421,10 +426,7 @@ class Population:
 
 
 class ParallelPopulation(Population):
-    """This class is supposed to enable creating new generations in parallel, as a result of different combinations
-    of selection & crossover operators. They can be passed to a class instance as lists; if they contain only
-    one element each, a regular genetic algorithm will be performed, not a parallel one."""
-
+    """This class is supposed to enable fitness calculations in parallel."""
     def __init__(self, operator_pairs: list, pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=0.0,
                  seed=None):
         super().__init__(pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=mutation_prob, seed=seed)
