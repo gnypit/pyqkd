@@ -409,8 +409,6 @@ class Population:
     def change_population_size(self, pop_size):
         self.pop_size = pop_size
 
-    # TODO: add fitness history plotting
-
     def fitness_plot(self):
         historic_best_fits = []
         for old_fitness_ranking in self.fitness_rankings:
@@ -427,6 +425,12 @@ class ParallelPopulation(Population):
     of selection & crossover operators. They can be passed to a class instance as lists; if they contain only
     one element each, a regular genetic algorithm will be performed, not a parallel one."""
 
-    def __init__(self, selection_operators: list, crossover_operators: list,
-                 pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=0.0, seed=None):
+    def __init__(self, operator_pairs: list, pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=0.0,
+                 seed=None):
         super().__init__(pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=mutation_prob, seed=seed)
+        self.operator_pairs = operator_pairs
+
+    def create_new_generation(self, **kwargs):
+        # TODO: work on pairs of operators in a loop, and in each of the pairs perform the simulations in parallel,
+        # TODO: automatically adjusting to the number of cores available
+        pass
