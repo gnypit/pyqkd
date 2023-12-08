@@ -35,6 +35,10 @@ class Chromosome:
 
 
 class Member(Chromosome):
+    """ImportError: cannot import name 'Member' from partially initialized module 'genetic_algorithm'
+    (most likely due to a circular import)
+    (C:\Users\Jakub\PycharmProjects\qkd\qkd\genetic_algorithm\genetic_algorithm.py)
+    """
     def __init__(self, genes, identification_number):
         super().__init__(genes)
         self.id = identification_number
