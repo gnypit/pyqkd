@@ -2,13 +2,14 @@
 
 This file contains pre-defined crossover operators for the Generation class from genetic_algorithm.py to use within
 the genetic algorithm.
+
+Parents passed to function should be of class Member from genetic_algorithm.py
 """
 
 from numpy.random import binomial as np_binom
-from genetic_algorithm import Member
 
 
-def single_point_crossover(parent1: Member, parent2: Member, crossover_point=None):
+def single_point_crossover(parent1, parent2, crossover_point=None):
     """Parents will be crossed such that genes from first one (numbered from 0) up to crossover_point
     included shall go to one child, and the rest to the other."""
 
@@ -37,7 +38,7 @@ def single_point_crossover(parent1: Member, parent2: Member, crossover_point=Non
     return [child1_genes, child2_genes]
 
 
-def uniform_crossover(parent1: Member, parent2: Member, choice_prob=0.5):
+def uniform_crossover(parent1, parent2, choice_prob=0.5):
     """In this crossover method a gene mask is randomised. By default, there is 2 children. For the first one
     0 indicates genes from the first parent, while 1 - from the second one. For the second one contrarily.
 
@@ -68,7 +69,7 @@ def uniform_crossover(parent1: Member, parent2: Member, choice_prob=0.5):
     return [child1_genes, child2_genes]
 
 
-def plco(parent1: Member, parent2: Member, transit_point, alfa=0.5, beta=0.5):  # partially linear crossover operator
+def plco(parent1, parent2, transit_point, alfa=0.5, beta=0.5):  # partially linear crossover operator
     """Two children are created; integer-valued genes are exchanged as in single crossover operator,
     while the real-valued genes are linearly combined using formula:
 

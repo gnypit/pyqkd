@@ -35,10 +35,6 @@ class Chromosome:
 
 
 class Member(Chromosome):
-    """ImportError: cannot import name 'Member' from partially initialized module 'genetic_algorithm'
-    (most likely due to a circular import)
-    (C:\Users\Jakub\PycharmProjects\qkd\qkd\genetic_algorithm\genetic_algorithm.py)
-    """
     def __init__(self, genes, identification_number):
         super().__init__(genes)
         self.id = identification_number
@@ -391,7 +387,8 @@ class Population:
         to be mutated."""
         number_of_mutations = floor(self.mutation_prob * self.current_generation.size)
         indexes = random.sample(
-            range(self.current_generation.size - self.elite_size),  # size of generation is a constant, it has to be adjusted to the lack of elite; after all we want to mutate all but the elite members
+            range(self.current_generation.size - self.elite_size),
+            # size of generation is a constant, it has to be adjusted to the lack of elite; after all we want to mutate all but the elite members
             int(number_of_mutations)  # has to be an integer, e.g., you can't make half of a mutation
         )
 
@@ -427,8 +424,7 @@ class ParallelPopulation(Population):
     """This class is supposed to enable creating new generations in parallel, as a result of different combinations
     of selection & crossover operators. They can be passed to a class instance as lists; if they contain only
     one element each, a regular genetic algorithm will be performed, not a parallel one."""
+
     def __init__(self, selection_operators: list, crossover_operators: list,
                  pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=0.0, seed=None):
         super().__init__(pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=mutation_prob, seed=seed)
-
-
