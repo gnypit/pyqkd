@@ -128,7 +128,7 @@ def cascade_blocks_sizes_old(quantum_bit_error_rate, key_length, n_passes=1):
         # Firstly we check condition for expected values - (3) in the paper
         expected_value = 0
 
-        for j in list(np.arange(0, size // 2, 1)):
+        for j in list(np.arange(1, size // 2 + 1, 1)):
             expected_value += 2 * j * numerical_error_prob(n_errors=2 * j, pass_size=size, qber=quantum_bit_error_rate)
 
         if expected_value <= max_expected_value:
@@ -204,7 +204,8 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=2):
             When you analyse the inequality (2) carefully, you'll notice, that for j = size of the first pass // 2 - 1
             the sum on the left side contains the probability of having 2 * (j + 1) errors, which is equal to the length
             of the first block. This means that for any j greater than the size of the first pass // 2 - 1 there are no
-            expressions in the left-side sum "left", rendering it 0, which is always equal to or lesser than 0.
+            expressions in the left-side sum "left", rendering it 0, which is always equal to or lesser than 
+            a non-negative value of any probability..
             """
             right_side = numerical_error_prob(
                 n_errors=2 * j,
