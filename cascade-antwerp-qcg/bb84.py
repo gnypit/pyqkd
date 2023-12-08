@@ -201,7 +201,7 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=2):
             break
 
         """For the (2) condition (inequality)..."""
-        second_condition = False
+        second_condition = True
         for j in list(np.arange(0, size // 2, 1)):
             """For number of errors equal to the amount of bits (or one bit fewer) in a block.
             
@@ -222,9 +222,7 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=2):
             )
 
             """Now we check inequality (2) - must work for all possible numbers of errors in a block of given size."""
-            if left_side <= right_side:
-                second_condition = True
-            else:
+            if left_side > right_side:
                 second_condition = False
                 break
 
