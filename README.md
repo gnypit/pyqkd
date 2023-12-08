@@ -1,3 +1,6 @@
+23 XI 2023:
+This month I added all my codes used for my QKD optimisation research project. I reorganised them, having a prototype of a window app for the Demonstrator and my parallel genetic algorithm for the optimisation purposes. I'm testing the latter on a simple labyrinth.
+
 24 VII 2023:
 I've uploaded a Python notebook (.ipynb) with a full BB84 protocol: measurements of states, simulating disturbances and losses in quantum channel, performing naive or refined error estimation, CASCADE error correction algorithm and privacy amplification with hashing functions.
 

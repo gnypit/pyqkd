@@ -1,7 +1,9 @@
 """Author: Jakub Gnyp; contact: gnyp.jakub@gmail.com, LinkedIn: https://www.linkedin.com/in/gnypit/"""
 import random
-from numpy.random import binomial as np_binom
+import matplotlib.pyplot as plt
+import numpy as np
 from numpy import floor
+from crossover_operators import uniform_crossover, single_point_crossover, plco
 
 identification = 0
 
@@ -57,7 +59,7 @@ class Generation:
         self.genome_generator = genome_generator
         self.genome_generator_args = args
 
-        if self.genome_generator is not None:
+        if self.genome_generator is not None:  # ONLY for the initial generation within the population
             for index in range(self.size):
                 new_member = Member(self.genome_generator(self.genome_generator_args), identification)
                 identification += 1
@@ -79,99 +81,6 @@ class Generation:
 """At this point we need to define crossover operators"""
 
 
-def single_point_crossover(crossover_point, parent1, parent2):
-    """Parents will be crossed such that genes from first one (numbered from 0) up to crossover_point
-    included shall go to one child, and the rest to the other."""
-
-    parent1_genes = list(parent1.genes)
-    parent2_genes = list(parent2.genes)
-
-    # TODO: different working with genes whether it's a dict or a list
-
-    gene_counter = 0
-    child1_genes = []
-    child2_genes = []
-
-    while gene_counter <= crossover_point:
-        child1_genes.append(parent1_genes[gene_counter])
-        child2_genes.append(parent2_genes[gene_counter])
-        gene_counter += 1
-
-    while gene_counter < len(parent1_genes):
-        child1_genes.append(parent2_genes[gene_counter])
-        child2_genes.append(parent1_genes[gene_counter])
-        gene_counter += 1
-
-    # child1 = Chromosome()
-    # child2 = Chromosome()
-
-    return [child1_genes, child2_genes]
-
-
-def uniform_crossover(parent1, parent2, choice_prob=0.5):
-    """In this crossover method a gene mask is randomised. By default, there is 2 children. For the first one
-    0 indicates genes from the first parent, while 1 - from the second one. For the second one contrarily.
-
-    no_kids specifies how many children are to be breaded;
-
-    choice_prob is the probability of choosing a gene from the first parent in a single Bernoulli trial.
-    """
-    parent1_genes = list(parent1.genes)
-    parent2_genes = list(parent2.genes)
-
-    # TODO: different working with genes whether it's a dict or a list
-
-    child1_genes = []
-    child2_genes = []
-
-    gene_mask = np_binom(1, 1 - choice_prob, len(parent1_genes))
-    index = 0
-
-    for indicator in gene_mask:
-        if indicator == 0:
-            child1_genes.append(parent1_genes[index])
-            child2_genes.append(parent2_genes[index])
-        else:
-            child1_genes.append(parent2_genes[index])
-            child2_genes.append(parent1_genes[index])
-        index += 1
-
-    # child1 = Chromosome()
-    # child2 = Chromosome()
-
-    return [child1_genes, child2_genes]
-
-
-def plco(parent1, parent2, transit_point, alfa=0.5, beta=0.5):  # partially linear crossover operator, my idea
-    """Two children are created; integer-valued genes are exchanged as in single crossover operator,
-    while the real-valued genes are linearly combined using formula:
-
-    child_gene = alfa * parent1_gene + beta * parent2_gene
-
-    transit point is the index from which crossover is linear; beforehand it's single point
-    """
-    parent1_genes = list(parent1.genes)
-    parent2_genes = list(parent2.genes)
-    no_genes = len(parent1_genes)
-
-    # TODO: different working with genes whether it's a dict or a list
-
-    child1_genes = []
-    child2_genes = []
-
-    for index in range(transit_point // 2 + 1):  # single-point crossover part 1
-        child1_genes.append(parent1_genes[index])
-        child2_genes.append(parent2_genes[index])
-    for index in range(transit_point // 2 + 1, transit_point):  # single-point crossover part 2
-        child1_genes.append(parent2_genes[index])
-        child2_genes.append(parent1_genes[index])
-    for index in range(transit_point, no_genes):  # linear crossover
-        child1_genes.append(alfa * parent1_genes[index] + beta * parent2_genes[index])
-        child2_genes.append(alfa * parent2_genes[index] + beta * parent1_genes[index])
-
-    return [child1_genes, child2_genes]
-
-
 class Population:
     def __init__(self, pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=0.0, seed=None):
         """pop_size is a constant size of the population, fit_fun is a chosen fitness function to be used in a
@@ -183,9 +92,17 @@ class Population:
             random.seed(a=seed)  # temporary, for debugging
 
         self.pop_size = pop_size
+        self.fit_fun = fit_fun
         self.elite_size = elite_size
         self.mutation_prob = mutation_prob
-        self.fit_fun = fit_fun
+
+        """Even though for the initial population we can pass the genome generator with it's arguments
+        directly to the __init__ method within the Generation class, we need to memorise these two variables
+        for mutation later on."""
+        self.genome_generator = genome_generator
+        self.genome_generator_args = args
+
+        """Creating the first - initial - generation in this population and lists to handle future generations"""
         self.current_generation = Generation(size=pop_size, genome_generator=genome_generator, args=args)
         self.generations = [self.current_generation]
         self.current_parents = []
@@ -226,31 +143,29 @@ class Population:
         size for the whole population, we simply copy-paste the old members into the new generation. That's why
         we automatically calculate it and focus on selecting pairs of members from the current generation as parents
         for crossover performed later. Only then will the 'elite' members be copy-pasted."""
-        member_counter = 2 * self.elite_size
-
-        """
-        while member_counter < self.elite_size:
-            self.current_parents.append(
-                self.current_generation[self.current_fitness_ranking[member_counter].get('index')]
-            )
-            self.current_parents.append(
-                self.current_generation[self.current_fitness_ranking[member_counter + 1].get('index')]
-            )
-            member_counter += 2
-        """
+        member_counter = 0
 
         """As every other one, this selection operator creates his own list of candidates for parents of the future
         generation from the current generation and appends it to the 'parents' field in this class:"""
         parents_candidates = []
 
-        while member_counter < self.current_generation.size:
+        """Because I decided to not only preserve the elite, but also perform crossover on it, I'll disregard
+        a part of current generation's members with worst fitness, so that the size os population is constant.
+        
+        We'll have elite_size number of elite Members copied, elite_size number of Members being the children of the 
+        elite, and that leaves us with (pop_size - 2 * elite_size) number of places in the generation. Since the
+        elite-parents will be added now, we have to subtract the 'other' elite_size number of Members from the
+        loop limit to preserve the right size of generation - for when the elite will be copied directly
+        into children's list:
+        """
+        while member_counter < self.current_generation.size - self.elite_size:
             parent1 = self.current_generation.members[self.current_fitness_ranking[member_counter].get('index')]
             parent2 = self.current_generation.members[self.current_fitness_ranking[member_counter + 1].get('index')]
             parents_candidates.append({'parent1': parent1, 'parent2': parent2})
             member_counter += 2
 
         self.current_parents.append({'ranking': parents_candidates})
-        # TODO: why where there three lists from ranking selection alone???
+        # TODO: why where there three lists from ranking selection alone??? -> probably resolved by now 10/11/2023
 
     def roulette_wheel_selection(self):  # probability-based
         """The conspicuous characteristic of this selection method is the fact that it gives to
@@ -349,15 +264,18 @@ class Population:
         """...and append it to the list of candidate parents lists:"""
         self.current_parents.append({'sus': parents_candidates})
 
-    def perform_crossover(self, crossover_operator):
+    def perform_crossover(self, crossover_operator, selection_operator_name):
+        """Let's try passing the selection operator info into the crossover operator, so that instead of forcing
+        taking a list of dict_values we simply call the value with a key."""
         children_candidates = []
         for parents_candidates in self.current_parents:
-            list_of_parents_pairs = parents_candidates.values()
-            for parents_pair in list_of_parents_pairs:
+            # list_of_parents_pairs = list(parents_candidates.values())  # I'm forcing it to be a list object
+            list_of_parents_pairs = parents_candidates.get(selection_operator_name)
+            for parents_pair in list_of_parents_pairs:  # this loop end way to soon, I think
                 children_candidates.append(
                     crossover_operator(
-                        parents_pair[0].get('parent1'),
-                        parents_pair[0].get('parent2')
+                        parents_pair.get('parent1'),
+                        parents_pair.get('parent2')
                     )
                 )
             self.current_children.append(
@@ -370,9 +288,15 @@ class Population:
     def create_new_generation(self, selection_operator, crossover_operator):  # for single new generation creation
         """A method for combining selection and crossover operators over the current population to create a new one.
         For the moment we are assuming that there will be a single list of children candidates.
-        Firstly we have to match the selection operator; then in each case we have to match the crossover operator:"""
+        Firstly we have to match the selection operator; then in each case we have to match the crossover operator.
 
-        if selection_operator == 'sus':
+        In each of the selection-oriented cases we feed the selection operator name to the crossover operator
+        method, so that it takes the parents lists designated for a given new generation creation, i.e., to
+        always connect the chosen crossover to chosen selection and yet keep all probable parents lists
+        from different selection processes in one object for multiple processes to access.
+        """
+
+        if selection_operator == 'sus':  # wtf did I mean here
             print('yes')
 
         match str(selection_operator):
@@ -380,29 +304,56 @@ class Population:
                 self.ranking_selection()
                 match crossover_operator:
                     case 'single point':
-                        self.perform_crossover(crossover_operator=single_point_crossover)
+                        self.perform_crossover(
+                            crossover_operator=single_point_crossover,
+                            selection_operator_name='ranking'
+                        )
                     case 'uniform':
-                        self.perform_crossover(crossover_operator=uniform_crossover)
+                        self.perform_crossover(
+                            crossover_operator=uniform_crossover,
+                            selection_operator_name='ranking'
+                        )
                     case 'plco':
-                        self.perform_crossover(crossover_operator=plco)
+                        self.perform_crossover(
+                            crossover_operator=plco,
+                            selection_operator_name='ranking'
+                        )
             case 'roulette wheel':
                 self.roulette_wheel_selection()
                 match crossover_operator:
                     case 'single point':
-                        self.perform_crossover(crossover_operator=single_point_crossover)
+                        self.perform_crossover(
+                            crossover_operator=single_point_crossover,
+                            selection_operator_name='roulette wheel'
+                        )
                     case 'uniform':
-                        self.perform_crossover(crossover_operator=uniform_crossover)
+                        self.perform_crossover(
+                            crossover_operator=uniform_crossover,
+                            selection_operator_name='roulette wheel'
+                        )
                     case 'plco':
-                        self.perform_crossover(crossover_operator=plco)
+                        self.perform_crossover(
+                            crossover_operator=plco,
+                            selection_operator_name='roulette wheel'
+                        )
             case 'sus':  # abbreviation for stochastic universal sampling
                 self.stochastic_universal_sampling()
                 match crossover_operator:
                     case 'single point':
-                        self.perform_crossover(crossover_operator=single_point_crossover)
+                        self.perform_crossover(
+                            crossover_operator=single_point_crossover,
+                            selection_operator_name='sus'
+                        )
                     case 'uniform':
-                        self.perform_crossover(crossover_operator=uniform_crossover)
+                        self.perform_crossover(
+                            crossover_operator=uniform_crossover,
+                            selection_operator_name='sus'
+                        )
                     case 'plco':
-                        self.perform_crossover(crossover_operator=plco)
+                        self.perform_crossover(
+                            crossover_operator=plco,
+                            selection_operator_name='sus'
+                        )
 
         """Secondly, we create the new generation with children being a result od selection and crossover operators
         on the current population:"""
@@ -412,7 +363,19 @@ class Population:
             new_generation.add_member(genome=pair[0])
             new_generation.add_member(genome=pair[1])
 
-        """Thirdly, we overwrite the current generation with the new one:"""
+        """Thirdly, we add the elite - it doesn't matter that it's at the end of the new generation, because it'll be
+        sorted anyway after new Members evaluation."""
+        index = 0
+        while index < self.elite_size:
+            new_generation.add_member(
+                genome=self.current_generation.members[self.current_fitness_ranking[index].get('index')].genes
+            )
+            new_generation.add_member(
+                genome=self.current_generation.members[self.current_fitness_ranking[index + 1].get('index')].genes
+            )
+            index += 2
+
+        """Finally, we overwrite the current generation with the new one:"""
         self.current_generation = new_generation
 
     def mutate(self):
@@ -421,12 +384,15 @@ class Population:
         of members to be mutated and then generate pseudo-randomly a list of member indexes in the current generation
         to be mutated."""
         number_of_mutations = floor(self.mutation_prob * self.current_generation.size)
-        indexes = random.sample(range(self.current_generation.size), int(number_of_mutations))  # has to be an integer
+        indexes = random.sample(
+            range(self.current_generation.size - self.elite_size),  # size of generation is a constant, it has to be adjusted to the lack of elite; after all we want to mutate all but the elite members
+            int(number_of_mutations)  # has to be an integer, e.g., you can't make half of a mutation
+        )
 
         """For new (mutated) genome creation I use the generator passed to the superclass in it's initialisation:"""
         for index in indexes:
             self.current_generation.members[index].change_genes(
-                self.current_generation.genome_generator(self.current_generation.genome_generator_args)
+                self.genome_generator(self.genome_generator_args)
             )
 
     def reset_parents(self):
@@ -437,3 +403,26 @@ class Population:
 
     def change_population_size(self, pop_size):
         self.pop_size = pop_size
+
+    # TODO: add fitness history plotting
+
+    def fitness_plot(self):
+        historic_best_fits = []
+        for old_fitness_ranking in self.fitness_rankings:
+            historic_best_fits.append(old_fitness_ranking[0].get('fitness value'))
+
+        generation_indexes = np.arange(start=0, stop=len(historic_best_fits), step=1)
+
+        plt.plot(generation_indexes, historic_best_fits)
+        plt.show()
+
+
+class ParallelPopulation(Population):
+    """This class is supposed to enable creating new generations in parallel, as a result of different combinations
+    of selection & crossover operators. They can be passed to a class instance as lists; if they contain only
+    one element each, a regular genetic algorithm will be performed, not a parallel one."""
+    def __init__(self, selection_operators: list, crossover_operators: list,
+                 pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=0.0, seed=None):
+        super().__init__(pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=mutation_prob, seed=seed)
+
+
