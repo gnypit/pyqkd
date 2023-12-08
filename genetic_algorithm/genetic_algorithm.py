@@ -196,7 +196,15 @@ class Population:
         generation from the current generation and appends it to the 'parents' field in this class:"""
         parents_candidates = []
 
-        while member_counter < self.current_generation.size:
+        """Because I decided to not only preserve the elite, but also perform crossover on it, I'll disregard
+        a part of current generation's members with worst fitness, so that the size os population is constant.
+
+        We'll have elite_size number of elite Members copied, elite_size number of Members being the children of the 
+        elite, and that leaves us with (pop_size - 2 * elite_size) number of places in the generation. Since the
+        elite-parents will be added now, we have to subtract the 'other' elite_size number of Members from the
+        loop limit to preserve the right size of generation - for when the elite will be copied directly
+        into children's list:"""
+        while member_counter < self.current_generation.size - self.elite_size:
             """In each iteration we add two parents who will result in two children,
             which is why we use a while loop and 'jump' 2 population members in each iteration."""
             param = random.uniform(0, fit_total)
