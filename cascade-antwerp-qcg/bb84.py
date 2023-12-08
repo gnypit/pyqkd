@@ -120,23 +120,23 @@ def cascade_blocks_sizes_old(quantum_bit_error_rate, key_length, n_passes=1):
     the largest one suitable for the whole algorithm to be performed.
     """
     max_expected_value = -1 * math.log(0.5, math.e)
-    # best_expected_value = max_expected_value
     best_size = 0
 
     for size in list(np.arange(2, key_length // 4 + 1, 1)):  # we need at lest 2 blocks to begin with
 
-        # Firstly we check condition for expected values - (3) in the paper
+        """Firstly we check condition for expected values - (3) in the paper"""
         expected_value = 0
 
         for j in list(np.arange(1, size // 2 + 1, 1)):
             expected_value += 2 * j * numerical_error_prob(n_errors=2 * j, pass_size=size, qber=quantum_bit_error_rate)
 
-        if expected_value <= max_expected_value:
-            first_condition = True
-        else:
-            first_condition = False
+        if expected_value > max_expected_value:
+            """As for increasing sizes the expected value is non-decreasing. Thus, once the expected_value of number
+            of errors remaining in the first block is greater than the max_expected_value, it'll always be.
+            Therefore, it makes no sense to keep checking greater sizes - none of them will meet this requirement."""
+            break
 
-        # Secondly we check condition for probabilities per se - (2) in the paper
+        """Secondly we check condition for probabilities per se - (2) in the paper"""
         second_condition = False
         for j in list(np.arange(0, size // 2 + 1, 1)):
             prob_sum = 0
@@ -146,9 +146,12 @@ def cascade_blocks_sizes_old(quantum_bit_error_rate, key_length, n_passes=1):
             if prob_sum <= numerical_error_prob(n_errors=2 * j, pass_size=size, qber=quantum_bit_error_rate) / 4:
                 second_condition = True
             else:
+                """This condition has to be met by all possible numbers of errors. If a single number of errors doesn't
+                meet this requirement, there is no point in keeping checking the other for this particular size."""
                 second_condition = False
+                break
 
-        if first_condition and second_condition:
+        if second_condition:
             if size > best_size:
                 # best_expected_value = expected_value
                 best_size = size
@@ -191,10 +194,11 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=2):
         in the first pass of CASCADE - (3) in the paper
         """
         expected_value = size * quantum_bit_error_rate - (1 - (1 - 2 * quantum_bit_error_rate)**size) / 2
-        if expected_value <= max_expected_value:
-            first_condition = True
-        else:
-            first_condition = False
+        if expected_value > max_expected_value:
+            """As for increasing sizes the expected value is non-decreasing. Thus, once the expected_value of number
+            of errors remaining in the first block is greater than the max_expected_value, it'll always be.
+            Therefore, it makes no sense to keep checking greater sizes - none of them will meet this condition."""
+            break
 
         """For the (2) condition (inequality)..."""
         second_condition = False
@@ -222,8 +226,9 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=2):
                 second_condition = True
             else:
                 second_condition = False
+                break
 
-        if first_condition and second_condition:
+        if second_condition:
             if size > best_size:
                 best_size = size
 
