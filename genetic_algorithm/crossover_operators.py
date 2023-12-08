@@ -8,12 +8,15 @@ from numpy.random import binomial as np_binom
 from genetic_algorithm import Member
 
 
-def single_point_crossover(crossover_point, parent1: Member, parent2: Member):
+def single_point_crossover(parent1: Member, parent2: Member, crossover_point=None):
     """Parents will be crossed such that genes from first one (numbered from 0) up to crossover_point
     included shall go to one child, and the rest to the other."""
 
     parent1_genes = list(parent1.genes)
     parent2_genes = list(parent2.genes)
+
+    if crossover_point is None:
+        crossover_point = len(parent1_genes) // 2
 
     # TODO: different working with genes whether it's a dict or a list
 

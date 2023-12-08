@@ -299,6 +299,8 @@ class Population:
         if selection_operator == 'sus':  # wtf did I mean here
             print('yes')
 
+        # TODO: passing crossover operator's arguments
+
         match str(selection_operator):
             case 'ranking':
                 self.ranking_selection()
