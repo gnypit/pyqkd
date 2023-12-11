@@ -65,6 +65,13 @@ class Generation:
                 identification += 1
                 self.members.append(new_member)
 
+        """With parallel computation in mind, with possible multiple rival generations being created, 
+        a more transparent and easier to control approach is to store the current fitness ranking of a given generation
+        inside the Generation class. Besides, the fitness ranking is a property of a generation, 
+        not the whole population.
+        """
+        self.fitness_ranking = []
+
     def add_member(self, genome, parents_id=None):
         """Method for manual creation of new members"""
 
