@@ -305,7 +305,7 @@ class Population:
                 }
             )
 
-    def create_new_generation(self, selection_operator, crossover_operator):  # for single new generation creation
+    def create_new_generation(self, selection_operator, crossover_operator, args: dict):
         """A method for combining selection and crossover operators over the current population to create a new one.
         For the moment we are assuming that there will be a single list of children candidates.
         Firstly we have to match the selection operator; then in each case we have to match the crossover operator.
@@ -314,10 +314,12 @@ class Population:
         method, so that it takes the parents lists designated for a given new generation creation, i.e., to
         always connect the chosen crossover to chosen selection and yet keep all probable parents lists
         from different selection processes in one object for multiple processes to access.
-        """
 
-        if selection_operator == 'sus':  # wtf did I mean here
-            print('yes')
+        selection_operator is a function passed to this method for parents selection
+        crossover_operator is a function passed to this method for the crossover of the parents
+        args is a dictionary with arguments for both selection and crossover operators; it's structure should be:
+            args = {"selection" : ..., "crossover": ...}
+        """
 
         # TODO: passing crossover operator's arguments
 
