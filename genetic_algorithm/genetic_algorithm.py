@@ -284,9 +284,13 @@ class Population:
         """...and append it to the list of candidate parents lists:"""
         self.current_parents.append({'sus': parents_candidates})
 
-    def perform_crossover(self, crossover_operator, selection_operator_name):
+    def perform_crossover(self, crossover_operator, selection_operator_name, args = None):
         """Let's try passing the selection operator info into the crossover operator, so that instead of forcing
-        taking a list of dict_values we simply call the value with a key."""
+        taking a list of dict_values we simply call the value with a key.
+
+        We need to pass a list of arguments for the crossover operator, if necessary. For args = None crossover
+        operators use default settings/parameters.
+        """
         children_candidates = []
         for parents_candidates in self.current_parents:
             # list_of_parents_pairs = list(parents_candidates.values())  # I'm forcing it to be a list object
@@ -295,7 +299,8 @@ class Population:
                 children_candidates.append(
                     crossover_operator(
                         parents_pair.get('parent1'),
-                        parents_pair.get('parent2')
+                        parents_pair.get('parent2'),
+                        args=args
                     )
                 )
             self.current_children.append(
