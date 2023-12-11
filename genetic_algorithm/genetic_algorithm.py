@@ -48,16 +48,16 @@ class Member(Chromosome):
 
 
 class Generation:
-    def __init__(self, size, genome_generator=None, args=None):
+    def __init__(self, size, genome_generator=None, genome_args=None):
         """genome_generator is the function that creates genomes for the initial generation
-        of population members, args are arguments to be used in genome_generator;
+        of population members, genome_args are arguments to be used in genome_generator;
         this method uses a global variable identification for creating unique IDs for created members"""
 
         global identification
         self.size = size
         self.members = []
         self.genome_generator = genome_generator
-        self.genome_generator_args = args
+        self.genome_generator_args = genome_args
 
         if self.genome_generator is not None:  # ONLY for the initial generation within the population
             for index in range(self.size):
@@ -82,11 +82,12 @@ class Generation:
 
 
 class Population:
-    def __init__(self, pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=0.0, seed=None):
+    def __init__(self, pop_size, fit_fun, genome_generator, elite_size, args: dict, mutation_prob=0.0, seed=None):
         """pop_size is a constant size of the population, fit_fun is a chosen fitness function to be used in a
         genetic algorithm, genom_generator is the function that creates genomes for the initial generation
-        of population members, args are arguments to be used in genom_generator, mutation_prob is a probability
-        of a single member's genome being initialised from scratch, seed is for pseud-random number generation."""
+        of population members, args are arguments to be used in genome_generator & selection/crossover operators,
+        mutation_prob is a probability of a single member's genome being initialised from scratch,
+        seed is for pseud-random number generation."""
 
         # TODO differentiate between initial population size and the population size later on
 
@@ -102,10 +103,17 @@ class Population:
         directly to the __init__ method within the Generation class, we need to memorise these two variables
         for mutation later on."""
         self.genome_generator = genome_generator
-        self.genome_generator_args = args
+        self.genome_generator_args = args.get('genome')  # TODO we need to verify it and document outside of code...
+        # TODO ...as there are more and more args everywhere and I don't know how to handle it better
+        self.selection_args = args.get('selection')
+        self.crossover_args = args.get('crossover')
 
         """Creating the first - initial - generation in this population and lists to handle future generations"""
-        self.current_generation = Generation(size=pop_size, genome_generator=genome_generator, args=args)
+        self.current_generation = Generation(
+            size=pop_size,
+            genome_generator=genome_generator,
+            genome_args=self.genome_generator_args
+        )
         self.generations = [self.current_generation]
         self.current_parents = []
         self.current_children = []
@@ -284,7 +292,7 @@ class Population:
         """...and append it to the list of candidate parents lists:"""
         self.current_parents.append({'sus': parents_candidates})
 
-    def perform_crossover(self, crossover_operator, selection_operator_name, args = None):
+    def perform_crossover(self, crossover_operator, selection_operator_name):
         """Let's try passing the selection operator info into the crossover operator, so that instead of forcing
         taking a list of dict_values we simply call the value with a key.
 
@@ -300,7 +308,7 @@ class Population:
                     crossover_operator(
                         parents_pair.get('parent1'),
                         parents_pair.get('parent2'),
-                        args=args
+                        args=self.crossover_args
                     )
                 )
             self.current_children.append(
@@ -310,7 +318,7 @@ class Population:
                 }
             )
 
-    def create_new_generation(self, selection_operator, crossover_operator, args: dict):
+    def create_new_generation(self, selection_operator, crossover_operator):
         """A method for combining selection and crossover operators over the current population to create a new one.
         For the moment we are assuming that there will be a single list of children candidates.
         Firstly we have to match the selection operator; then in each case we have to match the crossover operator.
@@ -322,8 +330,6 @@ class Population:
 
         selection_operator is a function passed to this method for parents selection
         crossover_operator is a function passed to this method for the crossover of the parents
-        args is a dictionary with arguments for both selection and crossover operators; it's structure should be:
-            args = {"selection" : ..., "crossover": ...}
         """
 
         # TODO: passing crossover operator's arguments
@@ -449,7 +455,7 @@ class Population:
 
 
 class ParallelPopulation(Population):
-    """This class is supposed to enable fitness calculations in parallel."""
+    """This class is supposed to enable fitness calculations in parallel. I think that an atomic """
     def __init__(self, operator_pairs: list, pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=0.0,
                  seed=None):
         super().__init__(pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=mutation_prob, seed=seed)
