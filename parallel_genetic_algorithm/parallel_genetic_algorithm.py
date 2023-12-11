@@ -1,5 +1,5 @@
 import multiprocessing
-from genetic_algorithm.genetic_algorithm import Population
+from genetic_algorithm.genetic_algorithm import Population, sort_dict_by_fit
 
 
 class ParallelPopulation(Population):
