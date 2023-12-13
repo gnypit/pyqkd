@@ -13,6 +13,9 @@ from scipy.stats import binom
 from scipy.special import betainc
 
 
+# TODO: rename variable to have the content first, name later, e.g., bits_alice instead of alice_bits
+# TODO: add a variable demonstration=FALSE, which makes the code omit parts which are for the demonstrator
+
 """Let's set up the quantum channel (BB84)"""
 basis_mapping = {'rectilinear': 0, 'diagonal': 1}
 states_mapping = {'0': 0, '1': 1, '+': 0, '-': 1}
@@ -382,18 +385,31 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     final key, length of the final key, a dictionary containing computational costs of consecutive parts of the
     algorithm, equal to number of bits exchanged (either via quantum or public channel) and number of last performed
     CASCADE pass - after each one error rate is tested and if equals 0, the error correction algorithm is stopped."""
-    global_time_start = time.time()  # Beginning of time measurement for fitness evaluation
 
-    """We want to store numbers of bits exchanged in each phase of the simulation: while using quantum channel,
-    while performing sifting, error estimation and finally CASCADE.
+    """I want to have a history of key lengths through the whole simulation: after using the quantum channel,
+    after performing sifting, error estimation and finally CASCADE.
     """
-    computational_cost = {'qubits': alice_basis_length, 'sifting': 0, 'error estimation': 0,
-                          'error correction': 0}  # we will systematically update this dictionary
+    key_length_history = {
+        'qubits': alice_basis_length,  # after qubits exchange in the quantum channel
+        'sifting': 0,  # after sifting phase
+        'error estimation': 0,  # after error estimation phase
+        'error correction': 0  # after error correction phase (CASCADE)
+    }  # we will systematically update this dictionary
 
-    '''
-    alice_basis = random_choice(length=alice_basis_length, p=rectilinear_basis_prob)
-    alice_bits = random_choice(length=alice_basis_length, p=rectilinear_basis_prob)
-    '''
+    """After I optimised the search for the initial CASCADE block size, I want to measure the time needed for each
+    phase
+    """
+    time_history = {
+        'qubits': 0,  # after qubits exchange in the quantum channel
+        'sifting': 0,  # after sifting phase
+        'error estimation': 0,  # after error estimation phase
+        'error correction': 0  # after error correction phase (CASCADE)
+    }  # we will systematically update this dictionary
+
+    # TODO: which is better for research, lists or strings? For visualisation strings.
+
+    time_quantum_channel_start = time.time()
+
     alice_basis_list = np.random.binomial(1, 1 - rectilinear_basis_prob, alice_basis_length)
     alice_basis = ''
     for basis in alice_basis_list:
@@ -488,6 +504,10 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
             bob_bits += 'E'  # E for error
             continue
 
+    """End of quantum channel measurements."""
+    time_quantum_channel_end = time.time()
+    time_history['qubits'] = time_quantum_channel_end - time_quantum_channel_start
+
     """Alice and Bob each have a string of bits, which will shortly become a key for cipher.
     At this point Alice and Bob can switch to communicating on a public channel. Their first step is to 
     perform sifting - decide which bits to keep in their key.
@@ -496,6 +516,8 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     Then it's Alice's turn to send Bob her basis and to cancel out bits (representing states!) from her string 
     that do not match both successful Bob's measurement and his usage of the same basis in each case.
     """
+
+    time_sifting_start = time.time()
 
     bob_measurement_indicators = ''
     for bit in bob_bits:  # is it possible to optimise length of such an indicator?
@@ -542,8 +564,10 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
             bob_sifted_basis += bob_indicated_basis[index]
         index += 1
 
-    """At this point we memorise number of bits exchanged during this phase"""
-    computational_cost['sifting'] = len(bob_measurement_indicators) + len(alice_indicated_basis)
+    """End of the sifting phase"""
+    key_length_history['sifting'] = len(bob_sifted_key)
+    time_sifting_end = time.time()
+    time_history['qubits'] = time_sifting_end - time_sifting_start
 
     """Sifted keys generally differ from each other due to changes between states sent by Alice and received by Bob.
     In order to estimate empirical probability of error occurrence in the sifted keys we can publish parts
@@ -554,6 +578,8 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     (Lo, Chau, Ardehali, 2004). For this purpose I defined above two functions: naive_error & refined_average_error.
     Below we will use (by default) the refined one.
     """
+
+    time_error_estimation_start = time.time()
 
     if error_estimation == refined_average_error:
         error_estimation_results = refined_average_error(
@@ -576,12 +602,10 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     alice_sifted_key_after_error_estimation = error_estimation_results.get('alice key')
     bob_sifted_key_after_error_estimation = error_estimation_results.get('bob key')
 
-    """Bits published during error rate estimation do not count in the case of leaked information, 
-    as they have been deleted from the raw key afterwards. Nevertheless, they still matter in regards to 
-    computational cost:
-    """
-    computational_cost['error estimation'] = error_estimation_results.get('number of published bits')
-    exchanged_bits_counter = 0
+    key_len = len(alice_sifted_key_after_error_estimation)
+    key_length_history['error estimation'] = key_len
+    time_error_estimation_end = time.time()
+    time_history['error estimation'] = time_error_estimation_end - time_error_estimation_start
 
     """Naturally we assume it's Bob's key that's flawed.
     
@@ -591,19 +615,23 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     CASCADE: 1st I need to assign bits to their indexes in original strings. Therefore I create dictionaries
     for Alice and for Bob.
     """
-    n = len(alice_sifted_key_after_error_estimation)
+    time_error_correction_start = time.time()
     alice_cascade = {}
     bob_cascade = {}
 
-    for i in range(n):  # I dynamically create dictionaries with indexes as keys and bits as values
+    for i in range(key_len):  # I dynamically create dictionaries with indexes as keys and bits as values
         alice_cascade[str(i)] = alice_sifted_key_after_error_estimation[i]
         bob_cascade[str(i)] = bob_sifted_key_after_error_estimation[i]
 
-    """Now we need to set up CASCADE itself: sizes of blocks in each pass, numeration of passes and a distionary
+    """Now we need to set up CASCADE itself: sizes of blocks in each pass, numeration of passes and a dictionary
     for corrected bits with their indexes from original Bob's string as keys and correct bits as values.
     """
 
-    blocks_sizes = cascade_blocks_sizes(quantum_bit_error_rate=error_estimate, key_length=n, n_passes=cascade_n_passes)
+    blocks_sizes = cascade_blocks_sizes(
+        quantum_bit_error_rate=error_estimate,
+        key_length=key_len,
+        n_passes=cascade_n_passes
+    )
 
     """In order to return to blocks from earlier passes of CASCADE we need a history of blocks with indexes and bits,
     so implemented by dictionaries as list elements per pass, nested in general history list:
@@ -611,16 +639,16 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     history = []
     error_rates = []
     pass_number = 0
+    exchanged_bits_counter = 0
 
     for size in blocks_sizes:
         try:
             pass_number_of_blocks = int(
-                -1 * np.floor(-1 * n // size))  # I calculate how many blocks are in total in this pass
+                -1 * np.floor(-1 * key_len // size))  # I calculate how many blocks are in total in this pass
         except ZeroDivisionError:
-            global_time_end = time.time()
             error_message = [blocks_sizes, pass_number, alice_basis_length, gain, disturbance_probability,
-                             error_estimate, n, global_time_end - global_time_start,
-                             rectilinear_basis_prob, publication_probability_rectilinear, cascade_n_passes]
+                             error_estimate, key_len, rectilinear_basis_prob, publication_probability_rectilinear,
+                             cascade_n_passes]
             print(error_message)
             continue
 
@@ -629,7 +657,7 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
         alice_blocks = []
         bob_blocks = []
 
-        for block_index in cascade_blocks_generator(string_length=n, blocks_size=size):
+        for block_index in cascade_blocks_generator(string_length=key_len, blocks_size=size):
 
             alice_block = {}  # a dictionary for a single block for Alice
             bob_block = {}  # a dictionary for a single block for Bob
@@ -702,10 +730,9 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
                                             indexes=history[n_pass][1][n_block].keys()
                                         )
                                 except AttributeError:
-                                    global_time_end = time.time()
                                     error_message = [blocks_sizes, alice_basis_length, gain, disturbance_probability,
-                                                     error_estimate, n, global_time_end - global_time_start,
-                                                     rectilinear_basis_prob, publication_probability_rectilinear,
+                                                     error_estimate, key_len, rectilinear_basis_prob,
+                                                     publication_probability_rectilinear,
                                                      cascade_n_passes, "AttributeError for binary_previous"]
                                     print(error_message)
 
@@ -741,18 +768,21 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
         try:
             key_error_rate = key_error_rate / len(alice_key_error_check)
             error_rates.append(key_error_rate)  # its length is equivalent to no. CASCADE passes performed
-            if key_error_rate < 0.01:  # VERY ARBITRARY!!! + ryzyko odejmowania małych liczb? Co z tym?
+            if key_error_rate < 0.0001:  # TODO: is 0.1% a small enough number?
                 break  # let's not waste time for more CASCADE passes if there are 'no more' errors
         except ZeroDivisionError:
-            global_time_end = time.time()
             error_message = [blocks_sizes, pass_number, alice_basis_length, gain, disturbance_probability,
-                             error_estimate, n, global_time_end - global_time_start,
-                             rectilinear_basis_prob, publication_probability_rectilinear, cascade_n_passes]
+                             error_estimate, key_len, rectilinear_basis_prob, publication_probability_rectilinear,
+                             cascade_n_passes]
             print(error_message)
 
     """Time to create strings from cascade dictionaries into corrected keys"""
     alice_correct_key = ''.join(list(alice_cascade.values()))
     bob_correct_key = ''.join(list(bob_cascade.values()))
+    time_error_correction_end = time.time()
+    time_history['error correction'] = time_error_correction_end - time_error_correction_start
+    key_len = len(bob_correct_key)
+    key_length_history['error correction'] = key_len
 
     """All that remains is to randomly choose number of bits for deletion, equal to number of exchanged bits
     during error correction phase. It's a form of a rudimentary privacy amplification. Let's say Alice randomly deletes 
@@ -764,10 +794,9 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     try:
         deletion_prob = exchanged_bits_counter / len(alice_correct_key)
     except ZeroDivisionError:
-        global_time_end = time.time()
         error_message = [blocks_sizes, pass_number, alice_basis_length, gain, disturbance_probability,
-                         error_estimate, n, global_time_end - global_time_start,
-                         rectilinear_basis_prob, publication_probability_rectilinear, cascade_n_passes]
+                         error_estimate, key_len, rectilinear_basis_prob, publication_probability_rectilinear,
+                         cascade_n_passes]
         print(error_message)
         deletion_prob = 0  # no idea how to set it better in such a case
     index = 0
@@ -782,11 +811,7 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
 
         index += 1
 
-    """Now we finally have the proper keys"""
-    global_time_end = time.time()
-    computational_cost['error correction'] = exchanged_bits_counter + deleted_bits_counter  # should be an even number
-
-    """Let's calculate key error rate"""
+    """Now we finally have the proper keys. Let's calculate key error rate"""
     final_key_error_rate = 0
     index = 0
     for bit in alice_correct_key:
@@ -799,35 +824,33 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     try:
         final_key_error_rate = final_key_error_rate / len(alice_correct_key)
     except ZeroDivisionError:
-        global_time_end = time.time()
         error_message = [blocks_sizes, pass_number, alice_basis_length, gain, disturbance_probability,
-                         error_estimate, n, global_time_end - global_time_start,
-                         rectilinear_basis_prob, publication_probability_rectilinear, cascade_n_passes]
+                         error_estimate, key_len, rectilinear_basis_prob, publication_probability_rectilinear,
+                         cascade_n_passes]
         print(error_message)
         final_key_error_rate = 1  # we set a max value to punish such a case
-    key_length = len(alice_correct_key)
+    key_length_history['error correction'] = len(alice_correct_key)
 
     results = {
         'error rate': final_key_error_rate,
-        'global time': global_time_end - global_time_start,
-        'key length': key_length,
-        'comp. cost': computational_cost,
-        'no. del. bits': deleted_bits_counter,  # just in the case
+        'time_history': time_history,
+        'key length history': key_length_history,
+        'no. del. bits': deleted_bits_counter,
         'no. cascade pass.': len(error_rates),
-        'cascade history': history,  # for the demonstrator
-        'alice states': alice_states,  # for the demonstrator
-        'bob states': bob_states,  # for the demonstrator
-        'alice basis': alice_basis,  # for the demonstrator
-        'bob basis': bob_basis,  # for the demonstrator
-        'alice bits': alice_bits,  # for the demonstrator
-        'bob bits': bob_bits,  # for the demonstrator
-        'alice sifted key': alice_sifted_key,  # for the demonstrator
-        'bob sifted key': bob_sifted_key,  # for the demonstrator
-        'alice sifted key after error estimation': alice_sifted_key_after_error_estimation,  # for the demonstrator
-        'bob sifted key after error estimation': bob_sifted_key_after_error_estimation,  # for the demonstrator
-        'error estimate': error_estimate,  # for the demonstrator
-        'alice correct key': alice_correct_key,  # for the demonstrator
-        'bob correct_key': bob_correct_key  # for the demonstrator
+        'cascade history': history,
+        'alice states': alice_states,
+        'bob states': bob_states,
+        'alice basis': alice_basis,
+        'bob basis': bob_basis,
+        'alice bits': alice_bits,
+        'bob bits': bob_bits,
+        'alice sifted key': alice_sifted_key,
+        'bob sifted key': bob_sifted_key,
+        'alice sifted key after error estimation': alice_sifted_key_after_error_estimation,
+        'bob sifted key after error estimation': bob_sifted_key_after_error_estimation,
+        'error estimate': error_estimate,
+        'alice correct key': alice_correct_key,
+        'bob correct_key': bob_correct_key
     }
 
     return results
