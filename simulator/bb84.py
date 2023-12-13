@@ -713,7 +713,7 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
                         for n_block in range(
                                 len(history[0][n_pass][1])):  # we check all Bob's blocks in each previous pass
                             if binary_results[1] in history[n_pass][1][n_block]:
-                                history[n_pass][1][n_block] = binary_results[0]
+                                history[n_pass][1][n_block] = binary_results[0]  # TODO: in here history[n_pass]['Bob'][n_block]['index of bit'] = binary_results[0] ???
 
                                 try:
                                     if type(history[n_pass][1][n_block]) == str:
