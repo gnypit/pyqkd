@@ -730,7 +730,7 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
                                     binary_previous = binary(
                                         sender_block=previous_pass_blocks_alice[n_block],
                                         receiver_block=previous_pass_blocks_bob[n_block],
-                                        indexes=list(previous_pass_blocks_bob[n_block].keys())
+                                        indexes=list(previous_pass_blocks_alice[n_block].keys())
                                     )
 
                                     exchanged_bits_counter += binary_previous.get('Bit counter')
