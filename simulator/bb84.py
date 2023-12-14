@@ -232,7 +232,7 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=2):
             if size > best_size:
                 best_size = size
 
-    sizes = [best_size]
+    sizes = [best_size - best_size % 2]  # all sizes must be even numbers for BINARY (search for errors) to operate
 
     for j in range(n_passes - 1):  # corrected interpretation of number of passes
         next_size = 2 * sizes[-1]
