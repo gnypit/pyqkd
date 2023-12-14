@@ -425,17 +425,17 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     to proper states, changing 0 and 1 into + and - for the diagonal basis, respectively.
     """
 
-    i = 0
+    block_number = 0
     alice_states_list = list(alice_bits)
     for bit in alice_bits:
-        if alice_basis[i] == '1':
+        if alice_basis[block_number] == '1':
             if bit == '0':
-                alice_states_list[i] = '+'
+                alice_states_list[block_number] = '+'
             elif bit == '1':
-                alice_states_list[i] = '-'
+                alice_states_list[block_number] = '-'
             else:
-                alice_states_list[i] = 'U'  # U for unknown
-        i += 1
+                alice_states_list[block_number] = 'U'  # U for unknown
+        block_number += 1
 
     alice_states = ''.join(alice_states_list)
 
@@ -491,8 +491,8 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     """
 
     bob_states = ''
-    for i in range(alice_basis_length):  # it's the same length as of Bob's basis choices
-        bob_states += measurement(state=received_states[i], basis=bob_basis[i])
+    for block_number in range(alice_basis_length):  # it's the same length as of Bob's basis choices
+        bob_states += measurement(state=received_states[block_number], basis=bob_basis[block_number])
 
     """Now, having Bob's measurement results, we can translate states into bits."""
 
@@ -619,9 +619,9 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     alice_cascade = {}
     bob_cascade = {}
 
-    for i in range(key_len):  # I dynamically create dictionaries with indexes as keys and bits as values
-        alice_cascade[str(i)] = alice_sifted_key_after_error_estimation[i]
-        bob_cascade[str(i)] = bob_sifted_key_after_error_estimation[i]
+    for block_number in range(key_len):  # I dynamically create dictionaries with indexes as keys and bits as values
+        alice_cascade[str(block_number)] = alice_sifted_key_after_error_estimation[block_number]
+        bob_cascade[str(block_number)] = bob_sifted_key_after_error_estimation[block_number]
 
     """Now we need to set up CASCADE itself: sizes of blocks in each pass, numeration of passes and a dictionary
     for corrected bits with their indexes from original Bob's string as keys and correct bits as values.
@@ -673,12 +673,12 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
             alice_blocks.append(alice_block)
             bob_blocks.append(bob_block)
 
-        for i in range(pass_number_of_blocks):
+        for block_number in range(pass_number_of_blocks):
 
-            current_indexes = list(alice_blocks[i].keys())  # same as Bob's
+            current_indexes = list(alice_blocks[block_number].keys())  # same as Bob's
 
-            alice_current_bits = list(alice_blocks[i].values())
-            bob_current_bits = list(bob_blocks[i].values())
+            alice_current_bits = list(alice_blocks[block_number].values())
+            bob_current_bits = list(bob_blocks[block_number].values())
 
             alice_bit_values = []
             bob_bit_values = []
@@ -690,11 +690,11 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
             alice_pass_parity_list.append(sum(alice_bit_values) % 2)
             bob_pass_parity_list.append(sum(bob_bit_values) % 2)
 
-            if alice_pass_parity_list[i] != bob_pass_parity_list[i]:  # we check if we should perform BINARY
+            if alice_pass_parity_list[block_number] != bob_pass_parity_list[block_number]:  # we check if we should perform BINARY
 
                 binary_results = binary(
-                    sender_block=alice_blocks[i],
-                    receiver_block=bob_blocks[i],
+                    sender_block=alice_blocks[block_number],
+                    receiver_block=bob_blocks[block_number],
                     indexes=current_indexes
                 )
                 binary_correct_bit_value = binary_results.get('Correct bit value')
@@ -708,7 +708,7 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
 
                 """Secondly we change main dictionary with final results and current blocks for history"""
                 bob_cascade[binary_correct_bit_index] = binary_correct_bit_value
-                bob_blocks[i][binary_correct_bit_index] = binary_correct_bit_value
+                bob_blocks[block_number][binary_correct_bit_index] = binary_correct_bit_value
 
                 """Thirdly we change the error bit in blocks' history_cascade:"""
                 if pass_number > 0:  # in the first pass of CASCADE there are no previous blocks
@@ -734,8 +734,8 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
                                     return error_message
 
                                 exchanged_bits_counter += binary_previous.get('Bit counter')
-                                bob_cascade[binary_previous[1]] = binary_previous.get('Corrected bit index')
-                                bob_blocks[i][binary_previous[1]] = binary_previous.get('Correct bit value')
+                                bob_cascade[binary_previous.get('Corrected bit index')] = binary_previous.get('Correct bit value')
+                                bob_blocks[block_number][binary_previous.get('Corrected bit index')] = binary_previous.get('Correct bit value')
 
         history_cascade.append({'Alice blocks': alice_blocks, 'Bob blocks': bob_blocks})
         pass_number += 1
@@ -744,7 +744,7 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
         alice_key_error_check = ''.join(list(alice_cascade.values()))
         bob_key_error_check = ''.join(list(bob_cascade.values()))
 
-        "Poniższe już można by wbić w osobną funkcję"
+        # TODO: can we make it a separate function?
         key_error_rate = 0
         index = 0
         for bit in alice_key_error_check:
