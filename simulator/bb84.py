@@ -2,7 +2,6 @@
 Author: Jakub Gnyp; contact: gnyp.jakub@gmail.com, LinkedIn: https://www.linkedin.com/in/gnypit/
 """
 
-import ast
 import random
 import math
 import time
