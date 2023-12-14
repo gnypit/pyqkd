@@ -727,6 +727,7 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
                             if binary_correct_bit_index in previous_pass_blocks_bob[n_block]:
                                 previous_pass_blocks_bob[n_block][binary_correct_bit_index] = binary_correct_bit_value
                                 try:
+                                    print("Doing previous BINARY")
                                     binary_previous = binary(
                                         sender_block=previous_pass_blocks_alice[n_block],
                                         receiver_block=previous_pass_blocks_bob[n_block],
