@@ -782,8 +782,6 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     bob_correct_key = ''.join(list(bob_cascade.values()))
     time_error_correction_end = time.time()
     time_history['error correction'] = time_error_correction_end - time_error_correction_start
-    key_len = len(bob_correct_key)
-    key_length_history['error correction'] = key_len
 
     """All that remains is to randomly choose number of bits for deletion, equal to number of exchanged bits
     during error correction phase. It's a form of a rudimentary privacy amplification. Let's say Alice randomly deletes 
