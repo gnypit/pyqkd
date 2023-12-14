@@ -590,16 +590,24 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
             alice_basis=alice_sifted_basis,
             bob_basis=bob_sifted_basis
         )
-    else:
+
+        error_estimate = error_estimation_results.get('error estimator')
+        alice_sifted_key_after_error_estimation = error_estimation_results.get('alice key')
+        bob_sifted_key_after_error_estimation = error_estimation_results.get('bob key')
+    elif error_estimation == naive_error:
         error_estimation_results = naive_error(
             alice_key=alice_sifted_key,
             bob_key=bob_sifted_key,
             publication_prob_rect=publication_probability_rectilinear
         )
 
-    error_estimate = error_estimation_results.get('error estimator')
-    alice_sifted_key_after_error_estimation = error_estimation_results.get('alice key')
-    bob_sifted_key_after_error_estimation = error_estimation_results.get('bob key')
+        error_estimate = error_estimation_results.get('error estimator')
+        alice_sifted_key_after_error_estimation = error_estimation_results.get('alice key')
+        bob_sifted_key_after_error_estimation = error_estimation_results.get('bob key')
+    else:
+        error_estimate = disturbance_probability
+        alice_sifted_key_after_error_estimation = alice_sifted_key
+        bob_sifted_key_after_error_estimation = bob_sifted_key
 
     key_len = len(alice_sifted_key_after_error_estimation)
     key_length_history['error estimation'] = key_len
