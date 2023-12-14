@@ -727,12 +727,18 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
                             if binary_correct_bit_index in previous_pass_blocks_bob[n_block]:
                                 previous_pass_blocks_bob[n_block][binary_correct_bit_index] = binary_correct_bit_value
                                 try:
-                                    print("Doing previous BINARY")
                                     binary_previous = binary(
                                         sender_block=previous_pass_blocks_alice[n_block],
                                         receiver_block=previous_pass_blocks_bob[n_block],
                                         indexes=list(previous_pass_blocks_bob[n_block].keys())
                                     )
+
+                                    exchanged_bits_counter += binary_previous.get('Bit counter')
+                                    bob_cascade[binary_previous['Corrected bit index']] = binary_previous.get(
+                                        'Correct bit value')
+                                    bob_blocks[block_number][
+                                        binary_previous['Corrected bit index']] = binary_previous.get(
+                                        'Correct bit value')
                                 except AttributeError:
                                     error_message = [blocks_sizes, alice_basis_length, gain, disturbance_probability,
                                                      error_estimate, key_len, rectilinear_basis_prob,
@@ -740,10 +746,11 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
                                                      cascade_n_passes, "AttributeError for binary_previous"]
                                     print(error_message)
                                     return error_message
-
-                                exchanged_bits_counter += binary_previous.get('Bit counter')
-                                bob_cascade[binary_previous.get('Corrected bit index')] = binary_previous.get('Correct bit value')
-                                bob_blocks[block_number][binary_previous.get('Corrected bit index')] = binary_previous.get('Correct bit value')
+                                except KeyError:
+                                    print("KeyError for binary_previous")
+                                    print(previous_pass_blocks_alice[n_block])
+                                    print(previous_pass_blocks_bob[n_block])
+                                    print(list(previous_pass_blocks_bob[n_block].keys()))
 
         history_cascade.append({'Alice blocks': alice_blocks, 'Bob blocks': bob_blocks})
         pass_number += 1
