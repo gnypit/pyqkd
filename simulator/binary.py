@@ -91,10 +91,10 @@ def binary(sender_block, receiver_block, indexes, receiver_name='Bob'):
             """Firstly we change the error bit in Bob's original dictionary of all bits"""
             if receiver_current_block[indexes[0]] == '0':
                 # bob_cascade[indexes[0]] = '1'
-                return ['1', indexes[0], bit_counter]
+                return {'Correct bit value': '1', 'Corrected bit index': indexes[0], 'Bit counter': bit_counter}
             else:
                 # bob_cascade[indexes[0]] = '0'
-                return ['0', indexes[0], bit_counter]
+                return {'Correct bit value': '0', 'Corrected bit index': indexes[0], 'Bit counter': bit_counter}
 
             # Secondly we change the error bit in blocks' history
             # We need to perform BINARY on all blocks which we correct in history list

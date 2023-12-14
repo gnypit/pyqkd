@@ -697,18 +697,18 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
                     receiver_block=bob_blocks[i],
                     indexes=current_indexes
                 )
-                binary_correct_bit_value = binary_results[0]
-                binary_correct_bit_index = binary_results[1]
-                binary_number_of_exchanged_bits = binary_results[2]
+                binary_correct_bit_value = binary_results.get('Correct bit value')
+                binary_correct_bit_index = binary_results.get('Corrected bit index')
+                binary_number_of_exchanged_bits = binary_results.get('Bit counter')
 
                 """Firstly we add the number of exchanged bits during this BINARY performance to the general number
                 of bits exchanged via the public channel.
                 """
-                exchanged_bits_counter += binary_results[2]
+                exchanged_bits_counter += binary_number_of_exchanged_bits
 
                 """Secondly we change main dictionary with final results and current blocks for history"""
-                bob_cascade[binary_results[1]] = binary_results[0]
-                bob_blocks[i][binary_results[1]] = binary_results[0]
+                bob_cascade[binary_correct_bit_index] = binary_correct_bit_value
+                bob_blocks[i][binary_correct_bit_index] = binary_correct_bit_value
 
                 """Thirdly we change the error bit in blocks' history_cascade:"""
                 if pass_number > 0:  # in the first pass of CASCADE there are no previous blocks
@@ -733,9 +733,9 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
                                     print(error_message)
                                     return error_message
 
-                                exchanged_bits_counter += binary_previous[2]
-                                bob_cascade[binary_previous[1]] = binary_previous[0]
-                                bob_blocks[i][binary_previous[1]] = binary_previous[0]
+                                exchanged_bits_counter += binary_previous.get('Bit counter')
+                                bob_cascade[binary_previous[1]] = binary_previous.get('Corrected bit index')
+                                bob_blocks[i][binary_previous[1]] = binary_previous.get('Correct bit value')
 
         history_cascade.append({'Alice blocks': alice_blocks, 'Bob blocks': bob_blocks})
         pass_number += 1
