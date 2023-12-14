@@ -633,10 +633,13 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
         n_passes=cascade_n_passes
     )
 
-    """In order to return to blocks from earlier passes of CASCADE we need a history of blocks with indexes and bits,
-    so implemented by dictionaries as list elements per pass, nested in general history list:
+    """In order to return to blocks from earlier passes of CASCADE we need to be able to access blocks from previous
+    passes. For this purpose we create a history_cascade list, which will store for each pass a dict with lists
+    of the blocks, accessible this way:
+    
+    history_cascade[number of the pass][either 'Alice blocks' or 'Bob blocks'][number of the block in the given pass]
     """
-    history = []
+    history_cascade = []
     error_rates = []
     pass_number = 0
     exchanged_bits_counter = 0
@@ -694,6 +697,9 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
                     receiver_block=bob_blocks[i],
                     indexes=current_indexes
                 )
+                binary_correct_bit_value = binary_results[0]
+                binary_correct_bit_index = binary_results[1]
+                binary_number_of_exchanged_bits = binary_results[2]
 
                 """Firstly we add the number of exchanged bits during this BINARY performance to the general number
                 of bits exchanged via the public channel.
@@ -704,54 +710,34 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
                 bob_cascade[binary_results[1]] = binary_results[0]
                 bob_blocks[i][binary_results[1]] = binary_results[0]
 
-                """Thirdly we change the error bit in blocks' history
-                We need to perform BINARY on all blocks which we correct in history list
-                history[number of pass][owner][number of block]
-                """
+                """Thirdly we change the error bit in blocks' history_cascade:"""
                 if pass_number > 0:  # in the first pass of CASCADE there are no previous blocks
                     for n_pass in range(pass_number):  # we check all previous passes
-                        for n_block in range(
-                                len(history[0][n_pass][1])):  # we check all Bob's blocks in each previous pass
-                            if binary_results[1] in history[n_pass][1][n_block]:
-                                history[n_pass][1][n_block] = binary_results[0]  # TODO: in here history[n_pass]['Bob'][n_block]['index of bit'] = binary_results[0] ???
-
+                        previous_pass_blocks_alice = history_cascade[n_pass].get('Alice blocks')
+                        previous_pass_blocks_bob = history_cascade[n_pass].get('Bob blocks')
+                        for n_block in range(len(previous_pass_blocks_bob)):
+                            """We check all Bob's blocks in each previous pass"""
+                            if binary_correct_bit_index in previous_pass_blocks_bob[n_block]:
+                                previous_pass_blocks_bob[n_block][binary_correct_bit_index] = binary_correct_bit_value
                                 try:
-                                    if type(history[n_pass][1][n_block]) == str:
-                                        indexes = ast.literal_eval(history[n_pass][1][n_block])
-                                        binary_previous = binary(
-                                            sender_block=history[n_pass][0][n_block],
-                                            receiver_block=history[n_pass][1][n_block],
-                                            indexes=indexes.keys()
-                                        )
-                                    elif type(history[n_pass][1][n_block]) == dict:
-                                        binary_previous = binary(
-                                            sender_block=history[n_pass][0][n_block],
-                                            receiver_block=history[n_pass][1][n_block],
-                                            indexes=history[n_pass][1][n_block].keys()
-                                        )
+                                    binary_previous = binary(
+                                        sender_block=previous_pass_blocks_alice[n_block],
+                                        receiver_block=previous_pass_blocks_bob[n_block],
+                                        indexes=previous_pass_blocks_bob[n_block].keys()
+                                    )
                                 except AttributeError:
                                     error_message = [blocks_sizes, alice_basis_length, gain, disturbance_probability,
                                                      error_estimate, key_len, rectilinear_basis_prob,
                                                      publication_probability_rectilinear,
                                                      cascade_n_passes, "AttributeError for binary_previous"]
                                     print(error_message)
-
-                                    file = open("error.txt", "w")
-                                    file.write('\n' + 'type of history: ' + str(type(history)) + '\n' + 'type of '
-                                                                                                        'history['
-                                                                                                        'n_pass]: ' +
-                                               str(type(history[n_pass])) + '\n' + 'type of history[n_pass][1]: ' +
-                                               str(type(history[n_pass][1])) + '\n' + 'type of history[n_pass][1]['
-                                                                                      'n_block]: ' +
-                                               str(type(history[n_pass][1][n_block])) + '\n' + str(history) + '\n')
-                                    file.close()
-                                    exit()
+                                    return error_message
 
                                 exchanged_bits_counter += binary_previous[2]
                                 bob_cascade[binary_previous[1]] = binary_previous[0]
                                 bob_blocks[i][binary_previous[1]] = binary_previous[0]
 
-        history.append([alice_blocks, bob_blocks])
+        history_cascade.append({'Alice blocks': alice_blocks, 'Bob blocks': bob_blocks})
         pass_number += 1
 
         """For the purposes of optimizing CASCADE we check the error rate after each pass:"""
@@ -837,7 +823,7 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
         'key length history': key_length_history,
         'no. del. bits': deleted_bits_counter,
         'no. cascade pass.': len(error_rates),
-        'cascade history': history,
+        'cascade history': history_cascade,
         'alice states': alice_states,
         'bob states': bob_states,
         'alice basis': alice_basis,
