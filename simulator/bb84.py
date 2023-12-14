@@ -652,9 +652,9 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     exchanged_bits_counter = 0
 
     for size in blocks_sizes:
+        """For nested loops we need to know how many blocks are in total in each pass"""
         try:
-            pass_number_of_blocks = int(
-                -1 * np.floor(-1 * key_len // size))  # I calculate how many blocks are in total in this pass
+            pass_number_of_blocks = int(np.floor(key_len // size))
         except ZeroDivisionError:
             error_message = [blocks_sizes, pass_number, alice_basis_length, gain, disturbance_probability,
                              error_estimate, key_len, rectilinear_basis_prob, publication_probability_rectilinear,
@@ -697,8 +697,9 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
             alice_pass_parity_list.append(sum(alice_bit_values) % 2)
             bob_pass_parity_list.append(sum(bob_bit_values) % 2)
 
-            if alice_pass_parity_list[block_number] != bob_pass_parity_list[block_number]:  # we check if we should perform BINARY
-
+            if alice_pass_parity_list[block_number] != bob_pass_parity_list[block_number]:
+                """Since parities of given blocks are different for Alice and Bob, Bob must have an odd number
+                of errors; we we should search for them - and correct one of them - with BINARY"""
                 binary_results = binary(
                     sender_block=alice_blocks[block_number],
                     receiver_block=bob_blocks[block_number],
