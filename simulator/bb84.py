@@ -658,7 +658,7 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
         except ZeroDivisionError:
             error_message = [blocks_sizes, pass_number, alice_basis_length, gain, disturbance_probability,
                              error_estimate, key_len, rectilinear_basis_prob, publication_probability_rectilinear,
-                             cascade_n_passes]
+                             cascade_n_passes, 'ZeroDivisionError with size']
             print(error_message)
             continue
 
@@ -707,12 +707,11 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
                 )
                 binary_correct_bit_value = binary_results.get('Correct bit value')
                 binary_correct_bit_index = binary_results.get('Corrected bit index')
-                binary_number_of_exchanged_bits = binary_results.get('Bit counter')
 
                 """Firstly we add the number of exchanged bits during this BINARY performance to the general number
                 of bits exchanged via the public channel.
                 """
-                exchanged_bits_counter += binary_number_of_exchanged_bits
+                exchanged_bits_counter += binary_results.get('Bit counter')
 
                 """Secondly we change main dictionary with final results and current blocks for history"""
                 bob_cascade[binary_correct_bit_index] = binary_correct_bit_value
@@ -775,7 +774,7 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
         except ZeroDivisionError:
             error_message = [blocks_sizes, pass_number, alice_basis_length, gain, disturbance_probability,
                              error_estimate, key_len, rectilinear_basis_prob, publication_probability_rectilinear,
-                             cascade_n_passes]
+                             cascade_n_passes, 'ZeroDivisionError with len(alice_key_error_check)']
             print(error_message)
 
     """Time to create strings from cascade dictionaries into corrected keys"""
@@ -798,7 +797,7 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     except ZeroDivisionError:
         error_message = [blocks_sizes, pass_number, alice_basis_length, gain, disturbance_probability,
                          error_estimate, key_len, rectilinear_basis_prob, publication_probability_rectilinear,
-                         cascade_n_passes]
+                         cascade_n_passes, 'ZeroDivisionError with len(alice_correct_key)']
         print(error_message)
         deletion_prob = 0  # no idea how to set it better in such a case
     index = 0
@@ -828,7 +827,7 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     except ZeroDivisionError:
         error_message = [blocks_sizes, pass_number, alice_basis_length, gain, disturbance_probability,
                          error_estimate, key_len, rectilinear_basis_prob, publication_probability_rectilinear,
-                         cascade_n_passes]
+                         cascade_n_passes, 'ZeroDivisionError with len(alice_correct_key)']
         print(error_message)
         final_key_error_rate = 1  # we set a max value to punish such a case
     key_length_history['error correction'] = len(alice_correct_key)
