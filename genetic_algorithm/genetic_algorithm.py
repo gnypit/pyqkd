@@ -339,8 +339,6 @@ class Population:
         crossover_operator is a function passed to this method for the crossover of the parents
         """
 
-        # TODO: passing crossover operator's arguments
-
         match str(selection_operator):
             case 'ranking':
                 self.ranking_selection()
