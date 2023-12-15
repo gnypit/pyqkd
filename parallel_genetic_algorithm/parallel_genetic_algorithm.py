@@ -26,22 +26,7 @@ class ParallelPopulation(Population):
             pass  # TODO how to create rival generations apart from the actual generation in the Population???
 
     def evaluate_all_chromosomes(self, reverse=True):
-        # TODO adjust to multiple generations to evaluate
-        """This method applies the fitness function to the current generation and sorts the fitness ranking by
-        the fitness values of current generation's members - 'reverse' means sorting will be performed
-        from maximum fitness to minimum."""
-        self.current_fitness_ranking = []  # TODO maybe this should be inside Generation class?
 
-        for generation in self.rival_generations:
-            for i in range(len(generation.members)):
-                self.current_fitness_ranking.append(
-                    {'index': i, 'fitness value': self.fit_fun(generation.members[i])}  # THIS HAS TO BE PARALLEL!!!
-                )
-
-            # TODO perhaps it's better to make it even more atomised
-
-            self.current_fitness_ranking.sort(key=sort_dict_by_fit, reverse=reverse)
-            self.fitness_rankings.append(self.current_fitness_ranking)
 
     def best_fit(self):  # we return gene sequence of the chromosome of the highest fitness value with it's fit value
         # TODO adjust to multiple generations to evaluate
