@@ -13,11 +13,11 @@ def sort_dict_by_fit(dictionary):
 
 
 class Chromosome:
-    def __init__(self, genes):
+    def __init__(self, genes, fitness_function=None):
         self.genes = genes  # a dictionary
 
         """Optional fields, that I'm not sure I'll use directly in the Chromosome:"""
-        self.fit_fun = None
+        self.fit_fun = fitness_function
         self.fit_val = None
 
     def __repr__(self) -> str:
@@ -35,8 +35,8 @@ class Chromosome:
 
 
 class Member(Chromosome):
-    def __init__(self, genes, identification_number):
-        super().__init__(genes)
+    def __init__(self, genes, identification_number, fitness_function=None):
+        super().__init__(genes=genes, fitness_function=fitness_function)
         self.id = identification_number
         self.parents_id = None
 
@@ -48,20 +48,25 @@ class Member(Chromosome):
 
 
 class Generation:
-    def __init__(self, size, genome_generator=None, genome_args=None):
+    def __init__(self, size, fitness_function, genome_generator=None, genome_args=None):
         """genome_generator is the function that creates genomes for the initial generation
         of population members, genome_args are arguments to be used in genome_generator;
         this method uses a global variable identification for creating unique IDs for created members"""
 
         global identification
         self.size = size
+        self.fitness_function = fitness_function
         self.members = []
         self.genome_generator = genome_generator
         self.genome_generator_args = genome_args
 
         if self.genome_generator is not None:  # ONLY for the initial generation within the population
             for index in range(self.size):
-                new_member = Member(self.genome_generator(self.genome_generator_args), identification)
+                new_member = Member(
+                    genes=self.genome_generator(self.genome_generator_args),
+                    identification_number=identification,
+                    fitness_function=fitness_function
+                )
                 identification += 1
                 self.members.append(new_member)
 
@@ -84,8 +89,19 @@ class Generation:
         self.members.append(new_member)
         identification += 1
 
+    def evaluate_fitness(self, reverse=True):  # true for sorting from the highest fitness value to the lowest
+        """This method applies the fitness function to the generation and sorts the fitness ranking by
+        the fitness values of generation's members - 'reverse' means sorting will be performed
+        from maximum fitness to minimum."""
+        self.fitness_ranking = []
 
-"""At this point we need to define crossover operators"""
+        for i in range(len(self.members)):
+            self.fitness_ranking.append(
+                {'index': i, 'fitness value': self.fit_fun(self.current_generation.members[i])}
+            )
+
+        self.current_fitness_ranking.sort(key=sort_dict_by_fit, reverse=reverse)
+        self.fitness_rankings.append(self.current_fitness_ranking)
 
 
 class Population:
