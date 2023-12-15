@@ -50,7 +50,6 @@ class ParallelPopulation(Population):
 
         return members_dict
 
-
     def parallel_evaluation(self, process_id, work_start, work_complete, continue_flag, members_dict):
         """While the flag signals we are to evaluate members, we unlock the work_start barrier, iterate over members
         subscribed to a given process (which has the given process_id), calling on their intrinsic method for fitness
