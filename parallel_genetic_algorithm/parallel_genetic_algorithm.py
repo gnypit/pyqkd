@@ -35,21 +35,31 @@ class ParallelPopulation(Population):
                 genome_args=pair  # TODO: how to handle that?!
             ))
 
-    def prepare_parallel_evaluation(self, processes_manager: multiprocessing.Manager):
+    def prepare_parallel_evaluation(self, members_dict: multiprocessing.Manager.dict):
         """For parallel computation we firstly create a multiprocessing dicti of all members to be evaluated; this
-        Array will be passed to the evaluate_generations method within parallel Processes."""
-        processes_manager.dict()
+        Array will be passed to the evaluate_generations method within parallel Processes.
+
+        Each member should have a distinctive identification number, but for simplicity we save in the key of the
+        dictionary both generation's position in the rival_generations list and the ID, too. This way after the
+        individual evaluation of fitness values we'll be able to update the members in their respective generations.
+        """
+        for generation in self.rival_generations:
+            gen_index = 0
+            for member in generation.members:
+                members_dict[str(gen_index) + str(member.id)] = member
+
+        return members_dict
 
 
-    def parallel_evaluation(self, process_id, work_start, work_complete, continue_flag):
+    def parallel_evaluation(self, process_id, work_start, work_complete, continue_flag, members_dict):
         """While the flag signals we are to evaluate members, we unlock the work_start barrier, iterate over members
         subscribed to a given process (which has the given process_id), calling on their intrinsic method for fitness
         calculation, so that, at the end, we unlock the work_complete barrier.
         """
         while continue_flag.value:
             work_start.wait()
-            indexes = list(arange(process_id, self))
-            for
+            for key, member in members_dict.items():
+                member.evaluate()
 
     def best_fit(self):  # we return gene sequence of the chromosome of the highest fitness value with it's fit value
         # TODO adjust to multiple generations to evaluate
