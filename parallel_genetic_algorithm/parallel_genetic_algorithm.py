@@ -21,12 +21,13 @@ class ParallelPopulation(Population):
         # TODO: work on pairs of operators in a loop, and in each of the pairs perform the simulations in parallel,
         # TODO: automatically adjusting to the number of cores available
 
-        self.rival_generations = []
-        for pair in self.operator_pairs:
-            pass  # TODO how to create rival generations apart from the actual generation in the Population???
+        """In the constructor we spawn a population for each pair of operators. They will be later evaluated and the 
+        best one will become the official first """
 
-    def evaluate_all_chromosomes(self, reverse=True):
-
+    def evaluate_generations(self, process_id, work_start, work_complete):
+        while True:
+            work_start.wait()
+            for
 
     def best_fit(self):  # we return gene sequence of the chromosome of the highest fitness value with it's fit value
         # TODO adjust to multiple generations to evaluate
