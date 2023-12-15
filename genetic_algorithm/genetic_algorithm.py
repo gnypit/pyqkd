@@ -29,6 +29,7 @@ class Chromosome:
     def evaluate(self, fitness_function):
         self.fit_fun = fitness_function
         self.fit_val = self.fit_fun(self.genes)
+        return self.fit_val
 
     def __iter__(self):  # might be redundant
         return self
@@ -97,11 +98,10 @@ class Generation:
 
         for i in range(len(self.members)):
             self.fitness_ranking.append(
-                {'index': i, 'fitness value': self.fit_fun(self.current_generation.members[i])}
+                {'index': i, 'fitness value': self.fitness_function(self.members[i])}
             )
 
-        self.current_fitness_ranking.sort(key=sort_dict_by_fit, reverse=reverse)
-        self.fitness_rankings.append(self.current_fitness_ranking)
+        self.fitness_ranking.sort(key=sort_dict_by_fit, reverse=reverse)
 
 
 class Population:
