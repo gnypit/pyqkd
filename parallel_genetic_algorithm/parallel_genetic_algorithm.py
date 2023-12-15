@@ -1,5 +1,6 @@
 import multiprocessing
 from genetic_algorithm.genetic_algorithm import Population, Generation
+from numpy import arange
 
 
 class ParallelPopulation(Population):
@@ -32,9 +33,18 @@ class ParallelPopulation(Population):
                 genome_args=pair  # TODO: how to handle that?!
             ))
 
-    def evaluate_generations(self, process_id, work_start, work_complete):
-        while True:
+    def prepare_parallel_evaluation(self):
+        """For parallel computation we firstly create a multiprocessing Array of all members to be evaluated; this
+        Array will be passed to the evaluate_generations method within parallel Processes."""
+
+    def parallel_evaluation(self, process_id, work_start, work_complete, continue_flag):
+        """While the flag signals we are to evaluate members, we unlock the work_start barrier, iterate over members
+        subscribed to a given process (which has the given process_id), calling on their intrinsic method for fitness
+        calculation, so that, at the end, we unlock the work_complete barrier.
+        """
+        while continue_flag.value:
             work_start.wait()
+            indexes = list(arange(process_id, self))
             for
 
     def best_fit(self):  # we return gene sequence of the chromosome of the highest fitness value with it's fit value
