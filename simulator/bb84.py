@@ -333,17 +333,20 @@ def refined_average_error(rect_prob, rect_pub_prob, diag_pub_prob,
     number_of_all_bits = len(alice_bits)
     number_of_rect_bits_to_be_published = np.floor(rect_pub_prob * number_of_all_bits)
     number_of_diag_bits_to_be_published = np.floor(diag_pub_prob * number_of_all_bits)
-    number_of_rect_bits_already_published = 0
-    number_of_diag_bits_already_published = 0
+    indexes_of_published_bits = []
+    index = 0
 
-    for index in range(number_of_all_bits):
-        """We iterate over the strings with bits, either publishing bits in their respective basis, or not."""
+    while rect_pub_counter < number_of_rect_bits_to_be_published or diag_pub_counter < number_of_diag_bits_to_be_published:
+        """We iterate over the strings with bits, either publishing bits in their respective basis, or not. Bits 
+        published have their indexes remembered, so that we don't accidentally publish them more than once, when 
+        iterating over the initial strings."""
         if alice_basis[index] == bob_basis[index] == '0':  # rectilinear basis
             if random.uniform(0, 1) >= rect_pub_prob:
                 alice_key += alice_bits[index]
                 bob_key += bob_bits[index]
             else:
                 rect_pub_counter += 1
+                indexes_of_published_bits.append(index)
                 if alice_bits[index] != bob_bits[index]:
                     rect_error += 1
         else:
@@ -352,8 +355,15 @@ def refined_average_error(rect_prob, rect_pub_prob, diag_pub_prob,
                 bob_key += bob_bits[index]
             else:
                 diag_pub_counter += 1
+                indexes_of_published_bits.append(index)
                 if alice_bits[index] != bob_bits[index]:
                     diag_error += 1
+        if index < number_of_all_bits:
+            index += 1
+        else:
+            """If we have already run over all bits and didn't publish the expected amount, we start going through
+                        the strings once again"""
+            index = 0
 
     """As it is possible to get a VERY small probability of publication, we check for possible divisions by zero:"""
     try:
