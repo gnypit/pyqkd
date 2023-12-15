@@ -4,7 +4,9 @@ from numpy import arange
 
 
 class ParallelPopulation(Population):
-    """This class is supposed to enable fitness calculations in parallel."""
+    """This class is supposed to enable fitness calculations in parallel. It is based on Python's multiprocessing module
+    https://docs.python.org/3/library/multiprocessing.html
+    """
     def __init__(self, operator_pairs: list, pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=0.0,
                  seed=None):
         """The list of operators needs to be a dictionary of dictionaries of the following structure:
@@ -33,9 +35,11 @@ class ParallelPopulation(Population):
                 genome_args=pair  # TODO: how to handle that?!
             ))
 
-    def prepare_parallel_evaluation(self):
-        """For parallel computation we firstly create a multiprocessing Array of all members to be evaluated; this
+    def prepare_parallel_evaluation(self, processes_manager: multiprocessing.Manager):
+        """For parallel computation we firstly create a multiprocessing dicti of all members to be evaluated; this
         Array will be passed to the evaluate_generations method within parallel Processes."""
+        processes_manager.dict()
+
 
     def parallel_evaluation(self, process_id, work_start, work_complete, continue_flag):
         """While the flag signals we are to evaluate members, we unlock the work_start barrier, iterate over members
