@@ -26,9 +26,14 @@ class Chromosome:
     def change_genes(self, genes):
         self.genes = genes
 
-    def evaluate(self, fitness_function):
-        self.fit_fun = fitness_function
-        self.fit_val = self.fit_fun(self.genes)
+    def evaluate(self, fitness_function=None):
+        if fitness_function is None:
+            self.fit_fun = fitness_function
+        elif self.fit_fun is not None:
+            self.fit_val = self.fit_fun(self.genes)
+        else:
+            self.fit_val = 0
+
         return self.fit_val
 
     def __iter__(self):  # might be redundant
@@ -90,15 +95,17 @@ class Generation:
         self.members.append(new_member)
         identification += 1
 
-    def evaluate_fitness(self, reverse=True):  # true for sorting from the highest fitness value to the lowest
+    def evaluate_all_members(self, reverse=True, fitness_function=None):
         """This method applies the fitness function to the generation and sorts the fitness ranking by
         the fitness values of generation's members - 'reverse' means sorting will be performed
-        from maximum fitness to minimum."""
+        from maximum fitness to minimum.
+
+        If 'fitness_function' is provided, it overrides the one given in the constructor."""
         self.fitness_ranking = []
 
         for i in range(len(self.members)):
             self.fitness_ranking.append(
-                {'index': i, 'fitness value': self.fitness_function(self.members[i])}
+                {'index': i, 'fitness value': self.members[i].evaluate()}
             )
 
         self.fitness_ranking.sort(key=sort_dict_by_fit, reverse=reverse)
