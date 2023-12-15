@@ -1,5 +1,5 @@
 import multiprocessing
-from genetic_algorithm.genetic_algorithm import Population, sort_dict_by_fit
+from genetic_algorithm.genetic_algorithm import Population, Generation
 
 
 class ParallelPopulation(Population):
@@ -21,8 +21,16 @@ class ParallelPopulation(Population):
         # TODO: work on pairs of operators in a loop, and in each of the pairs perform the simulations in parallel,
         # TODO: automatically adjusting to the number of cores available
 
-        """In the constructor we spawn a population for each pair of operators. They will be later evaluated and the 
-        best one will become the official first """
+        """In the constructor we spawn rival generations for each pair of operators. They will be later evaluated and 
+        the best one will become the official first one."""
+        self.rival_generations = []  # list of instances of the class Generation
+        for pair in self.operator_pairs:
+            self.rival_generations.append(Generation(
+                size=pop_size,
+                fitness_function=self.fit_fun,
+                genome_generator=self.genome_generator,
+                genome_args=pair  # TODO: how to handle that?!
+            ))
 
     def evaluate_generations(self, process_id, work_start, work_complete):
         while True:
