@@ -2,18 +2,31 @@
 
 This file contains pre-defined crossover operators for the Generation class from genetic_algorithm.py to use within
 the genetic algorithm.
+
+Parents passed to function should be of class Member from genetic_algorithm.py
 """
 
 from numpy.random import binomial as np_binom
-from genetic_algorithm import Member
 
 
-def single_point_crossover(crossover_point, parent1: Member, parent2: Member):
+# TODO: we need a more universal handling of arguments passed to the crossover operators
+# TODO: we need more detailed comments
+# TODO: perhaps specific crossover operators should be children of a general class 'CrossoverOperator'?
+
+def single_point_crossover(parent1, parent2, args):
     """Parents will be crossed such that genes from first one (numbered from 0) up to crossover_point
     included shall go to one child, and the rest to the other."""
 
     parent1_genes = list(parent1.genes)
     parent2_genes = list(parent2.genes)
+
+    if args is None:
+        crossover_point = None
+    else:
+        crossover_point = args[0]  # TODO in here we need one argument, so I assume a one-element list... be better
+
+    if crossover_point is None:
+        crossover_point = len(parent1_genes) // 2
 
     # TODO: different working with genes whether it's a dict or a list
 
@@ -34,7 +47,7 @@ def single_point_crossover(crossover_point, parent1: Member, parent2: Member):
     return [child1_genes, child2_genes]
 
 
-def uniform_crossover(parent1: Member, parent2: Member, choice_prob=0.5):
+def uniform_crossover(parent1, parent2, args):
     """In this crossover method a gene mask is randomised. By default, there is 2 children. For the first one
     0 indicates genes from the first parent, while 1 - from the second one. For the second one contrarily.
 
@@ -44,6 +57,11 @@ def uniform_crossover(parent1: Member, parent2: Member, choice_prob=0.5):
     """
     parent1_genes = list(parent1.genes)
     parent2_genes = list(parent2.genes)
+
+    if args is None:
+        choice_prob = 0.5
+    else:
+        choice_prob = args[0]  # TODO in here we need one argument, so I assume a one-element list... be better
 
     # TODO: different working with genes whether it's a dict or a list
 
@@ -65,7 +83,7 @@ def uniform_crossover(parent1: Member, parent2: Member, choice_prob=0.5):
     return [child1_genes, child2_genes]
 
 
-def plco(parent1: Member, parent2: Member, transit_point, alfa=0.5, beta=0.5):  # partially linear crossover operator
+def plco(parent1, parent2, args):  # partially linear crossover operator
     """Two children are created; integer-valued genes are exchanged as in single crossover operator,
     while the real-valued genes are linearly combined using formula:
 
@@ -76,6 +94,15 @@ def plco(parent1: Member, parent2: Member, transit_point, alfa=0.5, beta=0.5):  
     parent1_genes = list(parent1.genes)
     parent2_genes = list(parent2.genes)
     no_genes = len(parent1_genes)
+
+    if args is None:
+        transit_point = no_genes // 2
+        alfa = 0.5
+        beta = 0.5
+    else:
+        transit_point = args[0]
+        alfa = args[1]
+        beta = args[2]
 
     # TODO: different working with genes whether it's a dict or a list
 
