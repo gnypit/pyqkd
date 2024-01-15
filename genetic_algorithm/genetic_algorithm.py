@@ -142,7 +142,8 @@ class Population:
         self.current_generation = Generation(
             size=pop_size,
             genome_generator=genome_generator,
-            genome_args=self.genome_generator_args
+            genome_args=self.genome_generator_args,
+            fitness_function=fit_fun
         )
         self.generations = [self.current_generation]
         self.current_parents = []
