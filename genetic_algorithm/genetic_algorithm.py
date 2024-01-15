@@ -273,7 +273,7 @@ class Population:
         Evolutionary Computing' in sect. 5.2.3. We begin similarly to the roulette wheel, because we still base
         the probabilities of selection on the cumulative probability distribution, associated with the fitness values.
         """
-        fit_total = 0
+        fit_total = 0  # TODO: is it a problem when some fitness values are negative?
         cumulative_prob_distribution = []
         for i in range(self.pop_size):
             fit_total += self.current_fitness_ranking[i].get('fitness value')
