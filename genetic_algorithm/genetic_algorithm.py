@@ -425,7 +425,7 @@ class Population:
 
         """Secondly, we create the new generation with children being a result od selection and crossover operators
         on the current population:"""
-        new_generation = Generation(size=self.pop_size)
+        new_generation = Generation(size=self.pop_size, fitness_function=self.fit_fun)
 
         for pair in self.current_children[0].get('children'):
             new_generation.add_member(genome=pair[0])
