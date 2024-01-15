@@ -1,5 +1,5 @@
 import multiprocessing
-from qkd.genetic_algorithm.genetic_algorithm import Population, Generation
+from genetic_algorithm.genetic_algorithm import Population, Generation
 from numpy import arange
 
 
