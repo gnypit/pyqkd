@@ -280,7 +280,7 @@ class Population:
             cumulative_prob_distribution.append(self.current_fitness_ranking[i].get('fitness value'))
         cumulative_prob_distribution = [fit / fit_total for fit in cumulative_prob_distribution]
 
-        random_value = random.uniform(0, 1 / self.current_generation.size)
+        random_value = random.uniform(0, 1 / self.current_generation.size)  # that's too big a value...
         parents = []
         index = 0
 
@@ -305,14 +305,18 @@ class Population:
         loop limit to preserve the right size of generation - for when the elite will be copied directly
         into children's list:"""
         while member_counter < self.current_generation.size - self.elite_size:
-            while random_value <= cumulative_prob_distribution[index]:  # TODO IndexError: list index out of range
-                """We keep assigning given member as a new parent until the condition is met. This way we reflect
-                the probability of it's selection."""
-                new_parent = self.current_generation.members[self.current_fitness_ranking[index].get('index')]
-                random_value += 1 / self.current_generation.size
-                member_counter += 1
-                parents.append(new_parent)
-            index += 1
+            try:
+                while random_value <= cumulative_prob_distribution[index]:  # TODO IndexError: list index out of range
+                    """We keep assigning given member as a new parent until the condition is met. This way we reflect
+                    the probability of it's selection."""
+                    new_parent = self.current_generation.members[self.current_fitness_ranking[index].get('index')]
+                    random_value += 1 / self.current_generation.size
+                    member_counter += 1
+                    parents.append(new_parent)
+                index += 1
+            except IndexError:
+                """We've increased the index over the length of the current generation"""
+                break
 
         """Now I rewrite parents into an organised list of pairs as dictionaries..."""
         index = 0
