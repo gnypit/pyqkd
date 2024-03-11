@@ -495,7 +495,7 @@ class Population:
     def reset_children(self):
         self.current_children = []
 
-    def change_population_size(self, pop_size):
+    def change_population_size(self, pop_size):  # TODO isin't it in a conflict with the change to initial size and parent pairs number?
         self.pop_size = pop_size
 
     def fitness_plot(self):
