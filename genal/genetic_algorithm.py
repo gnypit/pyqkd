@@ -30,6 +30,9 @@ class Chromosome:
         return (f"{type(self).__name__}(genes={self.genes}, "
                 f"fitness function={self.fit_fun}, fitness value={self.fit_val})")
 
+    def __iter__(self):
+        return self
+
     def change_genes(self, genes):  # for mutation purposes
         self.genes = genes
 
@@ -43,9 +46,6 @@ class Chromosome:
 
         return self.fit_val
 
-    def __iter__(self):
-        return self
-
 
 class Member(Chromosome):
     """In order to be able to track parents and their children within the genetic algorithm, a derivative class is
@@ -55,11 +55,11 @@ class Member(Chromosome):
         self.id = identification_number
         self.parents_id = None
 
-    def add_parents_id(self, parents_id):
-        self.parents_id = parents_id
-
     def __repr__(self) -> str:
         return f"{type(self).__name__}(genes={self.genes}, id={self.id}, parents_id={self.parents_id})"
+
+    def add_parents_id(self, parents_id):
+        self.parents_id = parents_id
 
 
 class Generation:
