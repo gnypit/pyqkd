@@ -477,13 +477,11 @@ class Population:
         to be mutated."""
         number_of_mutations = floor(self.mutation_prob * self.current_generation.size)
 
-        """Size of generation is a constant, it has to be adjusted to the lack of elite; 
-        after all we want to mutate all but the elite members
+        """Size of generation is a constant, it has to be adjusted to the lack of elite; the elite Members are not
+        supposed to be mutated. Additionally, number of mutations has to be an integer, e.g., 
+        half of a mutation cannot be performed.
         """
-        indexes = random.sample(
-            range(self.current_generation.size - self.elite_size),
-            int(number_of_mutations)  # has to be an integer, e.g., you can't make half of a mutation
-        )
+        indexes = random.sample(range(self.current_generation.size - self.elite_size), int(number_of_mutations))
 
         """For new (mutated) genome creation I use the generator passed to the superclass in it's initialisation:"""
         for index in indexes:
