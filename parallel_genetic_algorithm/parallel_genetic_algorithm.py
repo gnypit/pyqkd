@@ -7,7 +7,7 @@ class ParallelPopulation(Population):
     """This class is supposed to enable fitness calculations in parallel. It is based on Python's multiprocessing module
     https://docs.python.org/3/library/multiprocessing.html
     """
-    def __init__(self, operator_pairs: list, pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=0.0,
+    def __init__(self, operator_pairs: list, initial_pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=0.0,
                  seed=None):
         """The list of operators needs to be a dictionary of dictionaries of the following structure:
         operator_pairs = {
@@ -17,7 +17,7 @@ class ParallelPopulation(Population):
             'generationN': {'selection': ..., 'crossover': ...}
         }
         """
-        super().__init__(pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=mutation_prob, seed=seed)
+        super().__init__(initial_pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=mutation_prob, seed=seed)
         self.operator_pairs = operator_pairs
         self.number_of_cpu_cores = multiprocessing.cpu_count()
 
@@ -29,7 +29,7 @@ class ParallelPopulation(Population):
         self.rival_generations = []  # list of instances of the class Generation
         for pair in self.operator_pairs:
             self.rival_generations.append(Generation(
-                size=pop_size,
+                size=initial_pop_size,
                 fitness_function=self.fit_fun,
                 genome_generator=self.genome_generator,
                 genome_args=pair  # TODO: how to handle that?!

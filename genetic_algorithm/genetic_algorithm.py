@@ -121,22 +121,35 @@ class Generation:
 
 
 class Population:
-    def __init__(self, pop_size, fit_fun, genome_generator, elite_size, args: dict, mutation_prob=0.0, seed=None):
-        """pop_size is a constant size of the population, fit_fun is a chosen fitness function to be used in a
+    def __init__(self, initial_pop_size, fit_fun, genome_generator, elite_size, args: dict, no_parents_pairs=None,
+                 mutation_prob=0.0, seed=None):
+        """initial_pop_size is the size of an initial population, fit_fun is a chosen fitness function to be used in a
         genetic algorithm, genom_generator is the function that creates genomes for the initial generation
         of population members, args are arguments to be used in genome_generator & selection/crossover operators,
         mutation_prob is a probability of a single member's genome being initialised from scratch,
-        seed is for pseud-random number generation."""
+        seed is an optional argument useful for comparison of pseudo-random number generation
 
-        # TODO differentiate between initial population size and the population size later on
+        no_parents_pairs is the designated number of parent pairs for future generations,
+        e.g., if the initial population size is 1000 and no_parents_pairs = 200, there will be 2 * 200 = 400 children
+        in the next generation, which becomes a constant population size. Additionally, the elite_size number of
+        Members is copied from an i-th generation to the (i+1)-th generation.
+        """
 
         if seed is not None:
-            random.seed(a=seed)  # temporary, for debugging
+            random.seed(a=seed)  # useful for debugging
 
-        self.pop_size = pop_size
+        self.pop_size = initial_pop_size
         self.fit_fun = fit_fun
         self.elite_size = elite_size
         self.mutation_prob = mutation_prob
+
+        """If the provided number of parents pairs would require more Members than the current (initial) generation has,
+        it'll be limited to the maximum possible number. Also, if no specific number of parent pairs is provided,
+        the initial population size is assumed to be a constant throughout the whole algorithm."""
+        if no_parents_pairs is None or no_parents_pairs > initial_pop_size // 2:
+            self.no_parents_pairs = initial_pop_size // 2
+        else:
+            self.no_parents_pairs = no_parents_pairs
 
         """Even though for the initial population we can pass the genome generator with it's arguments
         directly to the __init__ method within the Generation class, we need to memorise these two variables
@@ -149,7 +162,7 @@ class Population:
 
         """Creating the first - initial - generation in this population and lists to handle future generations"""
         self.current_generation = Generation(
-            size=pop_size,
+            size=initial_pop_size,
             genome_generator=genome_generator,
             genome_args=self.genome_generator_args,
             fitness_function=fit_fun
@@ -376,6 +389,8 @@ class Population:
         crossover_operator is a function passed to this method for the crossover of the parents
         """
 
+        # TODO: optimise this part, make it shorter
+
         match str(selection_operator):
             case 'ranking':
                 self.ranking_selection()
@@ -434,7 +449,7 @@ class Population:
 
         """Secondly, we create the new generation with children being a result od selection and crossover operators
         on the current population:"""
-        new_generation = Generation(size=self.pop_size, fitness_function=self.fit_fun)
+        new_generation = Generation(size=self.no_parents_pairs * 2, fitness_function=self.fit_fun)
 
         for pair in self.current_children[0].get('children'):
             new_generation.add_member(genome=pair[0])

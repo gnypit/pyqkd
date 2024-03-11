@@ -75,7 +75,7 @@ elite_size = 2
 num_genes = 30
 
 population = genetic_algorithm.Population(
-    pop_size=500,
+    initial_pop_size=500,
     fit_fun=fitness_fun,
     genome_generator=genome_generator,
     args=[gene_space, num_genes],
