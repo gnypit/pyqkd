@@ -1,5 +1,5 @@
 import multiprocessing
-from genetic_algorithm.genetic_algorithm import Population, Generation
+from genal.genetic_algorithm import Population, Generation
 from numpy import arange
 
 

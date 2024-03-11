@@ -1,9 +1,9 @@
 """Author: Jakub Gnyp; contact: gnyp.jakub@gmail.com, LinkedIn: https://www.linkedin.com/in/gnypit/
 
-This file contains pre-defined crossover operators for the Generation class from genetic_algorithm.py to use within
+This file contains pre-defined crossover operators for the Generation class from genal.py to use within
 the genetic algorithm.
 
-Parents passed to function should be of class Member from genetic_algorithm.py
+Parents passed to function should be of class Member from genal.py
 """
 
 from numpy.random import binomial as np_binom
