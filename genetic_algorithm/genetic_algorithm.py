@@ -13,23 +13,30 @@ def sort_dict_by_fit(dictionary):
 
 
 class Chromosome:
+    """Basic class for a genetic algorithm (GA) realisation. It stores genes, which characterise possible solutions to
+    our multi-objective optimisation problem, as well as fitness function and (normalised) fitness value. While it is
+    not a prerequisite for a Chromosome in a GA in general, it will be useful in a multiprocessing implementation.
+
+    This class has couple of basic methods for creating and changing genes, assigning fitness function & value, and
+    applying it to the currently stored genes. Fitness function may be passed either while initiating or evaluating
+    given Chromosome.
+    """
     def __init__(self, genes, fitness_function=None):
         self.genes = genes  # a dictionary
-
-        """Optional fields, that I'm not sure I'll use directly in the Chromosome:"""
-        self.fit_fun = fitness_function
+        self.fit_fun = fitness_function  # a function
         self.fit_val = None
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(genes={self.genes}, fitness function={self.fit_fun}, fitness value={self.fit_val})"
+        return (f"{type(self).__name__}(genes={self.genes}, "
+                f"fitness function={self.fit_fun}, fitness value={self.fit_val})")
 
-    def change_genes(self, genes):
+    def change_genes(self, genes):  # for mutation purposes
         self.genes = genes
 
     def evaluate(self, fitness_function=None):
-        if fitness_function is None:
+        if fitness_function is None:  # fitness function wasn't provided on initialisation
             self.fit_fun = fitness_function
-        elif self.fit_fun is not None:
+        elif self.fit_fun is not None:  # fitness function was provided on initialisation
             self.fit_val = self.fit_fun(self.genes)
         else:
             self.fit_val = 0
