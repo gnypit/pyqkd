@@ -43,18 +43,20 @@ class Chromosome:
 
         return self.fit_val
 
-    def __iter__(self):  # might be redundant
+    def __iter__(self):
         return self
 
 
 class Member(Chromosome):
+    """In order to be able to track parents and their children within the genetic algorithm, a derivative class is
+    created, with a list of parents' IDs from a single GA implementation."""
     def __init__(self, genes, identification_number, fitness_function=None):
         super().__init__(genes=genes, fitness_function=fitness_function)
         self.id = identification_number
         self.parents_id = None
 
-    def add_parents_id(self, parents_id):  # it's meant for 'genealogical tree' tracking
-        self.parents_id = parents_id  # it's a list with IDs of the parents
+    def add_parents_id(self, parents_id):
+        self.parents_id = parents_id
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(genes={self.genes}, id={self.id}, parents_id={self.parents_id})"
