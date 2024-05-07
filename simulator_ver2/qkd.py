@@ -19,8 +19,7 @@ quantum_channel = {
 }
 
 
-def qc_gain(mean_photon_number=1., fiber_loss=1., detection_efficiency=1., k_dead=1.,
-            additional_loss=1.):
+def qc_gain(mean_photon_number=1., fiber_loss=1., detection_efficiency=1., k_dead=1., additional_loss=1.):
     """Calculating the quantum channel gain as per (3.1) formula in "Applied Quantum Cryptography",
      section 3 by M. Pivk
      """
@@ -34,8 +33,10 @@ def received_key_material(quantum_channel_gain, sender_data_rate):
     return receiver
 
 
-def random_choice(length, p=0.5):  # function for random choosing of basis for each photon
-    """p -> probability of selecting rectilinear basis"""
+def random_choice(length, p=0.5):
+    """Function for randomising basis for a given number of photons
+    p -> probability of selecting rectilinear basis
+    """
     chosen_basis = ''
     for index in range(int(np.floor(length))):
         basis = random.uniform(0, 1)
@@ -52,7 +53,8 @@ def measurement(state, basis):
     original state of photon and the basis, in which this photon is being measured. For details of mathematics behind
     this operation please refer to 'Applied Quantum Cryptography', sections 2 & 3, authored by M. Pivk
 
-    First, the worst-case scenario is handled, that is when a photon is not received, or an error is encountered:"""
+    First, the worst-case scenario is handled, that is when a photon is not received, or an error is encountered:
+    """
     if basis == 'L':
         final_state = 'L'  # L for loss, as basis L reflects unperformed measurement due to quantum channel loss
         return final_state
@@ -65,7 +67,7 @@ def measurement(state, basis):
             '0': 'random',  # states from the rectilinear basis measured in the diagonal one yield random results
             '1': 'random'  # states from the rectilinear basis measured in the diagonal one yield random results
         },
-        '0': { # rectilinear basis
+        '0': {  # rectilinear basis
             '+': 'random',  # states from the diagonal basis measured in the rectilinear one yield random results
             '-': 'random',  # states from the diagonal basis measured in the rectilinear one yield random results
             '0': '0',  # states from the rectilinear basis measured in it remain the same
@@ -86,7 +88,10 @@ def measurement(state, basis):
         return final_state
 
 
-def numerical_error_prob(n_errors, pass_size, qber):  # probability that n_errors remain
+def numerical_error_prob(n_errors, pass_size, qber):
+    """Probability that n_errors remain in a given block, as per formula in 7.2 section in the '93 paper
+     'Secret-Key Reconciliation by Public Discussion' by Brassard, Salvail.
+     """
     prob = binom.pmf(n_errors, pass_size, qber) + binom.pmf(n_errors + 1, pass_size, qber)
     return prob
 
@@ -101,7 +106,8 @@ def sum_error_prob_betainc(first_pass_size, qber, n_errors):
     published in "Advances in Cryptography" proceedings, for 10 000 qubits the initial block size is only 73, this
     program aims to be a universal tool for simulations, allowing arbitrarily large amounts of qubits to be sent
     and post-processed. Moreover, with tens of thousands simulations performed, even one order of magnitude offers
-    a significant speed-up."""
+    a significant speed-up.
+    """
     prob = betainc(n_errors + 2, first_pass_size - n_errors - 1, qber)
 
     return prob
