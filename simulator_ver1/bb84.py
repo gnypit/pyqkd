@@ -7,7 +7,7 @@ import math
 import time
 import numpy as np
 
-from simulator.binary import binary
+from simulator_ver1.binary import binary
 from scipy.stats import binom
 from scipy.special import betainc
 
