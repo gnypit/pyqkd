@@ -48,9 +48,27 @@ def random_choice(length, p=0.5):  # function for random choosing of basis for e
 
 
 def measurement(state, basis):  # TODO: update & optimise
+    """This function simulates a simple measurement of photon's state, encoded in polarisation"""
 
-    if basis == '1':  # meaning diagonal basis
-        basis = 'diagonal'
+    possible_scenarios = {
+        '1':  # diagonal basis
+            {
+                '+': '+',  # states from the diagonal basis measured in it remain the same
+                '-': '-',  # states from the diagonal basis measured in it remain the same
+                '0': 'random',  # states from the rectilinear basis measured in the diagonal one yield random results
+                '1': 'random'  # states from the rectilinear basis measured in the diagonal one yield random results
+            },
+        '0':  # rectilinear basis
+            {
+                '+': '+',  # states from the diagonal basis measured in it remain the same
+                '-': '-',  # states from the diagonal basis measured in it remain the same
+                '0': 'random',  # states from the rectilinear basis measured in the diagonal one yield random results
+                '1': 'random'  # states from the rectilinear basis measured in the diagonal one yield random results
+            }
+    }
+
+    if basis == '1':
+        basis_name = 'diagonal'
 
         if state == '+':
             final_state = '+'
@@ -58,9 +76,9 @@ def measurement(state, basis):  # TODO: update & optimise
             final_state = '-'
         elif state == '0' or state == '1':  # in this case there's a 50% chance of getting either polarization
             if random.randint(0, 1) == 0:
-                final_state = quantum_channel.get(basis).get('basis_vectors').get('first_state')
+                final_state = quantum_channel.get(basis_name).get('basis_vectors').get('first_state')
             else:
-                final_state = quantum_channel.get(basis).get('basis_vectors').get('second_state')
+                final_state = quantum_channel.get(basis_name).get('basis_vectors').get('second_state')
         else:
             return 'U'  # U for unknown
 
