@@ -59,20 +59,18 @@ def measurement(state, basis):
 
     """Now that the loss in quantum channel is handled, the actual measurement can be simulated:"""
     possible_scenarios = {
-        '1':  # diagonal basis
-            {
-                '+': '+',  # states from the diagonal basis measured in it remain the same
-                '-': '-',  # states from the diagonal basis measured in it remain the same
-                '0': 'random',  # states from the rectilinear basis measured in the diagonal one yield random results
-                '1': 'random'  # states from the rectilinear basis measured in the diagonal one yield random results
-            },
-        '0':  # rectilinear basis
-            {
-                '+': 'random',  # states from the diagonal basis measured in the rectilinear one yield random results
-                '-': 'random',  # states from the diagonal basis measured in the rectilinear one yield random results
-                '0': '0',  # states from the rectilinear basis measured in it remain the same
-                '1': '0'  # states from the rectilinear basis measured in it remain the same
-            }
+        '1': {  # diagonal basis
+            '+': '+',  # states from the diagonal basis measured in it remain the same
+            '-': '-',  # states from the diagonal basis measured in it remain the same
+            '0': 'random',  # states from the rectilinear basis measured in the diagonal one yield random results
+            '1': 'random'  # states from the rectilinear basis measured in the diagonal one yield random results
+        },
+        '0': { # rectilinear basis
+            '+': 'random',  # states from the diagonal basis measured in the rectilinear one yield random results
+            '-': 'random',  # states from the diagonal basis measured in the rectilinear one yield random results
+            '0': '0',  # states from the rectilinear basis measured in it remain the same
+            '1': '0'  # states from the rectilinear basis measured in it remain the same
+        }
     }
 
     final_state = possible_scenarios.get(basis).get(state)
