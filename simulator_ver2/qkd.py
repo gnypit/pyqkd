@@ -10,10 +10,10 @@ from scipy.special import betainc
 basis_mapping = {'rectilinear': 0, 'diagonal': 1}
 states_mapping = {'0': 0, '1': 1, '+': 0, '-': 1}
 quantum_channel = {
-    'rectilinear': {
+    '0': {  # for the rectilinear basis
         'basis_vectors': {'first_state': '0', 'second_state': '1'}
     },
-    'diagonal': {
+    '1': {  # for the diagonal basis
         'basis_vectors': {'first_state': '+', 'second_state': '-'}
     }
 }
@@ -47,7 +47,7 @@ def random_choice(length, p=0.5):  # function for random choosing of basis for e
     return chosen_basis
 
 
-def measurement(state, basis):  # TODO: update & optimise
+def measurement(state, basis):
     """This function simulates a simple measurement of photon's state, encoded in polarisation. It receives the
     original state of photon and the basis, in which this photon is being measured. For details of mathematics behind
     this operation please refer to 'Applied Quantum Cryptography', sections 2 & 3, authored by M. Pivk
@@ -75,27 +75,17 @@ def measurement(state, basis):  # TODO: update & optimise
             }
     }
 
-    if basis == '1':
-        basis_name = 'diagonal'
-        if possible_scenarios.get(basis).get(state) == 'random':
-            """In this case there's a 50% chance of getting either polarization"""
-            if random.randint(0, 1) == 0:
-                final_state = quantum_channel.get(basis_name).get('basis_vectors').get('first_state')
-                return final_state
-            else:
-                final_state = quantum_channel.get(basis_name).get('basis_vectors').get('second_state')
-                return final_state
+    final_state = possible_scenarios.get(basis).get(state)
+    if final_state == 'random':
+        """In this case there's a 50% chance of getting either polarization"""
+        if random.randint(0, 1) == 0:
+            final_state = quantum_channel.get(basis).get('basis_vectors').get('first_state')
+            return final_state
         else:
-            final_state = state
+            final_state = quantum_channel.get(basis).get('basis_vectors').get('second_state')
             return final_state
-    elif basis == '0':
-        basis_name = 'rectilinear'
-
-        if possible_scenarios.get(basis).get(state) == 'random':
-            """In this case again there's a 50% chance of getting either polarization. Since '0' and '1' are states, 
-            there's no need for if...else"""
-            final_state = str(random.randint(0, 1))
-            return final_state
+    else:
+        return final_state
 
 
 def numerical_error_prob(n_errors, pass_size, qber):  # probability that n_errors remain
