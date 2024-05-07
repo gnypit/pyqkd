@@ -6,6 +6,9 @@ import numpy as np
 from scipy.stats import binom
 from scipy.special import betainc
 
+from sympy.physics.quantum import Bra, BraBase, Ket, KetBase
+from sympy import symbols, I
+
 """Global variables, characterising the quantum channel:"""
 basis_mapping = {'rectilinear': 0, 'diagonal': 1}
 states_mapping = {'0': 0, '1': 1, '+': 0, '-': 1}
@@ -96,18 +99,16 @@ def numerical_error_prob(n_errors, pass_size, qber):
     return prob
 
 
-def sum_error_prob_betainc(first_pass_size, qber, n_errors):
-    """Simplified left side of (2) inequality for CASCADE blocks. It uses regularised incomplete beta function as a
-    representation of binomial distribution CDF; after proposed [paper is currently being written] representation of (2)
-    inequality this way the computations are significantly faster, at least by one order of magnitude for small limits
-    of series and a few orders of magnitude (e.g. 5) for greater (thousands).
+class Qubit:
+    def __init__(self, alfa, beta, basis):
+        self.alfa = alfa
+        self.beta = beta
+        self.basis = basis
 
-    Although by 1993 paper "Secret Key Reconciliation by Public Discussion" by Gilles Brassard and Louis Salvail,
-    published in "Advances in Cryptography" proceedings, for 10 000 qubits the initial block size is only 73, this
-    program aims to be a universal tool for simulations, allowing arbitrarily large amounts of qubits to be sent
-    and post-processed. Moreover, with tens of thousands simulations performed, even one order of magnitude offers
-    a significant speed-up.
-    """
-    prob = betainc(n_errors + 2, first_pass_size - n_errors - 1, qber)
+        self.first_base_vector = Ket(symbols(quantum_channel.get(self.basis).get('first_state')))
+        self.second_base_vector = Ket(symbols(quantum_channel.get(self.basis).get('second_state')))
 
-    return prob
+        self.superposition = self.alfa * self.first_base_vector + self.beta * self.second_base_vector
+
+    def get_state(self):
+        return self.superposition
