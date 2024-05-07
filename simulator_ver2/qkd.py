@@ -48,8 +48,16 @@ def random_choice(length, p=0.5):  # function for random choosing of basis for e
 
 
 def measurement(state, basis):  # TODO: update & optimise
-    """This function simulates a simple measurement of photon's state, encoded in polarisation"""
+    """This function simulates a simple measurement of photon's state, encoded in polarisation. It receives the
+    original state of photon and the basis, in which this photon is being measured. For details of mathematics behind
+    this operation please refer to 'Applied Quantum Cryptography', sections 2 & 3, authored by M. Pivk
 
+    First, the worst-case scenario is handled, that is when a photon is not received, or an error is encountered:"""
+    if basis == 'L':
+        final_state = 'L'  # L for loss, as basis L reflects unperformed measurement due to quantum channel loss
+        return final_state
+
+    """Now that the loss in quantum channel is handled, the actual measurement can be simulated:"""
     possible_scenarios = {
         '1':  # diagonal basis
             {
@@ -60,45 +68,34 @@ def measurement(state, basis):  # TODO: update & optimise
             },
         '0':  # rectilinear basis
             {
-                '+': '+',  # states from the diagonal basis measured in it remain the same
-                '-': '-',  # states from the diagonal basis measured in it remain the same
-                '0': 'random',  # states from the rectilinear basis measured in the diagonal one yield random results
-                '1': 'random'  # states from the rectilinear basis measured in the diagonal one yield random results
+                '+': 'random',  # states from the diagonal basis measured in the rectilinear one yield random results
+                '-': 'random',  # states from the diagonal basis measured in the rectilinear one yield random results
+                '0': '0',  # states from the rectilinear basis measured in it remain the same
+                '1': '0'  # states from the rectilinear basis measured in it remain the same
             }
     }
 
     if basis == '1':
         basis_name = 'diagonal'
-
-        if state == '+':
-            final_state = '+'
-        elif state == '-':
-            final_state = '-'
-        elif state == '0' or state == '1':  # in this case there's a 50% chance of getting either polarization
+        if possible_scenarios.get(basis).get(state) == 'random':
+            """In this case there's a 50% chance of getting either polarization"""
             if random.randint(0, 1) == 0:
                 final_state = quantum_channel.get(basis_name).get('basis_vectors').get('first_state')
+                return final_state
             else:
                 final_state = quantum_channel.get(basis_name).get('basis_vectors').get('second_state')
+                return final_state
         else:
-            return 'U'  # U for unknown
+            final_state = state
+            return final_state
+    elif basis == '0':
+        basis_name = 'rectilinear'
 
-    elif basis == '0':  # meaning rectilinear basis
-
-        if state == '0':
-            final_state = '0'
-        elif state == '1':
-            final_state = '1'
-        elif state == '+' or state == '-':
-            final_state = str(random.randint(0, 1))  # since '0' and '1' are states, there's no need for if...else
-        else:
-            return 'U'  # U for unknown
-
-    elif basis == 'L':
-        final_state = 'L'  # L for loss, as basis L reflects unperformed measurement due to quantum channel loss
-    else:
-        return 'U'  # U for unknown
-
-    return final_state
+        if possible_scenarios.get(basis).get(state) == 'random':
+            """In this case again there's a 50% chance of getting either polarization. Since '0' and '1' are states, 
+            there's no need for if...else"""
+            final_state = str(random.randint(0, 1))
+            return final_state
 
 
 def numerical_error_prob(n_errors, pass_size, qber):  # probability that n_errors remain
