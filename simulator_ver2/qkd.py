@@ -14,10 +14,12 @@ basis_mapping = {'rectilinear': 0, 'diagonal': 1}
 states_mapping = {'0': 0, '1': 1, '+': 0, '-': 1}
 quantum_channel = {
     '0': {  # for the rectilinear basis
-        'basis_vectors': {'first_state': '0', 'second_state': '1'}
+        'first_state': '0',
+        'second_state': '1'
     },
     '1': {  # for the diagonal basis
-        'basis_vectors': {'first_state': '+', 'second_state': '-'}
+        'first_state': '+',
+        'second_state': '-'
     }
 }
 
