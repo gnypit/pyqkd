@@ -6,12 +6,21 @@ import numpy as np
 from scipy.stats import binom
 from scipy.special import betainc
 
-from sympy.physics.quantum import Bra, BraBase, Ket, KetBase
-from sympy import symbols, I
+from sympy import symbols, I, Matrix, sqrt
+from sympy.physics.quantum import TensorProduct, InnerProduct, OuterProduct
+from sympy.physics.quantum.dagger import Dagger
+from sympy.physics.quantum.state import Ket, Bra
+from sympy.physics.quantum.operator import Operator
 
 """Global variables, characterising the quantum channel:"""
 basis_mapping = {'rectilinear': 0, 'diagonal': 1}
-states_mapping = {'|0>': 0, '|1>': 1, '|+>': 0, '|->': 1}
+states_to_bit_mapping = {'|0>': 0, '|1>': 1, '|+>': 0, '|->': 1}
+states_to_matrix_mapping = {
+    '|0>': Matrix([[1], [0]]),
+    '|1>': Matrix([[0], [1]]),
+    '|+>': (Matrix([[1], [0]]) + Matrix([[0], [1]])) / sqrt(2),
+    '|->': (Matrix([[1], [0]]) - Matrix([[0], [1]])) / sqrt(2)
+}
 quantum_channel = {
     '0': {  # for the rectilinear basis
         'first_state': '0',
@@ -21,6 +30,18 @@ quantum_channel = {
         'first_state': '+',
         'second_state': '-'
     }
+}
+"""Measurement operators defined as:
+        M_0 = |0><0|,
+        M_1 = |1><1|,
+        M_+ = |+><+|,
+        M_- = |-><-|
+"""
+measurement_operators = {
+    'm0': TensorProduct(states_to_matrix_mapping.get('|0>'), Dagger(states_to_matrix_mapping.get('|0>'))),
+    'm1': TensorProduct(states_to_matrix_mapping.get('|1>'), Dagger(states_to_matrix_mapping.get('|1>'))),
+    'm+': TensorProduct(states_to_matrix_mapping.get('|+>'), Dagger(states_to_matrix_mapping.get('|+>'))),
+    'm-': TensorProduct(states_to_matrix_mapping.get('|->'), Dagger(states_to_matrix_mapping.get('|->'))),
 }
 
 
@@ -53,7 +74,7 @@ def random_choice(length, p=0.5):
     return chosen_basis
 
 
-def measurement(state, basis):
+def simple_measurement(state, basis):
     """This function simulates a simple measurement of photon's state, encoded in polarisation. It receives the
     original state of photon and the basis, in which this photon is being measured. For details of mathematics behind
     this operation please refer to 'Applied Quantum Cryptography', sections 2 & 3, authored by M. Pivk
@@ -106,6 +127,7 @@ class Qubit:
     or diagonal basis and allows to access both bra-ket and bit representations of the qubit."""
 
     def __init__(self, alfa, beta, basis):
+        self.measurement_operator = None
         self.state_bit = None
         self.basis_bit = None
         self.alfa = float(alfa)
@@ -125,9 +147,9 @@ class Qubit:
         """Private method to convert bra-ket state into a pair of bits"""
         self.basis_bit = basis_mapping.get(self.basis)
         if self.alfa == 1.0:
-            self.state_bit = states_mapping.get(str(self.first_base_vector))
+            self.state_bit = states_to_bit_mapping.get(str(self.first_base_vector))
         elif self.beta == 1.0:
-            self.state_bit = states_mapping.get(str(self.second_base_vector))
+            self.state_bit = states_to_bit_mapping.get(str(self.second_base_vector))
         else:
             self.state_bit = None  # I don't have a precise idea how to handle non-pure states, yet
 
@@ -147,6 +169,26 @@ class Qubit:
             self.basis_bit = 'L'
             self.state_bit = None
             return self.basis_bit, self.state_bit
+
+    def measure(self, measurement_operator):
+        """There are four measurement matrices to choose from:
+        'm0' = |0><0|,
+        'm1' = |1><1|,
+        'm+' = |+><+|,
+        'm-' = |-><-|
+        """
+        self.measurement_operator = measurement_operators.get(measurement_operator)
+
+        first_base_vector = states_to_matrix_mapping.get(str(self.first_base_vector))
+        second_base_vector = states_to_matrix_mapping.get(str(self.second_base_vector))
+        current_state = self.alfa * first_base_vector + self.beta * second_base_vector
+
+        sqrt_of_probability = sqrt(Dagger(current_state) * Dagger(self.measurement_operator) *
+                                   self.measurement_operator * current_state)
+
+        new_state = self.measurement_operator * current_state / sqrt_of_probability
+
+        return new_state
 
 
 class QMessage:
@@ -177,3 +219,12 @@ class QMessage:
                         beta=self.beta_list[index],
                         basis=self.basis_list[index]
                     ))
+
+
+def main():
+    nowy_qubit = Qubit(1, 0, 0)
+    wynik = nowy_qubit.measure('m0')
+    return wynik
+
+if __name__ == "__main__":
+    main()
