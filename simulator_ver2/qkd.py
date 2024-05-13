@@ -104,6 +104,7 @@ def numerical_error_prob(n_errors, pass_size, qber):
 class Qubit:
     """This class is meant mainly for representation purposes, in simulations. It creates a qubit in either rectilinear
     or diagonal basis and allows to access both bra-ket and bit representations of the qubit."""
+
     def __init__(self, alfa, beta, basis):
         self.state_bit = None
         self.basis_bit = None
@@ -135,15 +136,30 @@ class Qubit:
         self._bit_representation()
         return self.basis_bit, self.state_bit
 
+    def send(self, channel_gain=1.0):
+        """This method simulates sending a qubit via the quantum channel. A pseudo-random number from a uniform
+        distribution between 0 and 1 is selected. If it's smaller than the specified gain of the channel, than
+        the qubit is properly received after sending; otherwise it is lost, resulting in a None state
+        and 'L' (for 'loss') basis."""
+        if random.uniform(0, 1) < channel_gain:
+            self.get_bits()
+        else:
+            self.basis_bit = 'L'
+            self.state_bit = None
+            return self.basis_bit, self.state_bit
+
 
 class QMessage:
-    def __init__(self, alfa_list = None, beta_list = None, basis_list = None):
-        """This class gets lists/strings of parameters and basis choices for multiple qubits to be created for a
-        message to be sent via the quantum channel in a given protocol."""
+    """This class gets lists/strings of parameters and basis choices for multiple qubits to be created for a
+            message to be sent via the quantum channel in a given protocol."""
+
+    def __init__(self, alfa_list=None, beta_list=None, basis_list=None):
+        """Variables should be either strings or tables of equal length. If all of them are received and of
+        equal length, a table of Qubits based on specified coordinates in a given basis shall be created."""
         self.qubit_list = []
         self.status = None
 
-        if alfa_list is None or beta_list is None or basis_list is None:
+        if len(alfa_list) == 0 or len(beta_list) == 0 or len(basis_list) == 0:
             self.status = 'Missing input'
             self.alfa_list = alfa_list
             self.beta_list = beta_list
@@ -154,15 +170,10 @@ class QMessage:
             self.beta_list = beta_list
             self.basis_list = basis_list
 
-            for index in len(self.basis_list):
+            for index in range(len(self.basis_list)):
                 self.qubit_list.append(
                     Qubit(
                         alfa=self.alfa_list[index],
                         beta=self.beta_list[index],
                         basis=self.basis_list[index]
                     ))
-
-
-
-class Protocol:  # intended as a Pipeline for quantum key distribution
-    def __init__(self, rectilinear_basis_probability, number_of_sent_states, number_of_senders, number_of_receivers):
