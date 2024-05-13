@@ -6,7 +6,7 @@ import numpy as np
 from scipy.stats import binom
 from scipy.special import betainc
 
-from sympy import symbols, I, Matrix, sqrt
+from sympy import symbols, I, Matrix, sqrt, simplify
 from sympy.physics.quantum import TensorProduct, InnerProduct, OuterProduct
 from sympy.physics.quantum.dagger import Dagger
 from sympy.physics.quantum.state import Ket, Bra
@@ -183,12 +183,16 @@ class Qubit:
         second_base_vector = states_to_matrix_mapping.get(str(self.second_base_vector))
         current_state = self.alfa * first_base_vector + self.beta * second_base_vector
 
-        sqrt_of_probability = sqrt(Dagger(current_state) * Dagger(self.measurement_operator) *
-                                   self.measurement_operator * current_state)
+        """The square root of probability has to be a 1x1 matrix, so we automatically get the numerical value from it
+        to a float variable:"""
+        sqrt_of_probability = sqrt(
+            Dagger(current_state) * Dagger(self.measurement_operator) * self.measurement_operator * current_state
+        )
+        sqrt_of_probability = float(sqrt_of_probability.as_mutable()[0])
 
-        new_state = self.measurement_operator * current_state / sqrt_of_probability
+        # new_state = self.measurement_operator * current_state / float(sqrt_of_probability)
 
-        return new_state
+        return sqrt_of_probability
 
 
 class QMessage:
@@ -224,7 +228,8 @@ class QMessage:
 def main():
     nowy_qubit = Qubit(1, 0, 0)
     wynik = nowy_qubit.measure('m0')
-    return wynik
+    print(wynik)
+
 
 if __name__ == "__main__":
     main()
