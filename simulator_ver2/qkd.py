@@ -11,7 +11,7 @@ from sympy import symbols, I
 
 """Global variables, characterising the quantum channel:"""
 basis_mapping = {'rectilinear': 0, 'diagonal': 1}
-states_mapping = {'0': 0, '1': 1, '+': 0, '-': 1}
+states_mapping = {'|0>': 0, '|1>': 1, '|+>': 0, '|->': 1}
 quantum_channel = {
     '0': {  # for the rectilinear basis
         'first_state': '0',
@@ -102,10 +102,14 @@ def numerical_error_prob(n_errors, pass_size, qber):
 
 
 class Qubit:
+    """This class is meant mainly for representation purposes, in simulations. It creates a qubit in either rectilinear
+    or diagonal basis and allows to access both bra-ket and bit representations of the qubit."""
     def __init__(self, alfa, beta, basis):
-        self.alfa = alfa
-        self.beta = beta
-        self.basis = str(basis)  # so that one can initiate this class, e.g., 'Qubit(0.5, 0.5, 0)'
+        self.state_bit = None
+        self.basis_bit = None
+        self.alfa = float(alfa)
+        self.beta = float(beta)
+        self.basis = str(basis)
 
         self.first_base_vector = Ket(symbols(quantum_channel.get(self.basis).get('first_state')))
         self.second_base_vector = Ket(symbols(quantum_channel.get(self.basis).get('second_state')))
@@ -113,4 +117,52 @@ class Qubit:
         self.superposition = self.alfa * self.first_base_vector + self.beta * self.second_base_vector
 
     def get_state(self):
+        """For viewing bra-ket representation"""
         return self.superposition
+
+    def _bit_representation(self):
+        """Private method to convert bra-ket state into a pair of bits"""
+        self.basis_bit = basis_mapping.get(self.basis)
+        if self.alfa == 1.0:
+            self.state_bit = states_mapping.get(str(self.first_base_vector))
+        elif self.beta == 1.0:
+            self.state_bit = states_mapping.get(str(self.second_base_vector))
+        else:
+            self.state_bit = None  # I don't have a precise idea how to handle non-pure states, yet
+
+    def get_bits(self):
+        """For viewing the pair-of-bits representation"""
+        self._bit_representation()
+        return self.basis_bit, self.state_bit
+
+
+class QMessage:
+    def __init__(self, alfa_list = None, beta_list = None, basis_list = None):
+        """This class gets lists/strings of parameters and basis choices for multiple qubits to be created for a
+        message to be sent via the quantum channel in a given protocol."""
+        self.qubit_list = []
+        self.status = None
+
+        if alfa_list is None or beta_list is None or basis_list is None:
+            self.status = 'Missing input'
+            self.alfa_list = alfa_list
+            self.beta_list = beta_list
+            self.basis_list = basis_list
+        else:
+            self.status = 'Input received'
+            self.alfa_list = alfa_list
+            self.beta_list = beta_list
+            self.basis_list = basis_list
+
+            for index in len(self.basis_list):
+                self.qubit_list.append(
+                    Qubit(
+                        alfa=self.alfa_list[index],
+                        beta=self.beta_list[index],
+                        basis=self.basis_list[index]
+                    ))
+
+
+
+class Protocol:  # intended as a Pipeline for quantum key distribution
+    def __init__(self, rectilinear_basis_probability, number_of_sent_states, number_of_senders, number_of_receivers):
