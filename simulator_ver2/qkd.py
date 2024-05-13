@@ -258,10 +258,18 @@ class Protocol:
     def privacy_amplification(self, *args, **kwargs):
         self.privacy_amplification_args = args,
         self.privacy_amplification_kwargs = kwargs
-    
-    
 
 
+class QKDProcedure:
+    """A basic parent class for any stage in a QKD protocol."""
+    def __init__(self, input, *args, **kwargs):
+        self.input = input
+        self.output = None
+        self.args = args,
+        self.kwargs = kwargs
+
+    def get_results(self):
+        return self.output
 
 def main():
     """For testing/debugging"""
