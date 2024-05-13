@@ -225,6 +225,44 @@ class QMessage:
                     ))
 
 
+class Protocol:
+    """This class is a base for different QKD protocols to be simulated and optimised, e.g., BB84, BBM92, etc.
+    Its premise is that each protocol has to consist of senders' and receivers' measurement stations, connected by
+    quantum channels, a message sent over the quantum channels, a public channel for communication between all parties
+    involved, a sifting procedure, error correction procedure and privacy amplification procedure.
+    """
+    def __init__(self, *args, **kwargs):
+        self.privacy_amplification_kwargs = None
+        self.privacy_amplification_args = None
+        self.error_correction_kwargs = None
+        self.error_correction_args = None
+        self.error_estimation_kwargs = None
+        self.error_estimation_args = None
+        self.sifting_kwargs = None
+        self.sifting_args = None
+        self.args = args,
+        self.kwargs = kwargs
+    
+    def sifting(self, *args, **kwargs):
+        self.sifting_args = args,
+        self.sifting_kwargs = kwargs
+    
+    def error_estimation(self, *args, **kwargs):
+        self.error_estimation_args = args,
+        self.error_estimation_kwargs = kwargs
+    
+    def error_correction(self, *args, **kwargs):
+        self.error_correction_args = args,
+        self.error_correction_kwargs = kwargs
+    
+    def privacy_amplification(self, *args, **kwargs):
+        self.privacy_amplification_args = args,
+        self.privacy_amplification_kwargs = kwargs
+    
+    
+
+
+
 def main():
     """For testing/debugging"""
     nowy_qubit = Qubit(1, 0, 0)
