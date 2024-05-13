@@ -84,10 +84,10 @@ def measurement(state, basis):
     if final_state == 'random':
         """In this case there's a 50% chance of getting either polarization"""
         if random.randint(0, 1) == 0:
-            final_state = quantum_channel.get(basis).get('basis_vectors').get('first_state')
+            final_state = quantum_channel.get(basis).get('first_state')
             return final_state
         else:
-            final_state = quantum_channel.get(basis).get('basis_vectors').get('second_state')
+            final_state = quantum_channel.get(basis).get('second_state')
             return final_state
     else:
         return final_state
@@ -105,7 +105,7 @@ class Qubit:
     def __init__(self, alfa, beta, basis):
         self.alfa = alfa
         self.beta = beta
-        self.basis = basis
+        self.basis = str(basis)  # so that one can initiate this class, e.g., 'Qubit(0.5, 0.5, 0)'
 
         self.first_base_vector = Ket(symbols(quantum_channel.get(self.basis).get('first_state')))
         self.second_base_vector = Ket(symbols(quantum_channel.get(self.basis).get('second_state')))
