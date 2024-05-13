@@ -190,9 +190,9 @@ class Qubit:
         )
         sqrt_of_probability = float(sqrt_of_probability.as_mutable()[0])
 
-        # new_state = self.measurement_operator * current_state / float(sqrt_of_probability)
+        new_state = self.measurement_operator * current_state / float(sqrt_of_probability)
 
-        return sqrt_of_probability
+        return new_state
 
 
 class QMessage:
@@ -226,6 +226,7 @@ class QMessage:
 
 
 def main():
+    """For testing/debugging"""
     nowy_qubit = Qubit(1, 0, 0)
     wynik = nowy_qubit.measure('m0')
     print(wynik)
