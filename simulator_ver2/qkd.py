@@ -1,6 +1,8 @@
 import random
 import math
 import time
+from typing import Tuple, Any
+
 import numpy as np
 
 from scipy.stats import binom
@@ -231,33 +233,62 @@ class Protocol:
     quantum channels, a message sent over the quantum channels, a public channel for communication between all parties
     involved, a sifting procedure, error correction procedure and privacy amplification procedure.
     """
+
     def __init__(self, *args, **kwargs):
-        self.privacy_amplification_kwargs = None
-        self.privacy_amplification_args = None
-        self.error_correction_kwargs = None
-        self.error_correction_args = None
-        self.error_estimation_kwargs = None
-        self.error_estimation_args = None
-        self.sifting_kwargs = None
-        self.sifting_args = None
+        """kwargs should consist of at least arguments for qubit exchange, sifting, error estimation, error correction
+        and provacy amplification, with keys:
+        'qubit exchange', 'sifting', '
+
+        """
         self.args = args,
         self.kwargs = kwargs
-    
-    def sifting(self, *args, **kwargs):
-        self.sifting_args = args,
-        self.sifting_kwargs = kwargs
-    
-    def error_estimation(self, *args, **kwargs):
-        self.error_estimation_args = args,
-        self.error_estimation_kwargs = kwargs
-    
-    def error_correction(self, *args, **kwargs):
+
+        """These variables are valid for any protocol:"""
+        self.qubits_sent = []
+        self.qubits_received = []
+        self.basis_sender = ''
+        self.basis_receiver = ''
+        self.bits_sender = ''
+        self.bits_receiver = ''
+        self.quantum_bit_error_rate = None
+        self.raw_key_sender = ''
+        self.raw_key_receiver = ''
+
+        """Additionally, for research purposes, a history of the protocol can be recorded, e.g., the raw key after each
+        error correction algorithm's pass."""
+        self.history = {}
+
+
+    def _qubit_exchange(self):
+        self.qubit_exchange_kwargs = self.kwargs.get('qubit exchange')
+
+    def _sifting(self):
+        self.sifting_kwargs = self.kwargs.get('sifting')
+
+    def _error_estimation(self):
+        self.error_estimation_args =
+        self.error_estimation_kwargs =
+
+    def _error_correction(self, *args, **kwargs):
         self.error_correction_args = args,
         self.error_correction_kwargs = kwargs
-    
-    def privacy_amplification(self, *args, **kwargs):
+
+    def _privacy_amplification(self, *args, **kwargs):
         self.privacy_amplification_args = args,
         self.privacy_amplification_kwargs = kwargs
+
+    def execute(self):
+        self._qubit_exchange()
+        self._sifting()
+        self._error_estimation()
+        self._error_correction()
+        self._privacy_amplification()
+
+    def get_raw_key(self):
+        """This method allows to get raw keys in between tasks and operations on them, to check the status of protocol,
+        progress of error correction, etc."""
+        raw_keys = {'sender': self.raw_key_sender, 'receiver': self.raw_key_receiver}
+        return raw_keys
 
 
 class QKDProcedure:
