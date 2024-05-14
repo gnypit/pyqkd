@@ -30,42 +30,6 @@ basis_names = ['rectilinear', 'diagonal']
 '''
 
 
-def measurement(state, basis):  # meant for classical encoding
-
-    if basis == '1':  # meaning diagonal basis
-        basis = 'diagonal'
-
-        if state == '+':
-            final_state = '+'
-        elif state == '-':
-            final_state = '-'
-        elif state == '0' or state == '1':  # in this case there's a 50% chance of getting either polarization
-            if random.randint(0, 1) == 0:
-                final_state = quantum_channel.get(basis).get('basis_vectors').get('first_state')
-            else:
-                final_state = quantum_channel.get(basis).get('basis_vectors').get('second_state')
-        else:
-            return 'U'  # U for unknown
-
-    elif basis == '0':  # meaning rectilinear basis
-
-        if state == '0':
-            final_state = '0'
-        elif state == '1':
-            final_state = '1'
-        elif state == '+' or state == '-':
-            final_state = str(random.randint(0, 1))  # since '0' and '1' are states, there's no need for if...else
-        else:
-            return 'U'  # U for unknown
-
-    elif basis == 'L':
-        final_state = 'L'  # L for loss, as basis L reflects unperformed measurement due to quantum channel loss
-    else:
-        return 'U'  # U for unknown
-
-    return final_state
-
-
 def numerical_error_prob(n_errors, pass_size, qber):  # probability that 2*n_errors remain
     prob = binom.pmf(2 * n_errors, pass_size, qber) + binom.pmf(2 * n_errors + 1, pass_size, qber)
     return prob
