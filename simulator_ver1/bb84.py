@@ -12,46 +12,6 @@ from simulator_ver1.binary import binary
 # TODO: rename variable to have the content first, name later, e.g., bits_alice instead of alice_bits
 # TODO: add a variable demonstration=FALSE, which makes the code omit parts which are for the demonstrator
 
-"""Let's set up the quantum channel (BB84)"""
-basis_mapping = {'rectilinear': 0, 'diagonal': 1}
-states_mapping = {'0': 0, '1': 1, '+': 0, '-': 1}
-quantum_channel = {
-    'rectilinear': {
-        'basis_vectors': {'first_state': '0', 'second_state': '1'}
-    },
-    'diagonal': {
-        'basis_vectors': {'first_state': '+', 'second_state': '-'}
-    }
-}
-'''basis_vectors_mapping = {'0': '0', '90': '1', '+45': '+', '-45': '-'}
-bits_mapping = {'0': 0, '90': 1, '+45': 0, '-45': 1}
-basis_names = ['rectilinear', 'diagonal']
-'''
-
-
-def qc_gain(mean_photon_number=1., fiber_loss=1., detection_efficiency=1., k_dead=1.,
-            additional_loss=1.):  # quantum channel gain -> do lamusa
-    g = mean_photon_number * fiber_loss * detection_efficiency * k_dead * additional_loss
-    return g
-
-
-def received_key_material(quantum_channel_gain, sender_data_rate):
-    receiver = quantum_channel_gain * sender_data_rate
-    return receiver
-
-
-def random_choice(length, p=0.5):  # function for random choosing of basis for each photon
-    """p -> probability of selecting rectilinear basis"""
-    chosen_basis = ''
-    for index in range(int(np.floor(length))):
-        basis = random.uniform(0, 1)
-        if basis <= p:
-            chosen_basis += str(0)
-        else:
-            chosen_basis += str(1)
-
-    return chosen_basis
-
 
 def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5, disturbance_probability=0.1,
                     publication_probability_rectilinear=0.2, publication_probability_diagonal=0.2, cascade_n_passes=1,
