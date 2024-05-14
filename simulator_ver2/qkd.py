@@ -236,7 +236,7 @@ class Protocol:
 
     def __init__(self, *args, **kwargs):
         """kwargs should consist of at least arguments for qubit exchange, sifting, error estimation, error correction
-        and provacy amplification, with keys:
+        and privacy amplification, with keys:
         'qubit exchange', 'sifting', '
 
         """
@@ -258,24 +258,31 @@ class Protocol:
         error correction algorithm's pass."""
         self.history = {}
 
+    def get_raw_key(self):
+        """This method allows to get raw keys in between tasks and operations on them, to check the status of protocol,
+        progress of error correction, etc."""
+        raw_keys = {'sender': self.raw_key_sender, 'receiver': self.raw_key_receiver}
+        return raw_keys
+
+
+class BB84(Protocol):
+    def __init__(self, *args, **kwargs):
+        super().__init__(args)  # TODO: how to pass kwargs?
 
     def _qubit_exchange(self):
-        self.qubit_exchange_kwargs = self.kwargs.get('qubit exchange')
+        self.qubit_exchange_args = self.kwargs.get('qubit exchange')
 
     def _sifting(self):
-        self.sifting_kwargs = self.kwargs.get('sifting')
+        self.sifting_args = self.kwargs.get('sifting')
 
     def _error_estimation(self):
-        self.error_estimation_args =
-        self.error_estimation_kwargs =
+        self.error_estimation_args = self.kwargs.get('error estimation')
 
-    def _error_correction(self, *args, **kwargs):
-        self.error_correction_args = args,
-        self.error_correction_kwargs = kwargs
+    def _error_correction(self):
+        self.error_correction_args = self.kwargs.get('error correction')
 
-    def _privacy_amplification(self, *args, **kwargs):
-        self.privacy_amplification_args = args,
-        self.privacy_amplification_kwargs = kwargs
+    def _privacy_amplification(self):
+        self.privacy_amplification_args = self.kwargs.get('privacy amplification')
 
     def execute(self):
         self._qubit_exchange()
@@ -283,12 +290,6 @@ class Protocol:
         self._error_estimation()
         self._error_correction()
         self._privacy_amplification()
-
-    def get_raw_key(self):
-        """This method allows to get raw keys in between tasks and operations on them, to check the status of protocol,
-        progress of error correction, etc."""
-        raw_keys = {'sender': self.raw_key_sender, 'receiver': self.raw_key_receiver}
-        return raw_keys
 
 
 class QKDProcedure:
