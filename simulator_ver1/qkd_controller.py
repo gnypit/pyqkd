@@ -30,30 +30,6 @@ basis_names = ['rectilinear', 'diagonal']
 '''
 
 
-def qc_gain(mean_photon_number=1., fiber_loss=1., detection_efficiency=1., k_dead=1.,
-            additional_loss=1.):  # quantum channel gain -> do lamusa
-    g = mean_photon_number * fiber_loss * detection_efficiency * k_dead * additional_loss
-    return g
-
-
-def received_key_material(quantum_channel_gain, sender_data_rate):
-    receiver = quantum_channel_gain * sender_data_rate
-    return receiver
-
-
-def random_choice(length, p=0.5):  # function for random choosing of basis for each photon
-    """p -> probability of selecting rectilinear basis"""
-    chosen_basis = ''
-    for index in range(int(np.floor(length))):
-        basis = random.uniform(0, 1)
-        if basis <= p:
-            chosen_basis += str(0)
-        else:
-            chosen_basis += str(1)
-
-    return chosen_basis
-
-
 def measurement(state, basis):  # meant for classical encoding
 
     if basis == '1':  # meaning diagonal basis
