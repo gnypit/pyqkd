@@ -227,47 +227,96 @@ class QMessage:
                     ))
 
 
-class Protocol:
-    """This class is a base for different QKD protocols to be simulated and optimised, e.g., BB84, BBM92, etc.
-    Its premise is that each protocol has to consist of senders' and receivers' measurement stations, connected by
-    quantum channels, a message sent over the quantum channels, a public channel for communication between all parties
-    involved, a sifting procedure, error correction procedure and privacy amplification procedure.
-    """
-
+class Participant:
     def __init__(self, *args, **kwargs):
-        """kwargs should consist of at least arguments for qubit exchange, sifting, error estimation, error correction
-        and privacy amplification, with keys:
-        'qubit exchange', 'sifting', '
-
-        """
-        self.args = args,
+        self.args = args
         self.kwargs = kwargs
 
+
+class QuantumChannel:
+    """This is a class simulating """
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+class PublicChannel:
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+class Eavesdropper:
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+
+class Protocol:
+    """This class is a base for QKD protocols between any number of parties communicating and those eavesdropping.
+    It has to consist of an error estimation function and error correction function/algorithm.
+    It has a QBER field and a dictionary 'history' to store how raw keys change while the protocol is being performed.
+
+    Once initiated, quantum channels, public channels, communicating parties (in short: participants) and eavesdroppers
+    can be added to construct a whole network, over which the protocol is executed.
+
+    Quantum channels have to be created between specific participants, while public channels can be available to any
+    number of participants to use. Eavesdropper have to be assigned to specific quantum channels, only one for each
+    eavesdropper.
+    """
+
+    def __init__(self, error_estimation_function, error_correction_algorithm):
         """These variables are valid for any protocol:"""
+        self.participants = {}  # storage of communicating parties, e.g., Alice, Bob, etc.
+        self.eavesdroppers = {}  # storage of eavesdroppers, e.g., Eve
+        self.quantum_channels = {}  # storage of quantum channels
+        self.public_channels = {}  # storage of public channels
+        self.error_estimation_fun = error_estimation_function
+        self.error_correction_algorithm = error_correction_algorithm
+        self.qber = None  # quantum bit error rate, should be of type float
+
+        """Additionally, for research/demonstration purposes, a history of the protocol can be recorded, e.g., the raw 
+        key after each error correction algorithm's pass."""
+        self.history = {}
+
+    def __getstate__(self):
+        state = {
+            'error estimation function': self.error_estimation_fun,
+            'error correction algorithm': self.error_correction_algorithm,
+            'quantum bit error rate': self.qber,
+            'history': self.history
+        }
+        return state
+
+    def add_participants(self, **participants: dict[str, Participant]):
+        """Method for adding any number of uniquely named participants."""
+        for name, participant in participants.items():
+            self.participants[name] = participant
+
+    def add_quantum_channels(self, **quantum_channels: dict[str, QuantumChannel]):
+        """Method for adding any number of quantum channels to be used by the protocol."""
+        self.quantum_channels = quantum_channels
+
+    def reconnect_participants(self):
+        """Method for changing which participants are connected via which quantum channels; this info is stored within
+        QuantumChannel class, in analogy to a graph."""
+
+
+class BB84(Protocol):
+    def __init__(self, *args, **kwargs):
+        super().__init__(args)  # TODO: how to pass kwargs?
         self.qubits_sent = []
         self.qubits_received = []
         self.basis_sender = ''
         self.basis_receiver = ''
         self.bits_sender = ''
         self.bits_receiver = ''
-        self.quantum_bit_error_rate = None
         self.raw_key_sender = ''
         self.raw_key_receiver = ''
-
-        """Additionally, for research purposes, a history of the protocol can be recorded, e.g., the raw key after each
-        error correction algorithm's pass."""
-        self.history = {}
 
     def get_raw_key(self):
         """This method allows to get raw keys in between tasks and operations on them, to check the status of protocol,
         progress of error correction, etc."""
         raw_keys = {'sender': self.raw_key_sender, 'receiver': self.raw_key_receiver}
         return raw_keys
-
-
-class BB84(Protocol):
-    def __init__(self, *args, **kwargs):
-        super().__init__(args)  # TODO: how to pass kwargs?
 
     def _qubit_exchange(self):
         self.qubit_exchange_args = self.kwargs.get('qubit exchange')
