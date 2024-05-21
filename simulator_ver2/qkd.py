@@ -15,8 +15,10 @@ from sympy.physics.quantum.state import Ket, Bra
 from sympy.physics.quantum.operator import Operator
 
 """Global variables, characterising the quantum channel:"""
-basis_mapping = {'rectilinear': 0, 'diagonal': 1}
+basis_mapping = {'rectilinear': 0, 'diagonal': 1, '0': 'rectilinear', '1': 'diagonal'}
 states_to_bit_mapping = {'|0>': 0, '|1>': 1, '|+>': 0, '|->': 1}
+rectilinear_states_mapping = {'0': '|0>', '1': '|1>'}
+diagonal_states_mapping = {'0': '|+>', '1': '|->'}
 states_to_matrix_mapping = {
     '|0>': Matrix([[1], [0]]),
     '|1>': Matrix([[0], [1]]),
@@ -226,6 +228,8 @@ class QMessage:
                         basis=self.basis_list[index]
                     ))
 
+    def create_sender_states(self, length):
+
 
 class Participant:
     def __init__(self, *args, **kwargs):
@@ -301,6 +305,8 @@ class Protocol:
     def reconnect_participants(self):
         """Method for changing which participants are connected via which quantum channels; this info is stored within
         QuantumChannel class, in analogy to a graph."""
+
+
 
 
 class BB84(Protocol):
