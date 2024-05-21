@@ -235,14 +235,17 @@ class Participant:
 
 class QuantumChannel:
     """This is a class simulating """
+
     def __init__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
+
 
 class PublicChannel:
     def __init__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
+
 
 class Eavesdropper:
     def __init__(self, *args, **kwargs):
@@ -343,6 +346,7 @@ class BB84(Protocol):
 
 class QKDProcedure:
     """A basic parent class for any stage in a QKD protocol."""
+
     def __init__(self, input, *args, **kwargs):
         self.input = input
         self.output = None
@@ -351,6 +355,7 @@ class QKDProcedure:
 
     def get_results(self):
         return self.output
+
 
 def main():
     """For testing/debugging"""
