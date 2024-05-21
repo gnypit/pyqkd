@@ -14,6 +14,8 @@ from sympy.physics.quantum.dagger import Dagger
 from sympy.physics.quantum.state import Ket, Bra
 from sympy.physics.quantum.operator import Operator
 
+from typing import Union, List
+
 """Global variables, characterising the quantum channel:"""
 basis_mapping = {'rectilinear': 0, 'diagonal': 1, '0': 'rectilinear', '1': 'diagonal'}
 states_to_bit_mapping = {'|0>': 0, '|1>': 1, '|+>': 0, '|->': 1}
@@ -26,11 +28,19 @@ states_to_matrix_mapping = {
     '|->': (Matrix([[1], [0]]) - Matrix([[0], [1]])) / sqrt(2)
 }
 quantum_channel = {
-    '0': {  # for the rectilinear basis
+    '0': {  # can be used for the rectilinear basis
         'first_state': '0',
         'second_state': '1'
     },
-    '1': {  # for the diagonal basis
+    '1': {  # can be used for the diagonal basis
+        'first_state': '+',
+        'second_state': '-'
+    },
+    'rectilinear': {
+        'first_state': '0',
+        'second_state': '1'
+    },
+    'diagonal': {
         'first_state': '+',
         'second_state': '-'
     }
@@ -199,42 +209,65 @@ class Qubit:
         return new_state
 
 
+# TODO: basis choices are properties of senders and receivers, not the message!
+
 class QMessage:
-    """This class gets lists/strings of parameters and basis choices for multiple qubits to be created for a
-            message to be sent via the quantum channel in a given protocol."""
+    """
+    This class contains coordinates of multiple qubits in either rectilinear or diagonal basis, which are transferred
+    via the quantum channel in a given protocol.
+    """
 
-    def __init__(self, alfa_list=None, beta_list=None, basis_list=None):
-        """Variables should be either strings or tables of equal length. If all of them are received and of
-        equal length, a table of Qubits based on specified coordinates in a given basis shall be created."""
+    def __init__(self, alfa: Union[List, str] = None, beta: Union[List, str] = None, basis: Union[List, str] = None):
+        """
+        Variables should be either strings or lists of equal length in order to properly represent qubits.
+        If a string is provided, it is assumed to be consisted of 0s and 1s, to have pure states only. Of course with
+        only rectilinear or diagonal basis available, 0s and 1s are enough to indicate basis choices for multiple qubits
+        in a single string. A list of names of basis choices as strings can be given as well.
+        """
+        # Set default values to empty lists if None
+        if alfa is None:
+            alfa = []
+        if beta is None:
+            beta = []
+        if basis is None:
+            basis = []
+
+        # Type checks
+        if not isinstance(alfa, (list, str)):
+            raise TypeError(f"Expected alfa_list to be a list or string, got {type(alfa).__name__}")
+        if not isinstance(beta, (list, str)):
+            raise TypeError(f"Expected beta_list to be a list or string, got {type(beta).__name__}")
+        if not isinstance(basis, (list, str)):
+            raise TypeError(f"Expected basis_list to be a list or string, got {type(basis).__name__}")
+
         self.qubit_list = []
-        self.status = None
+        self.alfa = alfa
+        self.beta = beta
+        self.basis = basis  # necessary for proper representation of quantum states
 
-        if len(alfa_list) == 0 or len(beta_list) == 0 or len(basis_list) == 0:
-            self.status = 'Missing input'
-            self.alfa_list = alfa_list
-            self.beta_list = beta_list
-            self.basis_list = basis_list
-        else:
-            self.status = 'Input received'
-            self.alfa_list = alfa_list
-            self.beta_list = beta_list
-            self.basis_list = basis_list
-
-            for index in range(len(self.basis_list)):
-                self.qubit_list.append(
-                    Qubit(
-                        alfa=self.alfa_list[index],
-                        beta=self.beta_list[index],
-                        basis=self.basis_list[index]
-                    ))
-
-    def create_sender_states(self, length):
+    def create_qubit_representation(self):
+        """Based on series of alfa & beta coordinates in specified basis, instances of the Qubit class can be created
+        and stored within the QMessage class."""
+        for index in range(len(self.basis)):
+            self.qubit_list.append(
+                Qubit(
+                    alfa=self.alfa[index],
+                    beta=self.beta[index],
+                    basis=self.basis[index]
+                ))
 
 
 class Participant:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, rectilinear_basis_prob: float = 0.5, *args, **kwargs):
+        self.rect_prob = rectilinear_basis_prob  # the probability of choosing the diagonal basis is 1 - rect_prob
         self.args = args
         self.kwargs = kwargs
+
+    def create_sender_states(self, length):
+        sender_basis_list = np.random.binomial(1, 1 - self.rect_prob, length)
+        sender_basis = ''
+        for basis in sender_basis_list:
+            alice_basis += str(int(basis))
 
 
 class QuantumChannel:
@@ -305,8 +338,6 @@ class Protocol:
     def reconnect_participants(self):
         """Method for changing which participants are connected via which quantum channels; this info is stored within
         QuantumChannel class, in analogy to a graph."""
-
-
 
 
 class BB84(Protocol):
