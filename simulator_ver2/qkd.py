@@ -151,6 +151,10 @@ class Qubit:
         self.first_base_vector = Ket(symbols(quantum_channel.get(self.basis).get('first_state')))
         self.second_base_vector = Ket(symbols(quantum_channel.get(self.basis).get('second_state')))
 
+        """
+        This way a state |+> can be created either with the diagonal basis and alfa=1, beta=0, or with the 
+        rectilinear basis and alfa=beta=1/sqrt(2):
+        """
         self.superposition = self.alfa * self.first_base_vector + self.beta * self.second_base_vector
 
     def get_state(self):
@@ -190,23 +194,26 @@ class Qubit:
         'm1' = |1><1|,
         'm+' = |+><+|,
         'm-' = |-><-|
+
+        During measurement with a given operator, firstly probability of the result is computed. Next, if it's greater
+        than zero, the resulting state is computed. Both of them are returned as a dict. Otherwise, a 'None' state is
+        returned together with the 0 probability, again as a dict.
         """
         self.measurement_operator = measurement_operators.get(measurement_operator)
 
-        first_base_vector = states_to_matrix_mapping.get(str(self.first_base_vector))
-        second_base_vector = states_to_matrix_mapping.get(str(self.second_base_vector))
-        current_state = self.alfa * first_base_vector + self.beta * second_base_vector
-
         """The square root of probability has to be a 1x1 matrix, so we automatically get the numerical value from it
         to a float variable:"""
-        sqrt_of_probability = sqrt(
-            Dagger(current_state) * Dagger(self.measurement_operator) * self.measurement_operator * current_state
-        )
-        sqrt_of_probability = float(sqrt_of_probability.as_mutable()[0])
+        probability = Dagger(self.superposition) * Dagger(self.measurement_operator) * self.measurement_operator * self.superposition
 
-        new_state = self.measurement_operator * current_state / float(sqrt_of_probability)
+        if probability > 0:
+            sqrt_of_probability = float(sqrt(probability).as_mutable()[0])
+            new_state = self.measurement_operator * self.superposition / float(sqrt_of_probability)
+        else:
+            new_state = None
 
-        return new_state
+        result = {'probability': probability, 'new state': new_state}
+
+        return result
 
 
 # TODO: basis choices are properties of senders and receivers, not the message!
@@ -217,7 +224,7 @@ class QMessage:
     via the quantum channel in a given protocol.
     """
 
-    qubit_list = []
+    qubit_list: List[Qubit] = []  # is this properly defined?
 
     def __init__(self, alfa: Union[List, str] = None, beta: Union[List, str] = None, basis: Union[List, str] = None):
         """
@@ -245,6 +252,9 @@ class QMessage:
         self.alfa = alfa
         self.beta = beta
         self.basis = basis  # necessary for proper representation of quantum states
+
+    def _create_random_states(self):
+        return 0  # temporary, so that the file can compile
 
     def create_qubit_representation(self):
         """Based on series of alfa & beta coordinates in specified basis, instances of the Qubit class can be created
@@ -275,20 +285,30 @@ class Participant:
         for basis in basis_list:
             self.basis_choices += str(int(basis))
 
-    def perform_measurement(self, message: QMessage, operators: Union[List, str] = None):
+    def perform_measurement(self, message: QMessage, basis_choices: Union[List, str] = None):
         """
-        User can specify which measurement operators to use; otherwise _choose_basis() method will be called upon to
-        create a list of basis choices to create operators based on it. This way or another the quantum message must be
-        passed to measure it.
+        User can specify which base to use for measurement; otherwise _choose_basis() method will be called upon to
+        create a list of basis choices. Then a list of pairs of operators is created, based on basis choices. This way
+        or another the quantum message must be passed to measure it.
         """
-        if operators in None:
-            self._choose_basis(length=len(QMessage.qubit_list))
-            for basis in self.basis_choices:  # TODO heeeelp how to do it properly in a general way???
+        if basis_choices in None:
+            self._choose_basis(length=len(message.qubit_list))
+            for basis in self.basis_choices:
                 if basis == '0' or basis == 0 or basis == 'rectilinear':
-                    self.measurement_operators.append('m0')
+                    self.measurement_operators.append(('m0', 'm1'))
+                else:
+                    self.measurement_operators.append(('m+', 'm-'))
 
-        for qubit in QMessage.qubit_list:
-            self.measurement_results.append(qubit.measure())
+        """Now that the basis are chosen and in each one the measurement operators are known, qubit measurement with 
+        both of these can be performed. To track which pair of operators to use, a local index/counter is created."""
+        index = 0
+
+        for qubit in message.qubit_list:
+            operator1, operator2 = self.measurement_operators[index]
+            result1 = qubit.measure(measurement_operator=operator1)
+            result2 = qubit.measure(measurement_operator=operator2)
+            self.measurement_results.append((result1, result2))
+            index += 1
 
 
 class QuantumChannel:
