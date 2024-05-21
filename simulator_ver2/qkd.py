@@ -217,6 +217,8 @@ class QMessage:
     via the quantum channel in a given protocol.
     """
 
+    qubit_list = []
+
     def __init__(self, alfa: Union[List, str] = None, beta: Union[List, str] = None, basis: Union[List, str] = None):
         """
         Variables should be either strings or lists of equal length in order to properly represent qubits.
@@ -240,7 +242,6 @@ class QMessage:
         if not isinstance(basis, (list, str)):
             raise TypeError(f"Expected basis_list to be a list or string, got {type(basis).__name__}")
 
-        self.qubit_list = []
         self.alfa = alfa
         self.beta = beta
         self.basis = basis  # necessary for proper representation of quantum states
@@ -256,18 +257,38 @@ class QMessage:
                     basis=self.basis[index]
                 ))
 
+# TODO: should there be a differentiation between Participants, e.g., Alice and Bob, and the actual source of qubits?
 
 class Participant:
+
+    measurement_results = []
+    measurement_operators = []
+    basis_choices = ''
+
     def __init__(self, rectilinear_basis_prob: float = 0.5, *args, **kwargs):
         self.rect_prob = rectilinear_basis_prob  # the probability of choosing the diagonal basis is 1 - rect_prob
         self.args = args
         self.kwargs = kwargs
 
-    def create_sender_states(self, length):
-        sender_basis_list = np.random.binomial(1, 1 - self.rect_prob, length)
-        sender_basis = ''
-        for basis in sender_basis_list:
-            alice_basis += str(int(basis))
+    def _choose_basis(self, length):
+        basis_list = np.random.binomial(1, 1 - self.rect_prob, length)
+        for basis in basis_list:
+            self.basis_choices += str(int(basis))
+
+    def perform_measurement(self, message: QMessage, operators: Union[List, str] = None):
+        """
+        User can specify which measurement operators to use; otherwise _choose_basis() method will be called upon to
+        create a list of basis choices to create operators based on it. This way or another the quantum message must be
+        passed to measure it.
+        """
+        if operators in None:
+            self._choose_basis(length=len(QMessage.qubit_list))
+            for basis in self.basis_choices:  # TODO heeeelp how to do it properly in a general way???
+                if basis == '0' or basis == 0 or basis == 'rectilinear':
+                    self.measurement_operators.append('m0')
+
+        for qubit in QMessage.qubit_list:
+            self.measurement_results.append(qubit.measure())
 
 
 class QuantumChannel:
