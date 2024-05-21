@@ -270,6 +270,11 @@ class QMessage:
 # TODO: should there be a differentiation between Participants, e.g., Alice and Bob, and the actual source of qubits?
 
 class Participant:
+    """
+    This class is actually more and more a simulation of a pair of polarizing beam splitters, I think:
+    https://chem.libretexts.org/Bookshelves/Physical_and_Theoretical_Chemistry_Textbook_Maps/Quantum_Tutorials_(Rioux)/07%3A_Quantum_Optics/7.06%3A_The_Polarizing_Beam_Splitter_and_the_Superposition_Principle
+    https://physics.stackexchange.com/questions/20774/quantum-optics-of-a-polarizing-beam-splitter
+    """
 
     measurement_results = []
     measurement_operators = []
@@ -307,8 +312,22 @@ class Participant:
             operator1, operator2 = self.measurement_operators[index]
             result1 = qubit.measure(measurement_operator=operator1)
             result2 = qubit.measure(measurement_operator=operator2)
-            self.measurement_results.append((result1, result2))
+
+            """
+            At this stage the resulting states come with certain probabilities. Each measurement might result only 
+            with one state, i.e. a photon can be detected in only one path and cannot be split. This is simulated with 
+            a pseudo-random number:
+            """
+            if random.uniform(0, 1) < result1.get('probability'):
+                result = result1.get('new state')
+            else:
+                result = result2.get('new state')
+
+            self.measurement_results.append(result)
             index += 1
+
+
+# TODO: make sure what the half-wave plates are for in BB84 and expand on them & (polarisating) beam splitters with full algebra implementation
 
 
 class QuantumChannel:
