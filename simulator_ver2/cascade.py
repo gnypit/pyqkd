@@ -169,10 +169,10 @@ def cascade_blocks_generator(string_length, blocks_size):
         yield blocks[j:j + blocks_size]
 
 
-class Block:
+class PairOfBlocks:
     """This class is representing a single block of the Cascade error correction algorithm. It contains bits
     with their indexes in the raw key in a given QKD protocol, in which the error correction is being run. It also
-    holds in memory an information of which bits are erroneous for statistical analysis of the post-processing,
+    holds in memory the information of which bits are erroneous for statistical analysis of the post-processing,
     for optimisation purposes.
     """
     size: int = None
@@ -180,12 +180,118 @@ class Block:
     sender_bits: dict = {}  # keys are indexes in the raw key and values are the bits
     receiver_bits: dict = {}  # keys are indexes in the raw key and values are the bits
     erroneous_bits_indexes: list = []
+    corrected_sender_bits: dict = {}
+    corrected_receiver_bits: dict = {}
 
-    def __init__(self, size):  # TODO: differentiate between constructor and bit assignment?
-        """In the constructor, this class requires information of the expected size of this particular CASCADE
-        block, the bits and their indexes to be assigned to this block.
-        """
+    def __init__(self, size):
+        """In the constructor, this class requires the expected size of this particular CASCADE block"""
         self.size = size
+
+    def add_bits(self, index: int, sender_bit: int, receiver_bit: int):  # I want to store indexes as numbers for easier statistical analysis afterwards
+        """This method is called upon inside the Cascade's execute() main method, while assigning bits for error
+        correction to a given block in a given pass
+        """
+        self.sender_bits[str(index)] = sender_bit
+        self.receiver_bits[str(index)] = receiver_bit
+        self.indexes.append(index)
+
+    def flag_errors(self):
+        """To track all actual errors, to verify the influence of the errors' grouping on the final key rate
+        in QKD protocols, this method bluntly compares received sender's and receiver's bits. It creates strings of the
+        original bits and a list of indexes of the erroneous ones and returns it as a dict."""
+        original_sender_string = ''
+        original_receiver_string = ''
+
+        for index in self.indexes:
+            sender_bit = self.sender_bits.get(str(index))
+            receiver_bit = self.receiver_bits.get(str(index))
+
+            original_sender_string += str(sender_bit)
+            original_receiver_string += str(receiver_bit)
+
+            if sender_bit != receiver_bit:
+                self.erroneous_bits_indexes.append(index)
+
+        results = {
+            'original sender string': original_sender_string,
+            'original receiver string': original_receiver_string,
+            'indexes of all erroneous bits': self.erroneous_bits_indexes
+        }
+
+        return results
+
+    def binary(self):
+        """
+        Contrary to real-life applications in this simulation of the BINARY algorithm Alice (sender) and Bob (receiver)
+        do not exchange messages. Instead, we count how many bits should be exchanged between them so that the algorithm
+        would end successfully. Afterwards, we return this value together with the bit to be changed as a result of the
+        algorithm.
+        """
+        is_binary = True
+        bit_counter = 0
+
+        while is_binary:
+            """Sender starts by sending to the Receiver parity of the first half of her string"""
+            half_index = len(self.sender_bits) // 2  # same as Bob's
+            first_half_indexes = self.indexes[0:half_index:1]  # same as Bob's
+            sender_first_half_list = []
+
+            for index in first_half_indexes:
+                sender_first_half_list.append(int(self.sender_bits.get(str(index))))
+
+            sender_first_half_parity = sum(sender_first_half_list) % 2
+            bit_counter += 1  # At this point sender informs receiver about their 1st half's parity
+
+            """Now Receiver determines whether an odd number of errors occurred in the first or in the
+            second half by testing the parity of his string and comparing it to the parity sent
+            by Sender
+            """
+            receiver_first_half_list = []
+
+            for index in first_half_indexes:
+                receiver_first_half_list.append(int(self.receiver_bits.get(str(index))))
+
+            receiver_first_half_parity = sum(receiver_first_half_list) % 2
+
+            """Single (at least) error is in the 'half' of a different parity; we change current strings
+            that are analysed into halves of different parities until one bit is left - the error
+            """
+            sender_subscription_block = {}
+            receiver_subscription_block = {}
+
+            if receiver_first_half_parity != sender_first_half_parity:
+                bit_counter += 1  # At this point, the receiver sends a mess. About an odd number of errors in 1st half
+                for index in first_half_indexes:
+                    receiver_subscription_block[index] = self.receiver_bits.get(str(index))
+                    sender_subscription_block[index] = self.sender_bits.get(str(index))
+
+                sender_current_block = sender_subscription_block
+                receiver_current_block = receiver_subscription_block
+
+                indexes = list(sender_current_block.keys())  # same as Bob's
+            else:
+                bit_counter += 1  # At this point, the receiver sends a mess. about an odd number of errors in 2nd half
+
+                """We have to repeat the whole procedure for the second halves"""
+                second_half_indexes = self.indexes[half_index::1]
+
+                for index in second_half_indexes:
+                    receiver_subscription_block[index] = self.receiver_bits.get(str(index))
+                    sender_subscription_block[index] = self.sender_bits.get(str(index))
+
+                sender_current_block = sender_subscription_block
+                receiver_current_block = receiver_subscription_block
+
+                indexes = list(sender_current_block.keys())  # same as Bob's
+
+            if len(receiver_current_block) == 1:  # at some point, this clause will be true
+                bit_counter += 1  # At this point receiver would send a message (?) about one bit left and changing it
+
+                """Firstly we change the error bit in Bob's original dictionary of all bits"""
+                if receiver_current_block[indexes[0]] == '0':
+                    return {'Correct bit value': '1', 'Corrected bit index': indexes[0], 'Bit counter': bit_counter}
+                else:
+                    return {'Correct bit value': '0', 'Corrected bit index': indexes[0], 'Bit counter': bit_counter}
 
 
 class Cascade:
@@ -319,12 +425,12 @@ class Cascade:
 
     def execute(self):
         """
-        CASCADE: 1st I need to assign bits to their indexes in original strings. Therefore, I create dictionaries
+        CASCADE: First, I need to assign bits to their indexes in original strings. Therefore, I create dictionaries
         for Alice (sender) and for Bob (receiver).
         """
         self.time_error_correction_start = time.time()
 
-        # I dynamically create dictionaries with indexes as keys and bits as values
+        """I dynamically create dictionaries with indexes as keys and bits as values"""
         for bit_index in range(self.raw_key_length):
             self.sender_cascade[str(bit_index)] = self.raw_key_sender[bit_index]
             self.receiver_cascade[str(bit_index)] = self.raw_key_receiver[bit_index]
@@ -348,19 +454,27 @@ class Cascade:
             bob_blocks = []
 
             for block_index in self._cascade_blocks_generator(single_block_size=size):
+                """
                 alice_block = {}  # a dictionary for a single block for Alice
                 bob_block = {}  # a dictionary for a single block for Bob
-
-                sender_block = Block(size=size)
-
 
                 for index in block_index:  # I add proper bits to these dictionaries
                     alice_block[str(index)] = self.sender_cascade[str(index)]
                     bob_block[str(index)] = self.receiver_cascade[str(index)]
-
-                """I append single blocks created for given indexes to lists of block for this particular CASCADE's pass"""
+                # I append single blocks created for given indexes to lists of block for this particular CASCADE's 
+                #                 pass
+                
                 alice_blocks.append(alice_block)
                 bob_blocks.append(bob_block)
+                """
+
+                current_block = PairOfBlocks(size=size)
+                for index in block_index:
+                    current_block.add_bits(
+                        index=index,
+                        sender_bit=self.sender_cascade[str(index)],
+                        receiver_bit=self.receiver_cascade[str(index)]
+                    )
 
             for block_number in range(pass_number_of_blocks):
 
