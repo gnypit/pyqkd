@@ -164,3 +164,13 @@ def cascade_blocks_generator(string_length, blocks_size):
 
     for j in range(0, string_length, blocks_size):  # I generate equally long chunks of shuffled indexes
         yield blocks[j:j + blocks_size]
+
+
+class Cascade:
+    """A general class for the CASCADE error correction algorithm for QKD. It is based mainly on the original
+    proposition from 1993, with improvements motivated by lower computation cost & time. Variations of this algorithm
+    are meant to be children of this parent class."""
+    pass_no = 0
+    sets_of_blocks = {}
+
+
