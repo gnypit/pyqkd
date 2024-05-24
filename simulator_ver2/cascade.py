@@ -176,11 +176,13 @@ class Block:
     for optimisation purposes.
     """
     size: int = None
-    bits: dict = {}  # keys are indexes in the raw key and values are the bits
+    indexes: list = []
+    sender_bits: dict = {}  # keys are indexes in the raw key and values are the bits
+    receiver_bits: dict = {}  # keys are indexes in the raw key and values are the bits
     erroneous_bits_indexes: list = []
 
     def __init__(self, size):  # TODO: differentiate between constructor and bit assignment?
-        """In the constructor this class requires to get information of the expected size of this particular CASCADE
+        """In the constructor, this class requires information of the expected size of this particular CASCADE
         block, the bits and their indexes to be assigned to this block.
         """
         self.size = size
@@ -348,6 +350,9 @@ class Cascade:
             for block_index in self._cascade_blocks_generator(single_block_size=size):
                 alice_block = {}  # a dictionary for a single block for Alice
                 bob_block = {}  # a dictionary for a single block for Bob
+
+                sender_block = Block(size=size)
+
 
                 for index in block_index:  # I add proper bits to these dictionaries
                     alice_block[str(index)] = self.sender_cascade[str(index)]
