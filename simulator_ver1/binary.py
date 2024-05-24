@@ -1,7 +1,7 @@
 """Author: Jakub Gnyp; contact: gnyp.jakub@gmail.com, LinkedIn: https://www.linkedin.com/in/gnypit/"""
 
 
-# TODO: this file will have the chat-like version of the function for the demonstrator; for now the actual method with no printable messages will be put in the cascade.py file as a Block's method
+# TODO: this file will have the chat-like version of the function for the demonstrator; for now the actual method with no printable messages will be put in the error_correction.py file as a Block's method
 
 
 def binary(sender_block, receiver_block, indexes, receiver_name='Bob'):
