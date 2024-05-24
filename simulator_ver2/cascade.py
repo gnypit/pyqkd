@@ -237,13 +237,13 @@ class Cascade:
         fulfilling conditions (2) and (3) as described in 1993 paper "Secret Key Reconciliation by Public Discussion"
         by Gilles Brassard and Louis Salvail, published in "Advances in Cryptography" proceedings.
 
-        In this improved version of cascade_blocks_sizes functon the checks for the (2) & (3) of conditions from the '93
+        In this improved version of cascade_blocks_sizes function the checks for the (2) & (3) of conditions from the '93
         CASCADE paper are simplified, resulting in lesser computational complexity. For additional context, these
         conditions are a system of non-linear inequalities that need to be fulfilled in order to have the probability
         of correcting at least 2 errors in a given block in any pass greater than 0.75
 
         In this approach we implement regularised incomplete beta function to represent binomial distribution CDF
-        for a simplified left side of the (2) inequality from tha paper.
+        for a simplified left side of the (2) inequality from that paper.
 
         Additionally, we use a single formula for the expected value (3) of number of errors in a given block after
         completion of the first CASCADE pass.
@@ -337,9 +337,8 @@ class Cascade:
             try:
                 pass_number_of_blocks = int(np.floor(self.raw_key_length // size))
             except ZeroDivisionError:
-                error_message = 'ZeroDivisionError with size'
-                print(error_message)
-                continue
+                var = self.__dict__
+                raise ZeroDivisionError(f"ZeroDivisionError with size. Current field values are: {var}")
 
             alice_pass_parity_list = []
             bob_pass_parity_list = []
@@ -351,8 +350,8 @@ class Cascade:
                 bob_block = {}  # a dictionary for a single block for Bob
 
                 for index in block_index:  # I add proper bits to these dictionaries
-                    alice_block[str(index)] = alice_cascade[str(index)]
-                    bob_block[str(index)] = bob_cascade[str(index)]
+                    alice_block[str(index)] = self.sender_cascade[str(index)]
+                    bob_block[str(index)] = self.receiver_cascade[str(index)]
 
                 """I append single blocks created for given indexes to lists of block for this particular CASCADE's pass"""
                 alice_blocks.append(alice_block)
@@ -397,9 +396,9 @@ class Cascade:
 
                     """Thirdly we change the error bit in blocks' history_cascade:"""
                     if self.current_pass_no > 0:  # in the first pass of CASCADE there are no previous blocks
-                        for n_pass in range(pass_number):  # we check all previous passes
-                            previous_pass_blocks_alice = history_cascade[n_pass].get('Alice blocks')
-                            previous_pass_blocks_bob = history_cascade[n_pass].get('Bob blocks')
+                        for previous_pass_index in range(self.current_pass_no):  # we check all previous passes
+                            previous_pass_blocks_alice = self.history_cascade[previous_pass_index].get('Alice blocks')
+                            previous_pass_blocks_bob = self.history_cascade[previous_pass_index].get('Bob blocks')
                             for n_block in range(len(previous_pass_blocks_bob)):
                                 """We check all Bob's blocks in each previous pass"""
                                 if binary_correct_bit_index in previous_pass_blocks_bob[n_block]:
@@ -412,32 +411,27 @@ class Cascade:
                                             indexes=list(previous_pass_blocks_alice[n_block].keys())
                                         )
 
-                                        exchanged_bits_counter += binary_previous.get('Bit counter')
-                                        bob_cascade[binary_previous['Corrected bit index']] = binary_previous.get(
+                                        self.exchanged_bits_counter += binary_previous.get('Bit counter')
+                                        self.receiver_cascade[binary_previous['Corrected bit index']] = binary_previous.get(
                                             'Correct bit value')
                                         bob_blocks[block_number][
                                             binary_previous['Corrected bit index']] = binary_previous.get(
                                             'Correct bit value')
                                     except AttributeError:
-                                        error_message = [blocks_sizes, alice_basis_length, gain,
-                                                         disturbance_probability,
-                                                         error_estimate, key_len, rectilinear_basis_prob,
-                                                         publication_probability_rectilinear,
-                                                         cascade_n_passes, "AttributeError for binary_previous"]
-                                        print(error_message)
-                                        return error_message
+                                        var = self.__dict__
+                                        raise ZeroDivisionError(
+                                            f"AttributeError for binary_previous. Current field values are: {var}")
                                     except KeyError:
-                                        print("KeyError for binary_previous")
-                                        print(previous_pass_blocks_alice[n_block])
-                                        print(previous_pass_blocks_bob[n_block])
-                                        print(list(previous_pass_blocks_bob[n_block].keys()))
+                                        var = self.__dict__
+                                        raise ZeroDivisionError(
+                                            f"KeyError for binary_previous. Current field values are: {var}")
 
-            history_cascade.append({'Alice blocks': alice_blocks, 'Bob blocks': bob_blocks})
-            pass_number += 1
+            self.history_cascade.append({'Alice blocks': alice_blocks, 'Bob blocks': bob_blocks})
+            self.current_pass_no += 1
 
             """For the purposes of optimizing CASCADE we check the error rate after each pass:"""
-            alice_key_error_check = ''.join(list(alice_cascade.values()))
-            bob_key_error_check = ''.join(list(bob_cascade.values()))
+            alice_key_error_check = ''.join(list(self.sender_cascade.values()))
+            bob_key_error_check = ''.join(list(self.receiver_cascade.values()))
 
             # TODO: can we make it a separate function?
             key_error_rate = 0
@@ -448,11 +442,9 @@ class Cascade:
                 index += 1
             try:
                 key_error_rate = key_error_rate / len(alice_key_error_check)
-                error_rates.append(key_error_rate)  # its length is equivalent to no. CASCADE passes performed
+                self.error_rates.append(key_error_rate)  # its length is equivalent to no. CASCADE passes performed
                 if key_error_rate < 0.0001:  # TODO: is 0.1% a small enough number?
                     break  # let's not waste time for more CASCADE passes if there are 'no more' errors
             except ZeroDivisionError:
-                error_message = [blocks_sizes, pass_number, alice_basis_length, gain, disturbance_probability,
-                                 error_estimate, key_len, rectilinear_basis_prob, publication_probability_rectilinear,
-                                 cascade_n_passes, 'ZeroDivisionError with len(alice_key_error_check)']
+                error_message = 'ZeroDivisionError with len(alice_key_error_check)'
                 print(error_message)
