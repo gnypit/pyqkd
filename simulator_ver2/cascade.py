@@ -220,6 +220,13 @@ class PairOfBlocks:
 
         return results
 
+    def parity_check(self):
+        """This method computes the parity of strings of bits for both Alice (sender) and Bob (receiver)."""
+        sender_parity = sum(list(self.sender_bits.values())) % 2
+        receiver_parity = sum(list(self.receiver_bits.values())) % 2
+
+        return sender_parity, receiver_parity
+
     def binary(self):
         """
         Contrary to real-life applications in this simulation of the BINARY algorithm Alice (sender) and Bob (receiver)
@@ -321,7 +328,7 @@ class Cascade:
 
     history_cascade[number of the pass][either 'Alice blocks' or 'Bob blocks'][number of the block in the given pass]
     """
-    history_cascade: list = []
+    history_cascade: list = []  # TODO: actually, history is not required as such anymore, since we have an object for CASCADE and blocks saved within it as separate objects; instead the list of these pairs of blocks could be something between a pandas DataFrame and a dict
     error_rates: list = []
     exchanged_bits_counter: int = 0
 
@@ -424,10 +431,7 @@ class Cascade:
             yield blocks[j:j + single_block_size]
 
     def execute(self):
-        """
-        CASCADE: First, I need to assign bits to their indexes in original strings. Therefore, I create dictionaries
-        for Alice (sender) and for Bob (receiver).
-        """
+        """CASCADE: First, bits need to be assigned to their indexes in original strings."""
         self.time_error_correction_start = time.time()
 
         """I dynamically create dictionaries with indexes as keys and bits as values"""
@@ -448,11 +452,11 @@ class Cascade:
                 var = self.__dict__
                 raise ZeroDivisionError(f"ZeroDivisionError with size. Current field values are: {var}")
 
-            alice_pass_parity_list = []
-            bob_pass_parity_list = []
-            alice_blocks = []
-            bob_blocks = []
-
+            """Time to generate blocks for this pass. For each pair of blocks of bits with the same indexes in the raw 
+            key - one with Alice's (sender) bits, and the other one with Bob's (receiver) bits - an instance of
+            'PairOfBlocks' is created and stored in the 'list_of_pairs_of_blocks' list.  
+            """
+            list_of_pairs_of_blocks = []
             for block_index in self._cascade_blocks_generator(single_block_size=size):
                 """
                 alice_block = {}  # a dictionary for a single block for Alice
@@ -461,11 +465,6 @@ class Cascade:
                 for index in block_index:  # I add proper bits to these dictionaries
                     alice_block[str(index)] = self.sender_cascade[str(index)]
                     bob_block[str(index)] = self.receiver_cascade[str(index)]
-                # I append single blocks created for given indexes to lists of block for this particular CASCADE's 
-                #                 pass
-                
-                alice_blocks.append(alice_block)
-                bob_blocks.append(bob_block)
                 """
 
                 current_block = PairOfBlocks(size=size)
@@ -475,32 +474,30 @@ class Cascade:
                         sender_bit=self.sender_cascade[str(index)],
                         receiver_bit=self.receiver_cascade[str(index)]
                     )
+                list_of_pairs_of_blocks.append(current_block)
 
-            for block_number in range(pass_number_of_blocks):
+            """Lists for parity checks between blocks of bits are created independently of these blocks being stored in
+            pairs in the 'PairOfBlocks' class' instances:"""
+            sender_pass_parity_list = []
+            receiver_pass_parity_list = []
 
-                current_indexes = list(alice_blocks[block_number].keys())  # same as Bob's
+            """Now, binary is performed on each pair of blocks:"""
+            for block_number in range(pass_number_of_blocks):  # TODO: majority of this loop (until if self.current_pass_no > 0:) should be put inside the 'PairOfBlocks' class
+                """Firstly, parity of bits in the current pair of blocks is computed. Results are remembered."""
+                sender_parity, receiver_parity = list_of_pairs_of_blocks[block_number].parity_check()
+                sender_pass_parity_list.append(sender_parity)
+                receiver_pass_parity_list.append(receiver_parity)
 
-                alice_current_bits = list(alice_blocks[block_number].values())
-                bob_current_bits = list(bob_blocks[block_number].values())
-
-                alice_bit_values = []
-                bob_bit_values = []
-
-                for j in range(len(current_indexes)):
-                    alice_bit_values.append(int(alice_current_bits[j]))
-                    bob_bit_values.append(int(bob_current_bits[j]))
-
-                alice_pass_parity_list.append(sum(alice_bit_values) % 2)
-                bob_pass_parity_list.append(sum(bob_bit_values) % 2)
-
-                if alice_pass_parity_list[block_number] != bob_pass_parity_list[block_number]:
-                    """Since parities of given blocks are different for Alice and Bob, Bob must have an odd number
-                    of errors; we we should search for them - and correct one of them - with BINARY"""
-                    binary_results = binary(
-                        sender_block=alice_blocks[block_number],
-                        receiver_block=bob_blocks[block_number],
-                        indexes=current_indexes
-                    )
+                """Secondly, a parity check is performed - if failed, BINARY is run on this pair of blocks.
+                If parities of given blocks are different for Alice (sender) and Bob (receiver), Bob must have an odd 
+                number of errors (in protocols like BB84 for sure - otherwise its arbitrary which communicating party is 
+                assumed to have errors, and which the correct bits). 
+                
+                The errors are searched for and corrected (if possible) with BINARY, implemented as a method of the 
+                'PairOfBlocks' class.
+                """
+                if sender_parity != receiver_parity:
+                    binary_results = list_of_pairs_of_blocks[block_number].binary()
                     binary_correct_bit_value = binary_results.get('Correct bit value')
                     binary_correct_bit_index = binary_results.get('Corrected bit index')
 
@@ -511,7 +508,7 @@ class Cascade:
 
                     """Secondly we change main dictionary with final results and current blocks for history"""
                     self.receiver_cascade[binary_correct_bit_index] = binary_correct_bit_value
-                    bob_blocks[block_number][binary_correct_bit_index] = binary_correct_bit_value
+                    receiver_blocks[block_number][binary_correct_bit_index] = binary_correct_bit_value
 
                     """Thirdly we change the error bit in blocks' history_cascade:"""
                     if self.current_pass_no > 0:  # in the first pass of CASCADE there are no previous blocks
@@ -533,7 +530,7 @@ class Cascade:
                                         self.exchanged_bits_counter += binary_previous.get('Bit counter')
                                         self.receiver_cascade[binary_previous['Corrected bit index']] = binary_previous.get(
                                             'Correct bit value')
-                                        bob_blocks[block_number][
+                                        receiver_blocks[block_number][
                                             binary_previous['Corrected bit index']] = binary_previous.get(
                                             'Correct bit value')
                                     except AttributeError:
@@ -545,7 +542,7 @@ class Cascade:
                                         raise ZeroDivisionError(
                                             f"KeyError for binary_previous. Current field values are: {var}")
 
-            self.history_cascade.append({'Alice blocks': alice_blocks, 'Bob blocks': bob_blocks})
+            self.history_cascade.append({'Alice blocks': list_of_pairs_of_blocks, 'Bob blocks': receiver_blocks})
             self.current_pass_no += 1
 
             """For the purposes of optimizing CASCADE we check the error rate after each pass:"""
