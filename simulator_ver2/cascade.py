@@ -345,12 +345,12 @@ class Cascade:
         fulfilling conditions (2) and (3) as described in 1993 paper "Secret Key Reconciliation by Public Discussion"
         by Gilles Brassard and Louis Salvail, published in "Advances in Cryptography" proceedings.
 
-        In this improved version of cascade_blocks_sizes function the checks for the (2) & (3) of conditions from the '93
-        CASCADE paper are simplified, resulting in lesser computational complexity. For additional context, these
-        conditions are a system of non-linear inequalities that need to be fulfilled in order to have the probability
-        of correcting at least 2 errors in a given block in any pass greater than 0.75
+        In this improved version of cascade_blocks_sizes function, the checks for the (2) & (3) of conditions from the
+        '93 CASCADE paper are simplified, resulting in lesser computational complexity. For additional context, these
+        conditions are a system of non-linear inequalities that need to be fulfilled to have the probability of
+        correcting at least two errors in a given block in any pass greater than 0.75
 
-        In this approach we implement regularised incomplete beta function to represent binomial distribution CDF
+        In this approach, we implement a regularised incomplete beta function to represent binomial distribution CDF
         for a simplified left side of the (2) inequality from that paper.
 
         Additionally, we use a single formula for the expected value (3) of number of errors in a given block after
@@ -562,7 +562,7 @@ class Cascade:
             try:
                 key_error_rate = key_error_rate / len(alice_key_error_check)
                 self.error_rates.append(key_error_rate)  # its length is equivalent to no. CASCADE passes performed
-                if key_error_rate < 0.0001:  # TODO: is 0.1% a small enough number?
+                if key_error_rate < 0.0001:  # TODO: is 0.01% a small enough number?
                     break  # let's not waste time for more CASCADE passes if there are 'no more' errors
             except ZeroDivisionError:
                 error_message = 'ZeroDivisionError with len(alice_key_error_check)'
