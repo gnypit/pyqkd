@@ -180,8 +180,8 @@ class PairOfBlocks:
     sender_bits: dict = {}  # keys are indexes in the raw key and values are the bits
     receiver_bits: dict = {}  # keys are indexes in the raw key and values are the bits
     erroneous_bits_indexes: list = []
-    corrected_sender_bits: dict = {}
-    corrected_receiver_bits: dict = {}
+    original_sender_string: str = ''
+    original_receiver_string: str = ''
 
     def __init__(self, size):
         """In the constructor, this class requires the expected size of this particular CASCADE block"""
@@ -198,23 +198,22 @@ class PairOfBlocks:
     def flag_errors(self):
         """To track all actual errors, to verify the influence of the errors' grouping on the final key rate
         in QKD protocols, this method bluntly compares received sender's and receiver's bits. It creates strings of the
-        original bits and a list of indexes of the erroneous ones and returns it as a dict."""
-        original_sender_string = ''
-        original_receiver_string = ''
-
+        original bits and a list with indexes of the erroneous ones."""
         for index in self.indexes:
             sender_bit = self.sender_bits.get(str(index))
             receiver_bit = self.receiver_bits.get(str(index))
 
-            original_sender_string += str(sender_bit)
-            original_receiver_string += str(receiver_bit)
+            self.original_sender_string += str(sender_bit)
+            self.original_receiver_string += str(receiver_bit)
 
             if sender_bit != receiver_bit:
                 self.erroneous_bits_indexes.append(index)
 
+    def get_original_bits(self):
+        """This method returns results of the flag_errors() as a dict, if necessary."""
         results = {
-            'original sender string': original_sender_string,
-            'original receiver string': original_receiver_string,
+            'original sender string': self.original_sender_string,
+            'original receiver string': self.original_receiver_string,
             'indexes of all erroneous bits': self.erroneous_bits_indexes
         }
 
@@ -294,10 +293,12 @@ class PairOfBlocks:
             if len(receiver_current_block) == 1:  # at some point, this clause will be true
                 bit_counter += 1  # At this point receiver would send a message (?) about one bit left and changing it
 
-                """Firstly we change the error bit in Bob's original dictionary of all bits"""
+                """Finally we change the error bit in Bob's original dictionary of all bits"""
                 if receiver_current_block[indexes[0]] == '0':
+                    self.receiver_bits[indexes[0]] = 1
                     return {'Correct bit value': '1', 'Corrected bit index': indexes[0], 'Bit counter': bit_counter}
                 else:
+                    self.receiver_bits[indexes[0]] = 0
                     return {'Correct bit value': '0', 'Corrected bit index': indexes[0], 'Bit counter': bit_counter}
 
 
