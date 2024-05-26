@@ -511,6 +511,8 @@ class Cascade:
                 'PairOfBlocks' class.
                 """
                 if sender_parity != receiver_parity:
+                    self.report += (f"Different parity in block {block_number} out of {pass_number_of_blocks} blocks"
+                                    f"in CASCADE pass {self.current_pass_no}")
                     binary_results = list_of_pairs_of_blocks[block_number].binary()
                     binary_correct_bit_value = binary_results.get('Correct bit value')
                     binary_correct_bit_index = binary_results.get('Corrected bit index')
