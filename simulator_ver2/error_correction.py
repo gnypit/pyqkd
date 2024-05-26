@@ -540,10 +540,11 @@ class Cascade:
                         self.report += (f"As it is CASCADE pass {self.current_pass_no}, previous blocks are searched "
                                         f"for the bit to be corrected\n")
                         for previous_pass_index in range(self.current_pass_no):  # we check all previous passes
+                            # TODO: here we need to change working on previous blocks into PairOfBlocks implementation with binary as it's method
+                            """
                             previous_pass_blocks_sender = self.history_cascade[previous_pass_index].get('Alice blocks')
                             previous_pass_blocks_receiver = self.history_cascade[previous_pass_index].get('Bob blocks')
-
-                            # TODO: here we need to change working on previous blocks into PairOfBlocks implementation with binary as it's method
+                            """
                             for n_block in range(len(previous_pass_blocks_receiver)):
                                 """We check all Bob's blocks in each previous pass"""
                                 if binary_correct_bit_index in previous_pass_blocks_receiver[n_block]:
@@ -565,11 +566,11 @@ class Cascade:
                                             'Correct bit value')
                                     except AttributeError:
                                         var = self.__dict__
-                                        raise ZeroDivisionError(
+                                        raise AttributeError(
                                             f"AttributeError for binary_previous. Current field values are: {var}")
                                     except KeyError:
                                         var = self.__dict__
-                                        raise ZeroDivisionError(
+                                        raise KeyError(
                                             f"KeyError for binary_previous. Current field values are: {var}")
 
             self.history_cascade.append({'Alice blocks': list_of_pairs_of_blocks, 'Bob blocks': receiver_blocks})
