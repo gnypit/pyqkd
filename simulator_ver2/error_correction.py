@@ -545,7 +545,7 @@ class Cascade:
                             previous_pass_blocks_sender = self.history_cascade[previous_pass_index].get('Alice blocks')
                             previous_pass_blocks_receiver = self.history_cascade[previous_pass_index].get('Bob blocks')
                             """
-                            for n_block in range(len(previous_pass_blocks_receiver)):
+                            for n_block in range(len(previous_pass_blocks_receiver)):  # rekurencja na 99%
                                 """We check all Bob's blocks in each previous pass"""
                                 if binary_correct_bit_index in previous_pass_blocks_receiver[n_block]:
                                     previous_pass_blocks_receiver[n_block][
