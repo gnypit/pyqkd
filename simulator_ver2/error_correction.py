@@ -189,7 +189,8 @@ class PairOfBlocks:
         """In the constructor, this class requires the expected size of this particular CASCADE block"""
         self.size = size
 
-    def add_bits(self, index: int, sender_bit: int, receiver_bit: int):  # I want to store indexes as numbers for easier statistical analysis afterwards
+    def add_bits(self, index: int, sender_bit: int,
+                 receiver_bit: int):  # I want to store indexes as numbers for easier statistical analysis afterwards
         """This method is called upon inside the Cascade's execute() main method, while assigning bits for error
         correction to a given block in a given pass
         """
@@ -435,7 +436,7 @@ class Cascade:
         for j in range(0, self.raw_key_length, single_block_size):  # I generate equally long chunks of shuffled indexes
             yield blocks[j:j + single_block_size]
 
-    def execute(self):
+    def execute(self):  # should this be a recurrent function???
         """CASCADE: First, bits need to be assigned to their indexes in original strings."""
         self.time_error_correction_start = time.time()
 
@@ -464,7 +465,7 @@ class Cascade:
             key - one with Alice's (sender) bits, and the other one with Bob's (receiver) bits - an instance of
             'PairOfBlocks' is created and stored in the 'list_of_pairs_of_blocks' list.  
             """
-            list_of_pairs_of_blocks = []
+            list_of_pairs_of_blocks = []  # List[PairOfBlocks]
             for block_index in self._cascade_blocks_generator(single_block_size=size):
                 """
                 alice_block = {}  # a dictionary for a single block for Alice
@@ -484,6 +485,8 @@ class Cascade:
                     )
                 list_of_pairs_of_blocks.append(current_block)
 
+            """The most important part of CASCADE is remembering all the blocks from all the algorithm's passes:"""
+            self.sets_of_blocks[self.current_pass_no] = list_of_pairs_of_blocks
             self.report += f"Bits are assigned to blocks in CASCADE pass {self.current_pass_no}\n"
 
             """Lists for parity checks between blocks of bits are created independently of these blocks being stored in
@@ -491,8 +494,8 @@ class Cascade:
             sender_pass_parity_list = []
             receiver_pass_parity_list = []
 
-            alice_blocks = []
-            bob_blocks = []
+            # alice_blocks = []
+            # bob_blocks = []
 
             """Now, binary is performed on each pair of blocks. If there have already been any cascade passes, the
             corrected bit will be updated in all previous blocks & binary will be run on them. The number of 'reviews'
@@ -510,7 +513,9 @@ class Cascade:
                 assumed to have errors, and which the correct bits). 
                 
                 The errors are searched for and corrected (if possible) with BINARY, implemented as a method of the 
-                'PairOfBlocks' class.
+                'PairOfBlocks' class. This means that after running BINARY on a given pair of blocks, a single error is 
+                already corrected, and so what the method returns only needs to be updated in general statistics and 
+                the final key. 
                 """
                 if sender_parity != receiver_parity:
                     self.report += (f"Different parity in block {block_number} out of {pass_number_of_blocks} blocks"
@@ -524,7 +529,7 @@ class Cascade:
                     """
                     self.exchanged_bits_counter += binary_results.get('Bit counter')
 
-                    """Secondly we change main dictionary with final results and current blocks for history"""
+                    """Secondly we change main dictionary with final results"""
                     self.receiver_cascade[binary_correct_bit_index] = binary_correct_bit_value
                     # receiver_blocks[block_number][binary_correct_bit_index] = binary_correct_bit_value
 
@@ -550,7 +555,8 @@ class Cascade:
                                         )
 
                                         self.exchanged_bits_counter += binary_previous.get('Bit counter')
-                                        self.receiver_cascade[binary_previous['Corrected bit index']] = binary_previous.get(
+                                        self.receiver_cascade[
+                                            binary_previous['Corrected bit index']] = binary_previous.get(
                                             'Correct bit value')
                                         receiver_blocks[block_number][
                                             binary_previous['Corrected bit index']] = binary_previous.get(
