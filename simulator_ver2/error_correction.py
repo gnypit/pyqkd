@@ -1,3 +1,5 @@
+# TODO: can I save a class as a JSON to work on later? I run the code, do something with an object, save it and than load it with it's fields and method to run again?
+
 import math
 import random
 import time
@@ -512,7 +514,7 @@ class Cascade:
                 """
                 if sender_parity != receiver_parity:
                     self.report += (f"Different parity in block {block_number} out of {pass_number_of_blocks} blocks"
-                                    f"in CASCADE pass {self.current_pass_no}")
+                                    f"in CASCADE pass {self.current_pass_no}\n")
                     binary_results = list_of_pairs_of_blocks[block_number].binary()
                     binary_correct_bit_value = binary_results.get('Correct bit value')
                     binary_correct_bit_index = binary_results.get('Corrected bit index')
@@ -528,19 +530,23 @@ class Cascade:
 
                     """Thirdly we change the error bit in blocks' history_cascade:"""
                     if self.current_pass_no > 0:  # in the first pass of CASCADE there are no previous blocks
+                        self.report += (f"As it is CASCADE pass {self.current_pass_no}, previous blocks are searched "
+                                        f"for the bit to be corrected\n")
                         for previous_pass_index in range(self.current_pass_no):  # we check all previous passes
-                            previous_pass_blocks_alice = self.history_cascade[previous_pass_index].get('Alice blocks')
-                            previous_pass_blocks_bob = self.history_cascade[previous_pass_index].get('Bob blocks')
-                            for n_block in range(len(previous_pass_blocks_bob)):
+                            previous_pass_blocks_sender = self.history_cascade[previous_pass_index].get('Alice blocks')
+                            previous_pass_blocks_receiver = self.history_cascade[previous_pass_index].get('Bob blocks')
+
+                            # TODO: here we need to change working on previous blocks into PairOfBlocks implementation with binary as it's method
+                            for n_block in range(len(previous_pass_blocks_receiver)):
                                 """We check all Bob's blocks in each previous pass"""
-                                if binary_correct_bit_index in previous_pass_blocks_bob[n_block]:
-                                    previous_pass_blocks_bob[n_block][
+                                if binary_correct_bit_index in previous_pass_blocks_receiver[n_block]:
+                                    previous_pass_blocks_receiver[n_block][
                                         binary_correct_bit_index] = binary_correct_bit_value
                                     try:
                                         binary_previous = binary(
-                                            sender_block=previous_pass_blocks_alice[n_block],
-                                            receiver_block=previous_pass_blocks_bob[n_block],
-                                            indexes=list(previous_pass_blocks_alice[n_block].keys())
+                                            sender_block=previous_pass_blocks_sender[n_block],
+                                            receiver_block=previous_pass_blocks_receiver[n_block],
+                                            indexes=list(previous_pass_blocks_sender[n_block].keys())
                                         )
 
                                         self.exchanged_bits_counter += binary_previous.get('Bit counter')
