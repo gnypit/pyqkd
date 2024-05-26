@@ -316,13 +316,13 @@ class Cascade:
     sets_of_blocks: dict = {}
     time_error_correction_start = None  # for time measurement
     time_error_correction_end = None
-    raw_key_sender: str = ''
-    raw_key_receiver: str = ''
+    raw_key_sender: str = ''  # correct_raw_key?
+    raw_key_receiver: str = ''  # wrong_raw_key?
     raw_key_length: int = None
     total_no_passes: int = None
     qber: float = None
     blocks_sizes: list = []
-    sender_cascade: dict = {}
+    sender_cascade: dict = {}  # is it even necessary?
     receiver_cascade: dict = {}
 
     """In order to return to blocks from earlier passes of CASCADE we need to be able to access blocks from previous
@@ -484,7 +484,7 @@ class Cascade:
                     )
                 list_of_pairs_of_blocks.append(current_block)
 
-            self.report += "Bits are assigned to blocks\n"
+            self.report += f"Bits are assigned to blocks in CASCADE pass {self.current_pass_no}\n"
 
             """Lists for parity checks between blocks of bits are created independently of these blocks being stored in
             pairs in the 'PairOfBlocks' class' instances:"""
@@ -526,7 +526,7 @@ class Cascade:
 
                     """Secondly we change main dictionary with final results and current blocks for history"""
                     self.receiver_cascade[binary_correct_bit_index] = binary_correct_bit_value
-                    receiver_blocks[block_number][binary_correct_bit_index] = binary_correct_bit_value
+                    # receiver_blocks[block_number][binary_correct_bit_index] = binary_correct_bit_value
 
                     """Thirdly we change the error bit in blocks' history_cascade:"""
                     if self.current_pass_no > 0:  # in the first pass of CASCADE there are no previous blocks
