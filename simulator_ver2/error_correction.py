@@ -446,14 +446,17 @@ class Cascade:
         for corrected bits with their indexes from original Bob's string as keys and correct bits as values.
         """
         self._cascade_blocks_sizes()
+        self.report += "Block sizes computed\n"
 
-        for size in self.blocks_sizes:
+        for size in self.blocks_sizes:  # for each CASCADE pass the size of blocks is different
             """For nested loops we need to know how many blocks are in total in each pass"""
             try:
                 pass_number_of_blocks = int(np.floor(self.raw_key_length // size))
             except ZeroDivisionError:
                 var = self.__dict__
                 raise ZeroDivisionError(f"ZeroDivisionError with size. Current field values are: {var}")
+
+            self.report += "Blocks are planned\n"
 
             """Time to generate blocks for this pass. For each pair of blocks of bits with the same indexes in the raw 
             key - one with Alice's (sender) bits, and the other one with Bob's (receiver) bits - an instance of
@@ -478,6 +481,8 @@ class Cascade:
                         receiver_bit=self.receiver_cascade[str(index)]
                     )
                 list_of_pairs_of_blocks.append(current_block)
+
+            self.report += "Bits are assigned to blocks\n"
 
             """Lists for parity checks between blocks of bits are created independently of these blocks being stored in
             pairs in the 'PairOfBlocks' class' instances:"""
