@@ -332,6 +332,7 @@ class Cascade:
     history_cascade: list = []  # TODO: actually, history is not required as such anymore, since we have an object for CASCADE and blocks saved within it as separate objects; instead the list of these pairs of blocks could be something between a pandas DataFrame and a dict
     error_rates: list = []
     exchanged_bits_counter: int = 0
+    report: str
 
     def __init__(self, raw_key_sender, raw_key_receiver, quantum_bit_error_rate, number_of_passes=2):
         """In the constructor this class requires to get information of the expected size of this particular CASCADE
@@ -340,6 +341,7 @@ class Cascade:
         self.raw_key_receiver = raw_key_receiver
         self.total_no_passes = number_of_passes
         self.qber = quantum_bit_error_rate
+        self.report = "Instance of class Cascade created\n"
 
         if len(raw_key_sender) == len(raw_key_receiver):
             self.raw_key_length = len(raw_key_sender)
@@ -482,14 +484,20 @@ class Cascade:
             sender_pass_parity_list = []
             receiver_pass_parity_list = []
 
-            """Now, binary is performed on each pair of blocks:"""
+            alice_blocks = []
+            bob_blocks = []
+
+            """Now, binary is performed on each pair of blocks. If there have already been any cascade passes, the
+            corrected bit will be updated in all previous blocks & binary will be run on them. The number of 'reviews'
+            is closely followed and stored in the raport string.
+            """
             for block_number in range(pass_number_of_blocks):  # TODO: majority of this loop (until if self.current_pass_no > 0:) should be put inside the 'PairOfBlocks' class
-                """Firstly, parity of bits in the current pair of blocks is computed. Results are remembered."""
+                """Parity of bits in the current pair of blocks is computed. Results are remembered."""
                 sender_parity, receiver_parity = list_of_pairs_of_blocks[block_number].parity_check()
                 sender_pass_parity_list.append(sender_parity)
                 receiver_pass_parity_list.append(receiver_parity)
 
-                """Secondly, a parity check is performed - if failed, BINARY is run on this pair of blocks.
+                """Next, a parity check is performed - if failed, BINARY is run on this pair of blocks.
                 If parities of given blocks are different for Alice (sender) and Bob (receiver), Bob must have an odd 
                 number of errors (in protocols like BB84 for sure - otherwise its arbitrary which communicating party is 
                 assumed to have errors, and which the correct bits). 
