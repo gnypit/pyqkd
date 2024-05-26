@@ -325,6 +325,7 @@ class Cascade:
     blocks_sizes: list = []
     sender_cascade: dict = {}  # is it even necessary?
     receiver_cascade: dict = {}
+    corrected_bits_history: dict = {}
 
     """In order to return to blocks from earlier passes of CASCADE we need to be able to access blocks from previous
     passes. For this purpose we create a history_cascade list, which will store for each pass a dict with lists
@@ -532,6 +533,7 @@ class Cascade:
                     """Secondly we change main dictionary with final results"""
                     self.receiver_cascade[binary_correct_bit_index] = binary_correct_bit_value
                     # receiver_blocks[block_number][binary_correct_bit_index] = binary_correct_bit_value
+                    self.corrected_bits_history[binary_correct_bit_index] = binary_correct_bit_value
 
                     """Thirdly we change the error bit in blocks' history_cascade:"""
                     if self.current_pass_no > 0:  # in the first pass of CASCADE there are no previous blocks
