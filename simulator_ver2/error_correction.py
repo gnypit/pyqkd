@@ -175,7 +175,7 @@ class PairOfBlocks:
     """This class is representing a single block of the Cascade error correction algorithm. It contains bits
     with their indexes in the raw key in a given QKD protocol, in which the error correction is being run. It also
     holds in memory the information of which bits are erroneous for statistical analysis of the post-processing,
-    for optimisation purposes.
+    for optimization purposes.
     """
     size: int = None
     indexes: list = []
@@ -186,13 +186,13 @@ class PairOfBlocks:
     original_receiver_string: str = ''
 
     def __init__(self, size):
-        """In the constructor, this class requires the expected size of this particular CASCADE block"""
+        """In the constructor, this class requires the expected size of this particular CASCADE block."""
         self.size = size
 
     def add_bits(self, index: int, sender_bit: int,
                  receiver_bit: int):  # I want to store indexes as numbers for easier statistical analysis afterwards
         """This method is called upon inside the Cascade's execute() main method, while assigning bits for error
-        correction to a given block in a given pass
+        correction to a given block in a given pass.
         """
         self.sender_bits[str(index)] = sender_bit
         self.receiver_bits[str(index)] = receiver_bit
@@ -338,9 +338,14 @@ class Cascade:
     exchanged_bits_counter: int = 0
     report: str
 
-    def __init__(self, raw_key_sender, raw_key_receiver, quantum_bit_error_rate, number_of_passes=2):
-        """In the constructor this class requires to get information of the expected size of this particular CASCADE
-        block and raw keys of both sender and receiver (Alice & Bob), of equal length."""
+    def __init__(self, raw_key_sender, raw_key_receiver, quantum_bit_error_rate, number_of_passes=2,
+                 blocks_sizes_method='automatic', manual_block_sizes=None):  # TODO add checking type, etc.
+        """In the constructor, this class requires raw keys of both sender and receiver (Alice & Bob), of equal length,
+        QBER and the number of iterations/passes of the algorithm to be performed. Additionally, a method for specifying
+        blocks' length should be provided. By default, it's the one described in the '93 paper and implemented
+        in a private method '_cascade_blocks_sizes'. Alternatively, one can choose a 'manual' approach and set the sizes
+        in advance, treated as a constant from now on.
+        """
         self.raw_key_sender = raw_key_sender
         self.raw_key_receiver = raw_key_receiver
         self.total_no_passes = number_of_passes
@@ -364,7 +369,7 @@ class Cascade:
         conditions are a system of non-linear inequalities that need to be fulfilled to have the probability of
         correcting at least two errors in a given block in any pass greater than 0.75
 
-        In this approach, we implement a regularised incomplete beta function to represent binomial distribution CDF
+        In this approach, we implement a regularized incomplete beta function to represent binomial distribution CDF
         for a simplified left side of the (2) inequality from that paper.
 
         Additionally, we use a single formula for the expected value (3) of number of errors in a given block after
