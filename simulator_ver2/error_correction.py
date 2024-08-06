@@ -339,7 +339,7 @@ class Cascade:
     report: str
 
     def __init__(self, raw_key_sender, raw_key_receiver, quantum_bit_error_rate, number_of_passes=2,
-                 blocks_sizes_method='automatic', manual_block_sizes=None):  # TODO add checking type, etc.
+                 blocks_sizes_method='automatic', initial_block_size=None):  # TODO add checking type, etc.
         """In the constructor, this class requires raw keys of both sender and receiver (Alice & Bob), of equal length,
         QBER and the number of iterations/passes of the algorithm to be performed. Additionally, a method for specifying
         blocks' length should be provided. By default, it's the one described in the '93 paper and implemented
@@ -350,6 +350,8 @@ class Cascade:
         self.raw_key_receiver = raw_key_receiver
         self.total_no_passes = number_of_passes
         self.qber = quantum_bit_error_rate
+        self.blocks_sizes_method = blocks_sizes_method
+        self.initial_block_size = initial_block_size
         self.report = "Instance of class Cascade created\n"
 
         if len(raw_key_sender) == len(raw_key_receiver):
@@ -376,54 +378,66 @@ class Cascade:
         completion of the first CASCADE pass.
         """
         max_expected_value = -1 * math.log(0.5, math.e)
-        best_size = 0  # all sizes fulfilling (2) & (3) ineq. will be greater than that; we're looking fo the greatest
+        if self.blocks_sizes_method == 'automatic':
+            """All sizes fulfilling (2) & (3) ineq. will be greater than that; we're looking fo the greatest"""
+            self.initial_block_size = 0
 
-        for size in list(np.arange(2, self.raw_key_length // 4 + 1, 1)):
-            """We need at lest 4 blocks to begin with - then we can perform 2 passes.
+            for size in list(np.arange(2, self.raw_key_length // 4 + 1, 1)):
+                """We need at lest 4 blocks to begin with - then we can perform 2 passes.
 
-            Firstly we check condition for the expected value of number of errors remaining in a block
-            in the first pass of CASCADE - (3) in the paper
-            """
-            expected_value = size * self.qber - (1 - (1 - 2 * self.qber) ** size) / 2
-            if expected_value > max_expected_value:
-                """As for increasing sizes the expected value is non-decreasing. Thus, once the expected_value of number
-                of errors remaining in the first block is greater than the max_expected_value, it'll always be.
-                Therefore, it makes no sense to keep checking greater sizes - none of them will meet this condition.
+                Firstly we check condition for the expected value of number of errors remaining in a block
+                in the first pass of CASCADE - (3) in the paper
                 """
-                break
-
-            """For the (2) condition (inequality)..."""
-            second_condition = True
-            for j in list(np.arange(0, size // 2, 1)):
-                """For number of errors equal to the amount of bits (or one bit fewer) in a block.
-
-                When you analyse the inequality (2) carefully, you'll notice, that for 
-                    j = size of the first pass // 2 - 1
-                the sum on the left side contains the probability of having 2 * (j + 1) errors, which is equal to the 
-                length of the first block. This means that for any j greater than the size of the first pass // 2 - 1 
-                there are no expressions in the left-side sum "left", rendering it 0, which is always equal to or lesser 
-                than a non-negative value of any probability.
-                """
-                right_side = numerical_error_prob(
-                    n_errors=2 * j,
-                    pass_size=size,
-                    qber=self.qber) / 4
-                left_side = sum_error_prob_betainc(
-                    first_pass_size=size,
-                    n_errors=2 * j,
-                    qber=self.qber
-                )
-
-                # Now we check inequality (2) - must work for all possible numbers of errors in a block of given size
-                if left_side > right_side:
-                    second_condition = False
+                expected_value = size * self.qber - (1 - (1 - 2 * self.qber) ** size) / 2
+                if expected_value > max_expected_value:
+                    """As for increasing sizes the expected value is non-decreasing. Thus, once the expected_value of 
+                    number of errors remaining in the first block is greater than the max_expected_value, it'll always 
+                    be. Therefore, it makes no sense to keep checking greater sizes - none of them will meet this 
+                    condition.
+                    """
                     break
 
-            if second_condition:
-                if size > best_size:
-                    best_size = size
+                """For the (2) condition (inequality)..."""
+                second_condition = True
+                for j in list(np.arange(0, size // 2, 1)):
+                    """For number of errors equal to the amount of bits (or one bit fewer) in a block.
 
-        sizes = [best_size - best_size % 2]  # all sizes must be even numbers for BINARY (search for errors) to operate
+                    When you analyse the inequality (2) carefully, you'll notice, that for 
+                        j = size of the first pass // 2 - 1
+                    the sum on the left side contains the probability of having 2 * (j + 1) errors, which is equal to 
+                    the length of the first block. This means that for any j greater than the size of 
+                        the first pass // 2 - 1 
+                    there are no expressions in the left-side sum "left", rendering it 0, which is always equal to or 
+                    lesser than a non-negative value of any probability.
+                    """
+                    right_side = numerical_error_prob(
+                        n_errors=2 * j,
+                        pass_size=size,
+                        qber=self.qber) / 4
+                    left_side = sum_error_prob_betainc(
+                        first_pass_size=size,
+                        n_errors=2 * j,
+                        qber=self.qber
+                    )
+
+                    """Now we check inequality (2) - must work for all possible numbers of errors 
+                    in a block of given size
+                    """
+                    if left_side > right_side:
+                        second_condition = False
+                        break
+
+                if second_condition:
+                    if size > self.initial_block_size:
+                        self.initial_block_size = size
+
+        """At this point we have an initial size of the block either computed or manually provided.
+        
+        Since all sizes must be even numbers for BINARY (search for errors) to operate, we subtract from initial size
+        it's modulo 2. We also create a list of all sizes with the initial size as a first element, to be used in
+        a loop to compute other sizes.
+        """
+        sizes = [self.initial_block_size - self.initial_block_size % 2]
 
         for j in range(self.total_no_passes - 1):  # corrected interpretation of number of passes
             next_size = 2 * sizes[-1]
