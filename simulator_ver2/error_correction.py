@@ -503,7 +503,7 @@ class Cascade:
                         sender_bit=self.sender_cascade[index],
                         receiver_bit=self.receiver_cascade[index]
                     )
-                list_of_pairs_of_blocks.append(current_block)
+                list_of_pairs_of_blocks.append(current_block)  # TODO: should it be a dict or DataFrame?
 
             """The most important part of CASCADE is remembering all the blocks from all the algorithm's passes:"""
             self.sets_of_blocks[self.current_pass_no] = list_of_pairs_of_blocks
@@ -530,7 +530,8 @@ class Cascade:
                 """Next, a parity check is performed - if failed, BINARY is run on this pair of blocks.
                 If parities of given blocks are different for Alice (sender) and Bob (receiver), Bob must have an odd 
                 number of errors (in protocols like BB84 for sure - otherwise its arbitrary which communicating party is 
-                assumed to have errors, and which the correct bits). 
+                assumed to have errors, and which the correct bits). Obviously we assume that it is the receiver, Bob, 
+                who should change his bits to have them identical to Alice's. 
                 
                 The errors are searched for and corrected (if possible) with BINARY, implemented as a method of the 
                 'PairOfBlocks' class. This means that after running BINARY on a given pair of blocks, a single error is 
