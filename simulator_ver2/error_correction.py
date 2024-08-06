@@ -317,8 +317,8 @@ class Cascade:
     sets_of_blocks: dict = {}
     time_error_correction_start = None  # for time measurement
     time_error_correction_end = None
-    raw_key_sender: str = ''  # correct_raw_key?
-    raw_key_receiver: str = ''  # wrong_raw_key?
+    raw_key_sender: list[int]  # list of bits as ints consumes less memory than a string of bits
+    raw_key_receiver: list[int]  # list of bits as ints consumes less memory than a string of bits
     raw_key_length: int = None
     total_no_passes: int = None
     qber: float = None
