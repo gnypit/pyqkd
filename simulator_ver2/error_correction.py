@@ -179,11 +179,11 @@ class PairOfBlocks:
     """
     size: int = None
     indexes: list = []
-    sender_bits: dict = {}  # keys are indexes in the raw key and values are the bits
-    receiver_bits: dict = {}  # keys are indexes in the raw key and values are the bits
+    sender_bits: dict[int, int]  # keys are indexes in the raw key and values are the bits
+    receiver_bits: dict[int, int]  # keys are indexes in the raw key and values are the bits
     erroneous_bits_indexes: list = []
-    original_sender_string: str = ''
-    original_receiver_string: str = ''
+    original_sender_bits: list[int]
+    original_receiver_bits: list[int]
 
     def __init__(self, size):
         """In the constructor, this class requires the expected size of this particular CASCADE block."""
@@ -194,8 +194,8 @@ class PairOfBlocks:
         """This method is called upon inside the Cascade's execute() main method, while assigning bits for error
         correction to a given block in a given pass.
         """
-        self.sender_bits[str(index)] = sender_bit
-        self.receiver_bits[str(index)] = receiver_bit
+        self.sender_bits[index] = sender_bit
+        self.receiver_bits[index] = receiver_bit
         self.indexes.append(index)
 
     def flag_errors(self):
@@ -203,11 +203,11 @@ class PairOfBlocks:
         in QKD protocols, this method bluntly compares received sender's and receiver's bits. It creates strings of the
         original bits and a list with indexes of the erroneous ones."""
         for index in self.indexes:
-            sender_bit = self.sender_bits.get(str(index))
-            receiver_bit = self.receiver_bits.get(str(index))
+            sender_bit = self.sender_bits.get(index)
+            receiver_bit = self.receiver_bits.get(index)
 
-            self.original_sender_string += str(sender_bit)
-            self.original_receiver_string += str(receiver_bit)
+            self.original_sender_bits.append(sender_bit)
+            self.original_receiver_bits.append(receiver_bit)
 
             if sender_bit != receiver_bit:
                 self.erroneous_bits_indexes.append(index)
@@ -215,8 +215,8 @@ class PairOfBlocks:
     def get_original_bits(self):
         """This method returns results of the flag_errors() as a dict, if necessary."""
         results = {
-            'original sender string': self.original_sender_string,
-            'original receiver string': self.original_receiver_string,
+            'original sender string': self.original_sender_bits,
+            'original receiver string': self.original_receiver_bits,
             'indexes of all erroneous bits': self.erroneous_bits_indexes
         }
 
@@ -246,7 +246,7 @@ class PairOfBlocks:
             sender_first_half_list = []
 
             for index in first_half_indexes:
-                sender_first_half_list.append(int(self.sender_bits.get(str(index))))
+                sender_first_half_list.append(int(self.sender_bits.get(index)))
 
             sender_first_half_parity = sum(sender_first_half_list) % 2
             bit_counter += 1  # At this point sender informs receiver about their 1st half's parity
@@ -258,7 +258,7 @@ class PairOfBlocks:
             receiver_first_half_list = []
 
             for index in first_half_indexes:
-                receiver_first_half_list.append(int(self.receiver_bits.get(str(index))))
+                receiver_first_half_list.append(int(self.receiver_bits.get(index)))
 
             receiver_first_half_parity = sum(receiver_first_half_list) % 2
 
@@ -271,8 +271,8 @@ class PairOfBlocks:
             if receiver_first_half_parity != sender_first_half_parity:
                 bit_counter += 1  # At this point, the receiver sends a mess. About an odd number of errors in 1st half
                 for index in first_half_indexes:
-                    receiver_subscription_block[index] = self.receiver_bits.get(str(index))
-                    sender_subscription_block[index] = self.sender_bits.get(str(index))
+                    receiver_subscription_block[index] = self.receiver_bits.get(index)
+                    sender_subscription_block[index] = self.sender_bits.get(index)
 
                 sender_current_block = sender_subscription_block
                 receiver_current_block = receiver_subscription_block
@@ -285,8 +285,8 @@ class PairOfBlocks:
                 second_half_indexes = self.indexes[half_index::1]
 
                 for index in second_half_indexes:
-                    receiver_subscription_block[index] = self.receiver_bits.get(str(index))
-                    sender_subscription_block[index] = self.sender_bits.get(str(index))
+                    receiver_subscription_block[index] = self.receiver_bits.get(index)
+                    sender_subscription_block[index] = self.sender_bits.get(index)
 
                 sender_current_block = sender_subscription_block
                 receiver_current_block = receiver_subscription_block
@@ -297,12 +297,12 @@ class PairOfBlocks:
                 bit_counter += 1  # At this point receiver would send a message (?) about one bit left and changing it
 
                 """Finally we change the error bit in Bob's original dictionary of all bits"""
-                if receiver_current_block[indexes[0]] == '0':
+                if receiver_current_block[indexes[0]] == 0:
                     self.receiver_bits[indexes[0]] = 1
-                    return {'Correct bit value': '1', 'Corrected bit index': indexes[0], 'Bit counter': bit_counter}
+                    return {'Correct bit value': 1, 'Corrected bit index': indexes[0], 'Bit counter': bit_counter}
                 else:
                     self.receiver_bits[indexes[0]] = 0
-                    return {'Correct bit value': '0', 'Corrected bit index': indexes[0], 'Bit counter': bit_counter}
+                    return {'Correct bit value': 0, 'Corrected bit index': indexes[0], 'Bit counter': bit_counter}
 
 
 class Cascade:
