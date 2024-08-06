@@ -500,8 +500,8 @@ class Cascade:
                 for index in block_index:
                     current_block.add_bits(
                         index=index,
-                        sender_bit=self.sender_cascade[str(index)],
-                        receiver_bit=self.receiver_cascade[str(index)]
+                        sender_bit=self.sender_cascade[index],
+                        receiver_bit=self.receiver_cascade[index]
                     )
                 list_of_pairs_of_blocks.append(current_block)
 
