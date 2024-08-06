@@ -503,7 +503,7 @@ class Cascade:
                         sender_bit=self.sender_cascade[index],
                         receiver_bit=self.receiver_cascade[index]
                     )
-                list_of_pairs_of_blocks.append(current_block)  # TODO: should it be a dict or DataFrame?
+                list_of_pairs_of_blocks.append(current_block)  # TODO: should it be a dict or DataFrame? And a field of the class?
 
             """The most important part of CASCADE is remembering all the blocks from all the algorithm's passes:"""
             self.sets_of_blocks[self.current_pass_no] = list_of_pairs_of_blocks
@@ -561,20 +561,17 @@ class Cascade:
                                         f"for the bit to be corrected\n")
                         for previous_pass_index in range(self.current_pass_no):  # we check all previous passes
                             # TODO: here we need to change working on previous blocks into PairOfBlocks implementation with binary as it's method
-                            """
-                            previous_pass_blocks_sender = self.history_cascade[previous_pass_index].get('Alice blocks')
-                            previous_pass_blocks_receiver = self.history_cascade[previous_pass_index].get('Bob blocks')
-                            """
-                            for n_block in range(len(previous_pass_blocks_receiver)):  # rekurencja na 99%
+                            """I perform a loop over the list of previous PairOfBlocks class' instances."""
+                            for n_block_pair in range(len(list_of_pairs_of_blocks)):
                                 """We check all Bob's blocks in each previous pass"""
-                                if binary_correct_bit_index in previous_pass_blocks_receiver[n_block]:
-                                    previous_pass_blocks_receiver[n_block][
+                                if binary_correct_bit_index in previous_pass_blocks_receiver[n_block_pair]:
+                                    previous_pass_blocks_receiver[n_block_pair][
                                         binary_correct_bit_index] = binary_correct_bit_value
                                     try:
                                         binary_previous = binary(
-                                            sender_block=previous_pass_blocks_sender[n_block],
-                                            receiver_block=previous_pass_blocks_receiver[n_block],
-                                            indexes=list(previous_pass_blocks_sender[n_block].keys())
+                                            sender_block=previous_pass_blocks_sender[n_block_pair],
+                                            receiver_block=previous_pass_blocks_receiver[n_block_pair],
+                                            indexes=list(previous_pass_blocks_sender[n_block_pair].keys())
                                         )
 
                                         self.exchanged_bits_counter += binary_previous.get('Bit counter')
