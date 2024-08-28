@@ -519,7 +519,7 @@ class Cascade:
             corrected bit will be updated in all previous blocks & binary will be run on them. The number of 'reviews'
             is closely followed and stored in the raport string.
             """
-            for block_number in range(pass_number_of_blocks):  # TODO: majority of this loop (until if self.current_pass_no > 0:) should be put inside the 'PairOfBlocks' class
+            for block_number in range(pass_number_of_blocks):
                 """Parity of bits in the current pair of blocks is computed. Results are remembered."""
                 sender_parity, receiver_parity = list_of_pairs_of_blocks[block_number].parity_check()
                 sender_pass_parity_list.append(sender_parity)
