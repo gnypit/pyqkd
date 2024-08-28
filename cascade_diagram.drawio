@@ -1,0 +1,94 @@
+<mxfile host="app.diagrams.net" modified="2024-08-28T11:35:38.560Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36 Avast/127.0.0.0" etag="DdJUH3nIMv_XPbKdZ77V" version="21.8.0" type="device">
+  <diagram name="Strona-1" id="T4MhB9HTIy7TFqgteOYR">
+    <mxGraphModel dx="1434" dy="738" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="jFL4KmR-6IKBxNv1hkgq-1" target="jFL4KmR-6IKBxNv1hkgq-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-1" value="Fields are created" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="155" y="60" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="jFL4KmR-6IKBxNv1hkgq-2" target="jFL4KmR-6IKBxNv1hkgq-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-2" value="Constructor is called" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="155" y="180" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="jFL4KmR-6IKBxNv1hkgq-3" target="jFL4KmR-6IKBxNv1hkgq-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-3" value="Lengths of raw keys are compared&lt;br&gt;&lt;br&gt;Are the lengths the same?" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="155" y="300" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-4" value="ValueError" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="315" y="310" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="jFL4KmR-6IKBxNv1hkgq-8" target="jFL4KmR-6IKBxNv1hkgq-18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-8" value="CASCADE block sizes are computed" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="155" y="880" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="jFL4KmR-6IKBxNv1hkgq-9" target="jFL4KmR-6IKBxNv1hkgq-13">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-9" value="CASCADE blocks (of bits&#39; indexes) are created" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="155" y="540" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="jFL4KmR-6IKBxNv1hkgq-13" target="jFL4KmR-6IKBxNv1hkgq-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-13" value="Time is checked" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="155" y="660" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-17" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="jFL4KmR-6IKBxNv1hkgq-14" target="jFL4KmR-6IKBxNv1hkgq-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-14" value="Dictionaries &#39;sender_cascade&#39; and &#39;&lt;span style=&quot;background-color: initial;&quot;&gt;receiver_cascade&#39; are created: bits are assigned to keys which are their indexes in the respective raw keys&#39; lists.&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="760" width="350" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-21" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="jFL4KmR-6IKBxNv1hkgq-18" target="jFL4KmR-6IKBxNv1hkgq-20">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-18" value="Numbers of blocks in each pass are computed" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="155" y="1000" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-23" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="jFL4KmR-6IKBxNv1hkgq-20" target="jFL4KmR-6IKBxNv1hkgq-22">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-20" value="A &#39;list_of_pair_of_blocks&#39; is created, with instances of PairOfBlocks, each having their respective bits added.&lt;br&gt;&lt;br&gt;Method &#39;_cascade_blocks_generator&#39; is called." style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="67.5" y="1120" width="295" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-26" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="jFL4KmR-6IKBxNv1hkgq-22" target="jFL4KmR-6IKBxNv1hkgq-24">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-22" value="&#39;list_of_pair_of_blocks&#39; is remembered within the sets_of_blocks dict &amp;amp; class&#39; field." style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="95" y="1230" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-28" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="jFL4KmR-6IKBxNv1hkgq-24" target="jFL4KmR-6IKBxNv1hkgq-27">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-24" value="Parities of blocks are asserted. A method from PairOfBlocks class is called." style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="67.5" y="1310" width="295" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-30" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="jFL4KmR-6IKBxNv1hkgq-27" target="jFL4KmR-6IKBxNv1hkgq-29">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-27" value="Are the parities of both &lt;br&gt;sender&#39;s and receiver&#39;s &lt;br&gt;blocks in PairOfBlocks &lt;br&gt;instance the same?" style="rhombus;whiteSpace=wrap;html=1;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="123.75" y="1390" width="182.5" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-34" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="jFL4KmR-6IKBxNv1hkgq-29" target="jFL4KmR-6IKBxNv1hkgq-33">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-29" value="BINARY is called and run on these blocks." style="whiteSpace=wrap;html=1;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="417.5" y="1445" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jFL4KmR-6IKBxNv1hkgq-33" value="Number of exchanged bits (of information) is added to the &#39;exchanged_bits_counter&#39; field" style="whiteSpace=wrap;html=1;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="366.25" y="1540" width="222.5" height="65" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
