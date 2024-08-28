@@ -365,7 +365,7 @@ class Cascade:
                              f"length of sender's raw key equal to {len(raw_key_sender)} and receiver's equal to"
                              f"{len(raw_key_receiver)}")
 
-    def _cascade_blocks_sizes(self):
+    def _cascade_blocks_sizes(self):  # this is probably still to be changed with the CDF!
         """An iterative procedure to find the largest initial block size for the CASCADE algorithm,
         fulfilling conditions (2) and (3) as described in 1993 paper "Secret Key Reconciliation by Public Discussion"
         by Gilles Brassard and Louis Salvail, published in "Advances in Cryptography" proceedings.
@@ -509,7 +509,11 @@ class Cascade:
                         sender_bit=self.sender_cascade[index],
                         receiver_bit=self.receiver_cascade[index]
                     )
-                list_of_pairs_of_blocks.append(current_block)  # TODO: should it be a dict or DataFrame? And a field of the class?
+                """It's a local variable and the PairOfBlocks instances have their respective IDs as a field.
+                Therefore, it can be a list, because I do not expect the necessity to call specific blocks, but rather 
+                need to be able to iterate on this as a part of the 'sets_of_blocks' dict.
+                """
+                list_of_pairs_of_blocks.append(current_block)
 
             """The most important part of CASCADE is remembering all the blocks from all the algorithm's passes:"""
             self.sets_of_blocks[self.current_pass_no] = list_of_pairs_of_blocks
