@@ -327,8 +327,8 @@ class Cascade:
     total_no_passes: int = None
     qber: float = None
     blocks_sizes: list = []
-    sender_cascade: dict = {}  # is it even necessary?
-    receiver_cascade: dict = {}
+    sender_cascade: dict = {}  # for assigning bits to their indexes - is it necessary if we're going back to lists from strings?
+    receiver_cascade: dict = {}  # for assigning bits to their indexes - is it necessary if we're going back to lists from strings?
     corrected_bits_history: dict = {}
 
     """In order to return to blocks from earlier passes of CASCADE we need to be able to access blocks from previous
@@ -342,8 +342,8 @@ class Cascade:
     exchanged_bits_counter: int = 0
     report: str
 
-    def __init__(self, raw_key_sender, raw_key_receiver, quantum_bit_error_rate, number_of_passes=2,
-                 blocks_sizes_method='automatic', initial_block_size=None):  # TODO add checking type, etc.
+    def __init__(self, raw_key_sender: list, raw_key_receiver: list, quantum_bit_error_rate: float,
+                 number_of_passes: int=2, blocks_sizes_method: str='automatic', initial_block_size: int=None):  # TODO add checking type, etc.
         """In the constructor, this class requires raw keys of both sender and receiver (Alice & Bob), of equal length,
         QBER and the number of iterations/passes of the algorithm to be performed. Additionally, a method for specifying
         blocks' length should be provided. By default, it's the one described in the '93 paper and implemented
@@ -461,7 +461,9 @@ class Cascade:
             yield blocks[j:j + single_block_size]
 
     def execute(self):  # should this be a recurrent function???
-        """CASCADE: First, bits need to be assigned to their indexes in original strings."""
+        """CASCADE: First, bits need to be assigned to their indexes in original strings. I also start measuring the
+        time of execution of the algorithm.
+        """
         self.time_error_correction_start = time.time()
 
         """I dynamically create dictionaries with indexes as keys and bits as values"""
@@ -517,9 +519,6 @@ class Cascade:
             pairs in the 'PairOfBlocks' class' instances:"""
             sender_pass_parity_list = []
             receiver_pass_parity_list = []
-
-            # alice_blocks = []
-            # bob_blocks = []
 
             """Now, binary is performed on each pair of blocks. If there have already been any cascade passes, the
             corrected bit will be updated in all previous blocks & binary will be run on them. The number of 'reviews'
