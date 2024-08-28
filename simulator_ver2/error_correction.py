@@ -468,8 +468,8 @@ class Cascade:
 
         """I dynamically create dictionaries with indexes as keys and bits as values"""
         for bit_index in range(self.raw_key_length):
-            self.sender_cascade[str(bit_index)] = self.raw_key_sender[bit_index]
-            self.receiver_cascade[str(bit_index)] = self.raw_key_receiver[bit_index]
+            self.sender_cascade[bit_index] = self.raw_key_sender[bit_index]
+            self.receiver_cascade[bit_index] = self.raw_key_receiver[bit_index]
 
         """Now we need to set up CASCADE itself: sizes of blocks in each pass, numeration of passes and a dictionary
         for corrected bits with their indexes from original Bob's string as keys and correct bits as values.
