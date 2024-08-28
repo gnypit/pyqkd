@@ -327,8 +327,8 @@ class Cascade:
     total_no_passes: int = None
     qber: float = None
     blocks_sizes: list = []
-    sender_cascade: dict = {}  # for assigning bits to their indexes - is it necessary if we're going back to lists from strings?
-    receiver_cascade: dict = {}  # for assigning bits to their indexes - is it necessary if we're going back to lists from strings?
+    sender_cascade: dict = {}  # for assigning bits to their indexes
+    receiver_cascade: dict = {}  # for assigning bits to their indexes
     corrected_bits_history: dict = {}
 
     """In order to return to blocks from earlier passes of CASCADE we need to be able to access blocks from previous
@@ -477,7 +477,7 @@ class Cascade:
         self._cascade_blocks_sizes()
         self.report += "Block sizes computed\n"
 
-        for size in self.blocks_sizes:  # for each CASCADE pass the size of blocks is different
+        for size in self.blocks_sizes:  # for each CASCADE pass, the size of blocks is different
             """For nested loops we need to know how many blocks are in total in each pass"""
             try:
                 pass_number_of_blocks = int(np.floor(self.raw_key_length // size))
