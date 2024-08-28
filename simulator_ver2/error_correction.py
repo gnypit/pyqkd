@@ -177,6 +177,7 @@ class PairOfBlocks:
     holds in memory the information of which bits are erroneous for statistical analysis of the post-processing,
     for optimization purposes.
     """
+    id: int = None
     size: int = None
     indexes: list = []
     sender_bits: dict[int, int]  # keys are indexes in the raw key and values are the bits
@@ -186,8 +187,11 @@ class PairOfBlocks:
     original_receiver_bits: list[int]
 
     def __init__(self, size):
-        """In the constructor, this class requires the expected size of this particular CASCADE block."""
+        """In the constructor, this class requires the expected size of this particular CASCADE block.
+        Also, an id is created automatically, as a pseudo-random number from a big range.
+        """
         self.size = size
+        self.id = random.randint(a=0, b=1000000)
 
     def add_bits(self, index: int, sender_bit: int,
                  receiver_bit: int):  # I want to store indexes as numbers for easier statistical analysis afterwards
