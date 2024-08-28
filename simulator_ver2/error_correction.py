@@ -493,15 +493,6 @@ class Cascade:
             """
             list_of_pairs_of_blocks = []  # List[PairOfBlocks]
             for block_index in self._cascade_blocks_generator(single_block_size=size):
-                """
-                alice_block = {}  # a dictionary for a single block for Alice
-                bob_block = {}  # a dictionary for a single block for Bob
-
-                for index in block_index:  # I add proper bits to these dictionaries
-                    alice_block[str(index)] = self.sender_cascade[str(index)]
-                    bob_block[str(index)] = self.receiver_cascade[str(index)]
-                """
-
                 current_block = PairOfBlocks(size=size)
                 for index in block_index:
                     current_block.add_bits(
