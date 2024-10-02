@@ -8,11 +8,15 @@ from crossover_operators import uniform_crossover, single_point_crossover, plco
 identification = 0
 
 
-def sort_dict_by_fit(dictionary):
+def sort_dict_by_fit(dictionary):  # TODO: ja tu czegoś nie zgubiłem? Czy przebudowałem sam słownik?
     return dictionary['fitness value']
 
 
 class Chromosome:
+    """Basic class representing chromosomes, the most fundamental objects in genetic algorithms.
+    Based on author's experience, both fitness function and value are remembered directly in chromosomes to resolve any
+    problems with sharing memory in parallel programming.
+    """
     def __init__(self, genes, fitness_function=None):
         self.genes = genes  # a dictionary
 
