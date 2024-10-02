@@ -29,10 +29,13 @@ class Chromosome:
         self.fit_val = None
 
     def __repr__(self) -> str:
+        """Default method for self-representing objects of this class."""
         return (f"{type(self).__name__}(genes={self.genes}, fitness function={self.fit_fun}, "
                 f"fitness value={self.fit_val})")
 
     def change_genes(self, genes):
+        """Method meant to be used when mutation occurs, to modify the genes in an already created chromosome.
+        Can be called upon manually."""
         self.genes = genes
 
     def evaluate(self, fitness_function=None):
