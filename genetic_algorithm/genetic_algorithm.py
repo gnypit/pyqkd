@@ -18,14 +18,19 @@ class Chromosome:
     problems with sharing memory in parallel programming.
     """
     def __init__(self, genes, fitness_function=None):
+        """Each chromosome represents a possible solution to a given problem. Parameters characterising these solutions
+        are called genes; their set is sometimes referred to as 'genome'. They are supposed to be evaluated by the
+        fitness function. Then, based on the fitness (funtion's) value they are compared, sorted, selected for,
+        crossover, etc. For computational purposes of parallel programming, the function and value could be passed to
+        the Chromosome on its initiation/construction.
+        """
         self.genes = genes  # a dictionary
-
-        """Optional fields, that I'm not sure I'll use directly in the Chromosome:"""
         self.fit_fun = fitness_function
         self.fit_val = None
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(genes={self.genes}, fitness function={self.fit_fun}, fitness value={self.fit_val})"
+        return (f"{type(self).__name__}(genes={self.genes}, fitness function={self.fit_fun}, "
+                f"fitness value={self.fit_val})")
 
     def change_genes(self, genes):
         self.genes = genes
