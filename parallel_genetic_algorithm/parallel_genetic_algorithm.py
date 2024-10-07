@@ -65,3 +65,11 @@ class ParallelPopulation(Population):
         bf = [self.current_generation.members[self.current_fitness_ranking[0].get('index')].genes,
               self.current_fitness_ranking[0].get('fitness value')]
         return bf
+
+class ParallelGeneticAlgorithm:
+    """Another approach, treating the GA as a class, not the population. There are 4 important stages:
+    1. Fitness evaluation (in parallel)
+    2. Selection
+    3. Crossover
+    4. Mutation
+    """
