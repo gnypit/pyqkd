@@ -20,7 +20,7 @@ class Chromosome:
     def __init__(self, genes, fitness_function=None):
         """Each chromosome represents a possible solution to a given problem. Parameters characterising these solutions
         are called genes; their set is sometimes referred to as 'genome'. They are supposed to be evaluated by the
-        fitness function. Then, based on the fitness (funtion's) value they are compared, sorted, selected for,
+        fitness function. Then, based on the fitness (function's) value they are compared, sorted, selected for,
         crossover, etc. For computational purposes of parallel programming, the function and value could be passed to
         the Chromosome on its initiation/construction.
         """
@@ -122,7 +122,7 @@ class Generation:
     def evaluate_all_members(self, reverse=True, fitness_function=None):
         """This method applies the fitness function to the generation and sorts the fitness ranking by
         the fitness values of generation's members - 'reverse' means sorting will be performed
-        from maximum fitness to minimum.
+        from maximum fitness to the minimum.
 
         If 'fitness_function' is provided, it overrides the one given in the constructor."""
         self.fitness_ranking = []
@@ -184,7 +184,7 @@ class Population:
     def evaluate_generation(self, reverse=True):  # true for sorting from the highest fitness value to the lowest
         """This method applies the fitness function to the current generation and sorts the fitness ranking by
         the fitness values of current generation's members - 'reverse' means sorting will be performed
-        from maximum fitness to minimum."""
+        from maximum fitness to the minimum."""
         self.current_fitness_ranking = []
 
         for i in range(len(self.current_generation.members)):
@@ -374,15 +374,15 @@ class Population:
 
     def create_new_generation(self, selection_operator, crossover_operator):
         """A method for combining selection and crossover operators over the current population to create a new one.
-        For the moment we are assuming that there will be a single list of children candidates.
-        Firstly we have to match the selection operator; then in each case we have to match the crossover operator.
+        For the moment, we are assuming that there will be a single list of children candidates.
+        Firstly, we have to match the selection operator; then in each case we have to match the crossover operator.
 
         In each of the selection-oriented cases we feed the selection operator name to the crossover operator
         method, so that it takes the parents lists designated for a given new generation creation, i.e., to
         always connect the chosen crossover to chosen selection and yet keep all probable parents lists
         from different selection processes in one object for multiple processes to access.
 
-        selection_operator is a function passed to this method for parents selection
+        Selection_operator is a function passed to this method for parents selection
         crossover_operator is a function passed to this method for the crossover of the parents
         """
 
@@ -467,9 +467,10 @@ class Population:
 
     def mutate(self):
         """Mutation probability is the probability of 'resetting' a member of the current generation, i.e. changing
-        it genome randomly. For optimisation purposes instead of a loop over the whole generation I calculate number
-        of members to be mutated and then generate pseudo-randomly a list of member indexes in the current generation
-        to be mutated."""
+        it genome randomly. For optimisation purposes instead of a loop over the whole generation, I calculate the
+        number of members to be mutated and then generate pseudo-randomly a list of member indexes in the current
+        generation to be mutated.
+        """
         number_of_mutations = floor(self.mutation_prob * self.current_generation.size)
 
         """Size of generation is a constant, it has to be adjusted to the lack of elite; 
@@ -477,7 +478,7 @@ class Population:
         """
         indexes = random.sample(
             range(self.current_generation.size - self.elite_size),
-            int(number_of_mutations)  # has to be an integer, e.g., you can't make half of a mutation
+            int(number_of_mutations)  # has to be an integer, e.g. you can't make half of a mutation
         )
 
         """For new (mutated) genome creation I use the generator passed to the superclass in it's initialisation:"""
