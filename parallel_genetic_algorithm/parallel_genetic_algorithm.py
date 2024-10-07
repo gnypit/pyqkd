@@ -7,6 +7,7 @@ class ParallelPopulation(Population):
     """This class is supposed to enable fitness calculations in parallel. It is based on Python's multiprocessing module
     https://docs.python.org/3/library/multiprocessing.html
     """
+
     def __init__(self, operator_pairs: list, pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=0.0,
                  seed=None):
         """The list of operators needs to be a dictionary of dictionaries of the following structure:
@@ -60,11 +61,13 @@ class ParallelPopulation(Population):
             for key, member in members_dict.items():
                 member.evaluate()
 
-    def best_fit(self):  # we return a gene sequence of the chromosomes with the highest fitness value with it's fit value
+    def best_fit(
+            self):  # we return a gene sequence of the chromosomes with the highest fitness value with it's fit value
         # TODO adjust to multiple generations to evaluate
         bf = [self.current_generation.members[self.current_fitness_ranking[0].get('index')].genes,
               self.current_fitness_ranking[0].get('fitness value')]
         return bf
+
 
 class ParallelGeneticAlgorithm:
     """Another approach, treating the GA as a class, not the population. There are 4 important stages:
