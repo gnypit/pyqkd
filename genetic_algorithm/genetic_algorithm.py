@@ -61,14 +61,19 @@ class Member(Chromosome):
     genealogical tree of chromosomes in a population of a genetic algorithm.
     """
     def __init__(self, genes, identification_number, fitness_function=None):
+        """Apart from what 'Chromosome' class' constructor needs, here identification number should be passed."""
         super().__init__(genes=genes, fitness_function=fitness_function)
         self.id = identification_number
         self.parents_id = None
 
-    def add_parents_id(self, parents_id):  # it's meant for 'genealogical tree' tracking
+    def add_parents_id(self, parents_id):
+        """This method is meant for 'genealogical tree' tracking;
+        it assigns to the current member IDs of its parents.
+        """
         self.parents_id = parents_id  # it's a list with IDs of the parents
 
     def __repr__(self) -> str:
+        """Default method for self-representing objects of this class."""
         return f"{type(self).__name__}(genes={self.genes}, id={self.id}, parents_id={self.parents_id})"
 
 
