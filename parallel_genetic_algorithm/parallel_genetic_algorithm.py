@@ -36,12 +36,12 @@ class ParallelPopulation(Population):
             ))
 
     def prepare_parallel_evaluation(self, members_dict: multiprocessing.Manager.dict):
-        """For parallel computation we firstly create a multiprocessing dicti of all members to be evaluated; this
+        """For parallel computation, we firstly create a multiprocessing dicti of all members to be evaluated; this
         Array will be passed to the evaluate_generations method within parallel Processes.
 
         Each member should have a distinctive identification number, but for simplicity we save in the key of the
-        dictionary both generation's position in the rival_generations list and the ID, too. This way after the
-        individual evaluation of fitness values we'll be able to update the members in their respective generations.
+        dictionary both generations position in the rival_generations list and the ID, too. This way after the
+        individual evaluation of fitness values, we'll be able to update the members in their respective generations.
         """
         for generation in self.rival_generations:
             gen_index = 0
@@ -51,16 +51,16 @@ class ParallelPopulation(Population):
         return members_dict
 
     def parallel_evaluation(self, process_id, work_start, work_complete, continue_flag, members_dict):
-        """While the flag signals we are to evaluate members, we unlock the work_start barrier, iterate over members
-        subscribed to a given process (which has the given process_id), calling on their intrinsic method for fitness
-        calculation, so that, at the end, we unlock the work_complete barrier.
+        """While the flag signals we are to evaluate members, we unlock the work_start barrier. Next, we iterate over
+        members subscribed to a given process (which has the given process_id). Then, we're calling on their intrinsic
+        method for fitness calculation, so that, in the end, we unlock the work_complete barrier.
         """
         while continue_flag.value:
             work_start.wait()
             for key, member in members_dict.items():
                 member.evaluate()
 
-    def best_fit(self):  # we return gene sequence of the chromosome of the highest fitness value with it's fit value
+    def best_fit(self):  # we return a gene sequence of the chromosomes with the highest fitness value with it's fit value
         # TODO adjust to multiple generations to evaluate
         bf = [self.current_generation.members[self.current_fitness_ranking[0].get('index')].genes,
               self.current_fitness_ranking[0].get('fitness value')]
