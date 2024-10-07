@@ -57,6 +57,9 @@ class Chromosome:
 
 
 class Member(Chromosome):
+    """This class is a child of the 'Chromosome' class and is designated to store a unique ID, enabling tracking a
+    genealogical tree of chromosomes in a population of a genetic algorithm.
+    """
     def __init__(self, genes, identification_number, fitness_function=None):
         super().__init__(genes=genes, fitness_function=fitness_function)
         self.id = identification_number
