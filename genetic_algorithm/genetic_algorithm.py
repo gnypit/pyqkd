@@ -39,6 +39,10 @@ class Chromosome:
         self.genes = genes
 
     def evaluate(self, fitness_function=None):
+        """Method for applying fitness function to this chromosome (it's genes, to be precise).
+        If the fitness function was passed on in the constructor of this class, it has to be provided as an argument of
+        this method. Fitness value is remembered in a field of this classed and returned on output. If no fitness
+        function is provided, the assigned fitness value is 0."""
         if fitness_function is None:
             self.fit_fun = fitness_function
         elif self.fit_fun is not None:
