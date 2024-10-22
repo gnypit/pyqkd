@@ -22,8 +22,10 @@ class Chromosome:
     def __init__(self, genes, fitness_function=None):
         """Each chromosome represents a possible solution to a given problem. Parameters characterising these solutions
         are called genes; their set is sometimes referred to as 'genome'. They are supposed to be evaluated by the
-        fitness function. Then, based on the fitness (function's) value they are compared, sorted, selected for,
-        crossover, etc. For computational purposes of parallel programming, the function and value could be passed to
+        fitness function. Then, based on the fitness (function's) values, they are compared, sorted, selected for
+        crossover, etc.
+
+        For computational purposes of parallel programming, the fitness function can be passed to
         the Chromosome on its initiation/construction.
         """
         self.genes = genes  # a dictionary
