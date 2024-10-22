@@ -20,6 +20,8 @@ class Chromosome:
     problems with sharing memory in parallel programming.
     """
     fit_val: float = None
+    gene_names: str = 'default'
+    genes: dict  # I want to work on dicts - it's clearer and faster
 
     def __init__(self, genes: type[list | dict], fitness_function=None):
         """Each chromosome represents a possible solution to a given problem. Parameters characterising these solutions
@@ -35,8 +37,9 @@ class Chromosome:
             genome = {}
             for i in range(len(genes)):
                 genome[name + str(i)] = genes[i]
-        else:
+        elif type(genes) is dict:
             self.genes = genes
+            self.gene_names = 'custom'
 
         self.fit_fun = fitness_function
 
