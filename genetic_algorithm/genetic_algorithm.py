@@ -75,18 +75,19 @@ class Member(Chromosome):
     """This class is a child of the 'Chromosome' class and is designated to store a unique ID, enabling tracking a
     genealogical tree of chromosomes in a population of a genetic algorithm.
     """
+    id: int
+    parents_id: list  # it's a list with IDs of the parents
 
-    def __init__(self, genes, identification_number, fitness_function=None):
+    def __init__(self, genes: type[list | dict], identification_number: int, fitness_function=None):
         """Apart from what 'Chromosome' class' constructor needs, here identification number should be passed."""
         super().__init__(genes=genes, fitness_function=fitness_function)
         self.id = identification_number
-        self.parents_id = None
 
-    def add_parents_id(self, parents_id):
+    def add_parents_id(self, parents_id: list):
         """This method is meant for 'genealogical tree' tracking;
         it assigns to the current member IDs of its parents.
         """
-        self.parents_id = parents_id  # it's a list with IDs of the parents
+        self.parents_id = parents_id
 
     def __repr__(self) -> str:
         """Default method for self-representing objects of this class."""
