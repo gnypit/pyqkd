@@ -19,7 +19,9 @@ class Chromosome:
     Based on author's experience, both fitness function and value are remembered directly in chromosomes to resolve any
     problems with sharing memory in parallel programming.
     """
-    def __init__(self, genes, fitness_function=None):
+    fit_val: float = None
+
+    def __init__(self, genes: type[list | dict], fitness_function=None):
         """Each chromosome represents a possible solution to a given problem. Parameters characterising these solutions
         are called genes; their set is sometimes referred to as 'genome'. They are supposed to be evaluated by the
         fitness function. Then, based on the fitness (function's) values, they are compared, sorted, selected for
@@ -28,9 +30,15 @@ class Chromosome:
         For computational purposes of parallel programming, the fitness function can be passed to
         the Chromosome on its initiation/construction.
         """
-        self.genes = genes  # a dictionary
+        if type(genes) is list:
+            name = 'gene'
+            genome = {}
+            for i in range(len(genes)):
+                genome[name + str(i)] = genes[i]
+        else:
+            self.genes = genes
+
         self.fit_fun = fitness_function
-        self.fit_val = None
 
     def __repr__(self) -> str:
         """Default method for self-representing objects of this class."""
@@ -64,6 +72,7 @@ class Member(Chromosome):
     """This class is a child of the 'Chromosome' class and is designated to store a unique ID, enabling tracking a
     genealogical tree of chromosomes in a population of a genetic algorithm.
     """
+
     def __init__(self, genes, identification_number, fitness_function=None):
         """Apart from what 'Chromosome' class' constructor needs, here identification number should be passed."""
         super().__init__(genes=genes, fitness_function=fitness_function)
