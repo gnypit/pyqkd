@@ -5,10 +5,12 @@ import numpy as np
 from numpy import floor
 from crossover_operators import uniform_crossover, single_point_crossover, plco
 
+"""Global variable to hold IDs of chromosomes for backtracking"""
 identification = 0
 
 
-def sort_dict_by_fit(dictionary):  # TODO: ja tu czegoś nie zgubiłem? Czy przebudowałem sam słownik?
+def sort_dict_by_fit(dictionary):
+    """Used as a key in 'sort' method applied to a dict with chromosomes and their fitness values."""
     return dictionary['fitness value']
 
 
