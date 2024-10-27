@@ -309,7 +309,7 @@ class PairOfBlocks:
                     return {'Correct bit value': 0, 'Corrected bit index': indexes[0], 'Bit counter': bit_counter}
 
 
-class Cascade:
+class Cascade:  # TODO: should this be a class? Won't there be a conflict with QKD protocol as to what is the most 'external' object?
     """A general class for the CASCADE error correction algorithm for QKD. It is based mainly on the original
     proposition from 1993, with improvements motivated by lower computation cost & time. Variations of this algorithm
     are meant to be children of this parent class.
