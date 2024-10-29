@@ -6,6 +6,9 @@ import random
 import time
 import numpy as np
 
+from simulator_ver2.error_estimation import naive_error, refined_average_error
+from simulator_ver2.cascade import cascade_blocks_sizes, cascade_blocks_sizes_old, cascade_blocks_generator
+
 from simulator_ver1.binary import binary
 
 
