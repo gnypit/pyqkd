@@ -5,39 +5,60 @@ import numpy as np
 from numpy import floor
 from crossover_operators import uniform_crossover, single_point_crossover, plco
 
+"""Global variable to hold IDs of chromosomes for backtracking"""
 identification = 0
 
 
 def sort_dict_by_fit(dictionary):
+    """Used as a key in 'sort' method applied to a dict with chromosomes and their fitness values."""
     return dictionary['fitness value']
 
 
 class Chromosome:
-    """Basic class for a genetic algorithm (GA) realisation. It stores genes, which characterise possible solutions to
-    our multi-objective optimisation problem, as well as fitness function and (normalised) fitness value. While it is
-    not a prerequisite for a Chromosome in a GA in general, it will be useful in a multiprocessing implementation.
-
-    This class has couple of basic methods for creating and changing genes, assigning fitness function & value, and
-    applying it to the currently stored genes. Fitness function may be passed either while initiating or evaluating
-    given Chromosome.
+    """Basic class representing chromosomes, the most fundamental objects in genetic algorithms.
+    Based on author's experience, both fitness function and value are remembered directly in chromosomes to resolve any
+    problems with sharing memory in parallel programming.
     """
-    def __init__(self, genes, fitness_function=None):
-        self.genes = genes  # a dictionary
-        self.fit_fun = fitness_function  # a function
-        self.fit_val = None
+    fit_val: float = None
+    gene_names: str = 'default'
+    genes: dict  # I want to work on dicts - it's clearer and faster
+
+    def __init__(self, genes: type[list | dict], fitness_function=None):
+        """Each chromosome represents a possible solution to a given problem. Parameters characterising these solutions
+        are called genes; their set is sometimes referred to as 'genome'. They are supposed to be evaluated by the
+        fitness function. Then, based on the fitness (function's) values, they are compared, sorted, selected for
+        crossover, etc.
+
+        For computational purposes of parallel programming, the fitness function can be passed to
+        the Chromosome on its initiation/construction.
+        """
+        if type(genes) is list:
+            name = 'gene'
+            genome = {}
+            for i in range(len(genes)):
+                genome[name + str(i)] = genes[i]
+        elif type(genes) is dict:
+            self.genes = genes
+            self.gene_names = 'custom'
+
+        self.fit_fun = fitness_function
 
     def __repr__(self) -> str:
-        return (f"{type(self).__name__}(genes={self.genes}, "
-                f"fitness function={self.fit_fun}, fitness value={self.fit_val})")
+        """Default method for self-representing objects of this class."""
+        return (f"{type(self).__name__}(genes={self.genes}, fitness function={self.fit_fun}, "
+                f"fitness value={self.fit_val})")
 
-    def __iter__(self):
-        return self
-
-    def change_genes(self, genes):  # for mutation purposes
+    def change_genes(self, genes):
+        """Method meant to be used when mutation occurs, to modify the genes in an already created chromosome.
+        Can be called upon manually."""
         self.genes = genes
 
     def evaluate(self, fitness_function=None):
-        if fitness_function is None:  # fitness function wasn't provided on initialisation
+        """Method for applying fitness function to this chromosome (it's genes, to be precise).
+        If the fitness function was passed on in the constructor of this class, it has to be provided as an argument of
+        this method. Fitness value is remembered in a field of this classed and returned on output. If no fitness
+        function is provided, the assigned fitness value is 0."""
+        if fitness_function is None:
             self.fit_fun = fitness_function
         elif self.fit_fun is not None:  # fitness function was provided on initialisation
             self.fit_val = self.fit_fun(self.genes)
@@ -48,14 +69,25 @@ class Chromosome:
 
 
 class Member(Chromosome):
-    """In order to be able to track parents and their children within the genetic algorithm, a derivative class is
-    created, with a list of parents' IDs from a single GA implementation."""
-    def __init__(self, genes, identification_number, fitness_function=None):
+    """This class is a child of the 'Chromosome' class and is designated to store a unique ID, enabling tracking a
+    genealogical tree of chromosomes in a population of a genetic algorithm.
+    """
+    id: int
+    parents_id: list  # it's a list with IDs of the parents
+
+    def __init__(self, genes: type[list | dict], identification_number: int, fitness_function=None):
+        """Apart from what 'Chromosome' class' constructor needs, here identification number should be passed."""
         super().__init__(genes=genes, fitness_function=fitness_function)
         self.id = identification_number
-        self.parents_id = None
+
+    def add_parents_id(self, parents_id: list):
+        """This method is meant for 'genealogical tree' tracking;
+        it assigns to the current member IDs of its parents.
+        """
+        self.parents_id = parents_id
 
     def __repr__(self) -> str:
+        """Default method for self-representing objects of this class."""
         return f"{type(self).__name__}(genes={self.genes}, id={self.id}, parents_id={self.parents_id})"
 
     def add_parents_id(self, parents_id):
@@ -107,7 +139,7 @@ class Generation:
     def evaluate_all_members(self, reverse=True, fitness_function=None):
         """This method applies the fitness function to the generation and sorts the fitness ranking by
         the fitness values of generation's members - 'reverse' means sorting will be performed
-        from maximum fitness to minimum.
+        from maximum fitness to the minimum.
 
         If 'fitness_function' is provided, it overrides the one given in the constructor."""
         self.fitness_ranking = []
@@ -183,7 +215,7 @@ class Population:
     def evaluate_generation(self, reverse=True):  # true for sorting from the highest fitness value to the lowest
         """This method applies the fitness function to the current generation and sorts the fitness ranking by
         the fitness values of current generation's members - 'reverse' means sorting will be performed
-        from maximum fitness to minimum."""
+        from maximum fitness to the minimum."""
         self.current_fitness_ranking = []
 
         for i in range(len(self.current_generation.members)):
@@ -377,15 +409,15 @@ class Population:
 
     def create_new_generation(self, selection_operator, crossover_operator):
         """A method for combining selection and crossover operators over the current population to create a new one.
-        For the moment we are assuming that there will be a single list of children candidates.
-        Firstly we have to match the selection operator; then in each case we have to match the crossover operator.
+        For the moment, we are assuming that there will be a single list of children candidates.
+        Firstly, we have to match the selection operator; then in each case we have to match the crossover operator.
 
         In each of the selection-oriented cases we feed the selection operator name to the crossover operator
         method, so that it takes the parents lists designated for a given new generation creation, i.e., to
         always connect the chosen crossover to chosen selection and yet keep all probable parents lists
         from different selection processes in one object for multiple processes to access.
 
-        selection_operator is a function passed to this method for parents selection
+        Selection_operator is a function passed to this method for parents selection
         crossover_operator is a function passed to this method for the crossover of the parents
         """
 
@@ -472,16 +504,20 @@ class Population:
 
     def mutate(self):
         """Mutation probability is the probability of 'resetting' a member of the current generation, i.e. changing
-        it genome randomly. For optimisation purposes instead of a loop over the whole generation I calculate number
-        of members to be mutated and then generate pseudo-randomly a list of member indexes in the current generation
-        to be mutated."""
+        it genome randomly. For optimisation purposes instead of a loop over the whole generation, I calculate the
+        number of members to be mutated and then generate pseudo-randomly a list of member indexes in the current
+        generation to be mutated.
+        """
         number_of_mutations = floor(self.mutation_prob * self.current_generation.size)
 
         """Size of generation is a constant, it has to be adjusted to the lack of elite; the elite Members are not
         supposed to be mutated. Additionally, number of mutations has to be an integer, e.g., 
         half of a mutation cannot be performed.
         """
-        indexes = random.sample(range(self.current_generation.size - self.elite_size), int(number_of_mutations))
+        indexes = random.sample(
+            range(self.current_generation.size - self.elite_size),
+            int(number_of_mutations)  # has to be an integer, e.g. you can't make half of a mutation
+        )
 
         """For new (mutated) genome creation I use the generator passed to the superclass in it's initialisation:"""
         for index in indexes:
