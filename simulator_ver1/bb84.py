@@ -36,7 +36,6 @@ def measurement(state, basis):
     return result
 
 
-
 def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5, disturbance_probability=0.1,
                     publication_probability_rectilinear=0.2, publication_probability_diagonal=0.2, cascade_n_passes=1,
                     error_estimation=refined_average_error):
@@ -65,38 +64,25 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
         'error correction': 0  # after error correction phase (CASCADE)
     }  # we will systematically update this dictionary
 
-    # TODO: which is better for research, lists or strings? For visualisation strings.
-
     time_quantum_channel_start = time.time()
 
-    alice_basis_list = np.random.binomial(1, 1 - rectilinear_basis_prob, alice_basis_length)
-    alice_basis = ''
-    for basis in alice_basis_list:
-        alice_basis += str(int(basis))
+    """Lists of Alice's (sender's) basis choices and generated bits are created"""
+    alice_basis = list(np.random.binomial(1, 1 - rectilinear_basis_prob, alice_basis_length))
+    alice_bits = list(np.random.binomial(1, 0.5, alice_basis_length))
 
-    alice_bits_list = np.random.binomial(1, 0.5, alice_basis_length)
-    alice_bits = ''
-    for bit in alice_bits_list:
-        alice_bits += str(int(bit))
+    """After we prepare basis choices and bits, we can simulate quantum channel's gain with a mask"""
+    if gain < 1.0:
+        # Generate a random mask where elements greater than 'gain' are marked as True
+        mask = np.random.uniform(0, 1, alice_basis_length) > gain
 
-    """At this point it is impractical to encode states as bits because Bob's measurements results depend on both basis
-    and bits choices of Alice, but he shouldn't know the first one. Because of that we will now translate Alice's bits
-    to proper states, changing 0 and 1 into + and - for the diagonal basis, respectively.
+        # Apply mask to set the chosen elements to None
+        alice_bits[mask] = None
+
+    """Since for measurement purposes on Bob's (receiver's) part info about both basis and bits from Alice (sender)
+    is needed, values from the lists above are organised into a tuple, as this data structure cannot
+    be further modified.
     """
-
-    index = 0
-    alice_states_list = list(alice_bits)
-    for bit in alice_bits:
-        if alice_basis[index] == '1':
-            if bit == '0':
-                alice_states_list[index] = '+'
-            elif bit == '1':
-                alice_states_list[index] = '-'
-            else:
-                alice_states_list[index] = 'U'  # U for unknown
-        index += 1
-
-    alice_states = ''.join(alice_states_list)
+    alice_message = (alice_basis, alice_bits)
 
     """Now that we have Alice's data rate, quantum channel's gain and Alice's states,
     we can randomly choose m (Alice's basis choices number) bases for Bob. While he performs his measurements,
