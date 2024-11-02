@@ -384,7 +384,7 @@ class ModelControllerBB84:
             error_estimation_results = bb84.naive_error(
                 alice_key=self.alice_sifted_key,
                 bob_key=self.bob_sifted_key,
-                publication_prob_rect=self.publication_probability_rectilinear
+                publication_probability=self.publication_probability_rectilinear
             )
 
         self.error_estimate = error_estimation_results.get('error estimator')

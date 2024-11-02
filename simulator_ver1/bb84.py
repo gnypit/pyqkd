@@ -159,7 +159,7 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
         error_estimation_results = naive_error(
             alice_key=alice_sifted_key,
             bob_key=bob_sifted_key,
-            publication_prob_rect=publication_probability_rectilinear
+            publication_probability=publication_probability_rectilinear
         )
 
         error_estimate = error_estimation_results.get('error estimator')

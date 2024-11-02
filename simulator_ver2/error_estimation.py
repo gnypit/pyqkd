@@ -3,7 +3,7 @@ import random
 import numpy as np
 
 
-def naive_error(alice_key, bob_key, publication_prob_rect):
+def naive_error(alice_key, bob_key, publication_probability):
     """
     Originally I've been testing algorithm on short strings, i.e. up to 20 bits in original Alice's message.
     Sifted keys were therefore too short for publication of any parts of them for error estimation.
@@ -25,7 +25,7 @@ def naive_error(alice_key, bob_key, publication_prob_rect):
     naive_error_estimate = 0
 
     for index in range(len(alice_key)):  # could be bob_key as well
-        if random.uniform(0, 1) <= publication_prob_rect:
+        if random.uniform(0, 1) <= publication_probability:
             alice_bit = alice_key[index]
             bob_bit = bob_key[index]
 
