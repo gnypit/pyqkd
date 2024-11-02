@@ -85,9 +85,15 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     bob_basis = np.random.binomial(1, 1 - rectilinear_basis_prob, alice_basis_length)
     bob_bits = []
     for index in range(alice_basis_length):
-        if bob_basis[index] == alice_basis[index]:  # if they measure in the same base, Bob's bit should be the same
+        if bob_basis[index] == alice_basis[index] and random.uniform(0, 1) > disturbance_probability:
+            """If they measure in the same base and there's no disturbance in the quantum channel, 
+            Bob's bit should be the same.
+            """
             bob_bits.append(alice_bits[index])
-        else:  # if they measure in a different base, Bob's bit will be random
+        else:
+            """If either they measure in a different base or there's disturbance in the quantum channel, 
+            Bob's bit will be random.
+            """
             bob_bits.append(random.randint(0, 1))
 
     """End of quantum channel stage of the BB84 protocol."""
@@ -120,7 +126,9 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     time_history['sifting'] = time_sifting_end - time_sifting_start
 
     """Sifted keys generally differ from each other due to changes between states sent by Alice and received by Bob.
-    Above, that is simulated by random.randint() if Alice's and Bob's basis are different.
+    Above, that is simulated by random.randint() if Alice's and Bob's basis are different and using the 
+    'disturbance_probability' to account for random 'flipping' of a bit (state) even though it reaches Bob successfully,
+    after the quantum channel's gain is simulated.
     
     In order to estimate empirical probability of error occurrence in the sifted keys we can publish parts
     of keys, compare them and calculate numbers of errors. Then published parts of key should be deleted, as
