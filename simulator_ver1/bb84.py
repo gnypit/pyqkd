@@ -102,6 +102,7 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     measurements is not performed explicitly in this simulation, since the quantum channel's gain has already been
     applied to Alice's (sender's) bits using a mask above.
     """
+    time_sifting_start = time.time()
     alice_sifted_key = []
     bob_sifted_key = []
     sifted_basis = []
