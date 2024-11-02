@@ -142,14 +142,13 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
 
     if error_estimation == refined_average_error:
         # TODO: better handling of the estimator cases
-        error_estimation_results = refined_average_error(  # TODO: update this function and the one below to work on lists, not strings
+        error_estimation_results = refined_average_error(
             rect_prob=rectilinear_basis_prob,
             rect_pub_prob=publication_probability_rectilinear,
             diag_pub_prob=publication_probability_diagonal,
             alice_bits=alice_sifted_key,
             bob_bits=bob_sifted_key,
-            alice_basis=sifted_basis,  # TODO: only one basis argument is now needed, update the refined_average_error function
-            bob_basis=sifted_basis
+            basis=sifted_basis
         )
 
         error_estimate = error_estimation_results.get('error estimator')
