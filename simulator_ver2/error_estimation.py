@@ -17,10 +17,10 @@ def naive_error(alice_key, bob_key, publication_prob_rect):
 
     As a result of this function we return the naive estimator and Alice's & Bob's keys without published bits.
     """
-    alice_published_bits = ''
-    alice_sifted_key_after_error_estimation = ''
-    bob_published_bits = ''
-    bob_sifted_key_after_error_estimation = ''
+    alice_published_bits = []
+    alice_sifted_key_after_error_estimation = []
+    bob_published_bits = []
+    bob_sifted_key_after_error_estimation = []
 
     naive_error_estimate = 0
 
