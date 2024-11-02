@@ -69,8 +69,8 @@ def refined_average_error(rect_prob, rect_pub_prob, diag_pub_prob,
     rect_pub_counter & diag_pub_counter, rect_error & diag_error. The last two will be divided at the end by the
     first two, respectively, to obtain estimations as ratios.
     """
-    alice_key = ''
-    bob_key = ''
+    alice_key = []
+    bob_key = []
     rect_error = 0
     rect_pub_counter = 0
     diag_error = 0
@@ -93,8 +93,8 @@ def refined_average_error(rect_prob, rect_pub_prob, diag_pub_prob,
         iterating over the initial strings."""
         if basis[index] == '0':  # rectilinear basis
             if random.uniform(0, 1) >= rect_pub_prob:
-                alice_key += alice_bits[index]
-                bob_key += bob_bits[index]
+                alice_key.append(alice_bits[index])
+                bob_key.append(bob_bits[index])
             else:
                 rect_pub_counter += 1
                 indexes_of_published_bits.append(index)
@@ -102,8 +102,8 @@ def refined_average_error(rect_prob, rect_pub_prob, diag_pub_prob,
                     rect_error += 1
         else:
             if random.uniform(0, 1) >= diag_pub_prob:
-                alice_key += alice_bits[index]
-                bob_key += bob_bits[index]
+                alice_key.append(alice_bits[index])
+                bob_key.append(bob_bits[index])
             else:
                 diag_pub_counter += 1
                 indexes_of_published_bits.append(index)
