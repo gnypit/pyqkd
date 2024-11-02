@@ -117,7 +117,7 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     """End of the sifting phase"""
     key_length_history['sifting'] = len(bob_sifted_key)
     time_sifting_end = time.time()
-    time_history['qubits'] = time_sifting_end - time_sifting_start
+    time_history['sifting'] = time_sifting_end - time_sifting_start
 
     """Sifted keys generally differ from each other due to changes between states sent by Alice and received by Bob.
     In order to estimate empirical probability of error occurrence in the sifted keys we can publish parts
