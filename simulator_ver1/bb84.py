@@ -90,64 +90,8 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     bases inside a for loop instead of using random_choice function defined earlier.
     """
 
-    bob_basis_list = np.random.binomial(1, 1 - rectilinear_basis_prob, alice_basis_length)
-    bob_basis = ''
-    for basis in bob_basis_list:
-        if random.uniform(0, 1) <= gain:  # for small numbers of bits quantum gain won't change anything in here
-            bob_basis += str(int(basis))
-        else:
-            bob_basis += 'L'  # L for loss
+    bob_basis = np.random.binomial(1, 1 - rectilinear_basis_prob, alice_basis_length)
 
-    """There's a probability that due to disturbances in quantum channel or eavesdropping 
-    some bits change while being sent.
-    """
-
-    """Now that we know the probability of change, we can perform such disturbances:"""
-
-    received_states = ''
-    change_states = {'0': '0', '1': '1', '2': '+', '3': '-'}  # dictionary for randomizing changed states
-    for state in alice_states:  # to be updated following concrete attack strategies
-        if random.uniform(0, 1) <= disturbance_probability:
-            '''
-            if state == '0':
-                received_states += '1'
-            elif state == '1':
-                received_states += '0'
-            else:
-                received_states += 'C'  # C for change
-            '''
-            change_indicator = str(random.randint(0, 3))
-            while state == change_states.get(
-                    change_indicator):  # we repeat as long as it takes to actually change state
-                change_indicator = str(random.randint(0, 3))
-            received_states += change_states.get(change_indicator)
-        else:
-            received_states += state
-
-    """After Bob chose a basis and a photon has reached him, he performs his measurement. If for this particular photon 
-    he chooses the same basis as Alice chose before, his measurement result will be the same - that's because
-    in reality Bob is choosing polarisators for photons to go through. If photon's polarization is the same as
-    polarisators, then there's 100% probability of preserving this polarization. This is reflected by the same bit
-    as before the measurement. Otherwise polarization after measurement is random. This mechanism is implemented in
-    "measurement" function.
-    
-    Results of Bob's measurements are states - either 0 for |0> or 1 for |1> or + for |+> or - for |->. If he couldn't
-    perform the measurement (encoded by basis L) then the result will be encoded in the string by L as well.
-    """
-
-    bob_states = ''
-    for index in range(alice_basis_length):  # it's the same length as of Bob's basis choices
-        bob_states += measurement(state=received_states[index], basis=bob_basis[index])
-
-    """Now, having Bob's measurement results, we can translate states into bits."""
-
-    bob_bits = ''
-    for state in bob_states:
-        try:
-            bob_bits += str(states_mapping[state])  # we want to use indexing to raise errors for unsuccessful measur.
-        except KeyError:
-            bob_bits += 'E'  # E for error
-            continue
 
     """End of quantum channel measurements."""
     time_quantum_channel_end = time.time()
