@@ -30,15 +30,15 @@ def naive_error(alice_key, bob_key, publication_probability):
             bob_bit = bob_key[index]
 
             """First we add those bits to strings meant for publication"""
-            alice_published_bits += alice_bit
-            bob_published_bits += bob_bit
+            alice_published_bits.append(alice_bit)
+            bob_published_bits.append(bob_bit)
 
             """Now for the estimation of the error:"""
             if alice_bit != bob_bit:
                 naive_error_estimate += 1
         else:  # if a bit wasn't published, we reuse it in the sifted key
-            alice_sifted_key_after_error_estimation += alice_key[index]
-            bob_sifted_key_after_error_estimation += bob_key[index]
+            alice_sifted_key_after_error_estimation.append(alice_key[index])
+            bob_sifted_key_after_error_estimation.append(bob_key[index])
 
     try:
         naive_error_estimate = naive_error_estimate / len(alice_published_bits)
