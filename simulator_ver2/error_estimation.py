@@ -61,7 +61,7 @@ def naive_error(alice_key, bob_key, publication_probability):
 
 
 def refined_average_error(rect_prob, rect_pub_prob, diag_pub_prob,
-                          alice_bits, bob_bits, alice_basis, bob_basis):
+                          alice_bits, bob_bits, basis):
     """In the refined error analysis for simplicity we DO NOT divide raw keys into two separate strings (by the basis).
     Instead, we create two empty strings - alice_key & bob_key - into which we shall rewrite bits unused for error
     estimation. As for the others, chosen with probability rect_pub_prob & diag_pub_prob, respectively, we count them
@@ -91,7 +91,7 @@ def refined_average_error(rect_prob, rect_pub_prob, diag_pub_prob,
         """We iterate over the strings with bits, either publishing bits in their respective basis, or not. Bits 
         published have their indexes remembered, so that we don't accidentally publish them more than once, when 
         iterating over the initial strings."""
-        if alice_basis[index] == bob_basis[index] == '0':  # rectilinear basis
+        if basis[index] == '0':  # rectilinear basis
             if random.uniform(0, 1) >= rect_pub_prob:
                 alice_key += alice_bits[index]
                 bob_key += bob_bits[index]
