@@ -76,11 +76,6 @@ def refined_average_error(rect_prob, rect_pub_prob, diag_pub_prob,
     diag_error = 0
     diag_pub_counter = 0
 
-    """By the way, we don't have to worry with the conditional probability, because the final formula for the error
-    estimation takes that into consideration. However, due to randomising the bits which are up for publication,
-    we should verify that the right amount is published. It is not a problem while sending qubits because of their sheer
-    number, but for publishing the subsets might be so small, that the numbers of bits published might spread more.
-    """
     number_of_all_bits = len(alice_bits)
     number_of_rect_bits_to_be_published = np.floor(rect_pub_prob * number_of_all_bits)
     number_of_diag_bits_to_be_published = np.floor(diag_pub_prob * number_of_all_bits)
