@@ -120,6 +120,8 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     time_history['sifting'] = time_sifting_end - time_sifting_start
 
     """Sifted keys generally differ from each other due to changes between states sent by Alice and received by Bob.
+    Above, that is simulated by random.randint() if Alice's and Bob's basis are different.
+    
     In order to estimate empirical probability of error occurrence in the sifted keys we can publish parts
     of keys, compare them and calculate numbers of errors. Then published parts of key should be deleted, as
     they have just been exchanged via the public channel.
@@ -128,19 +130,18 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     (Lo, Chau, Ardehali, 2004). For this purpose I defined above two functions: naive_error & refined_average_error.
     Below we will use (by default) the refined one.
     """
-
     time_error_estimation_start = time.time()
 
     if error_estimation == refined_average_error:
         # TODO: better handling of the estimator cases
-        error_estimation_results = refined_average_error(
+        error_estimation_results = refined_average_error(  # TODO: update this function and the one below to work on lists, not strings
             rect_prob=rectilinear_basis_prob,
             rect_pub_prob=publication_probability_rectilinear,
             diag_pub_prob=publication_probability_diagonal,
             alice_bits=alice_sifted_key,
             bob_bits=bob_sifted_key,
-            alice_basis=alice_sifted_basis,
-            bob_basis=bob_sifted_basis
+            alice_basis=sifted_basis,  # TODO: only one basis argument is now needed, update the refined_average_error function
+            bob_basis=sifted_basis
         )
 
         error_estimate = error_estimation_results.get('error estimator')
