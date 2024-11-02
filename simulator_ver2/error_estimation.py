@@ -71,66 +71,46 @@ def refined_average_error(rect_prob, rect_pub_prob, diag_pub_prob,
     """
     alice_key = []
     bob_key = []
-    rect_error = 0
-    rect_pub_counter = 0
-    diag_error = 0
-    diag_pub_counter = 0
 
-    number_of_all_bits = len(alice_bits)
-    number_of_rect_bits_to_be_published = np.floor(rect_pub_prob * number_of_all_bits)
-    number_of_diag_bits_to_be_published = np.floor(diag_pub_prob * number_of_all_bits)
-    indexes_of_published_bits = []
-    index = 0
+    """Vectorize generation of random publication decision"""
+    random_vals = np.random.uniform(0, 1, len(alice_bits))
 
-    while rect_pub_counter < number_of_rect_bits_to_be_published or diag_pub_counter < number_of_diag_bits_to_be_published:
-        """We iterate over the strings with bits, either publishing bits in their respective basis, or not. Bits 
-        published have their indexes remembered, so that we don't accidentally publish them more than once, when 
-        iterating over the initial strings."""
-        if basis[index] == '0':  # rectilinear basis
-            if random.uniform(0, 1) >= rect_pub_prob:
-                alice_key.append(alice_bits[index])
-                bob_key.append(bob_bits[index])
-            else:
-                rect_pub_counter += 1
-                indexes_of_published_bits.append(index)
-                if alice_bits[index] != bob_bits[index]:
-                    rect_error += 1
-        else:
-            if random.uniform(0, 1) >= diag_pub_prob:
-                alice_key.append(alice_bits[index])
-                bob_key.append(bob_bits[index])
-            else:
-                diag_pub_counter += 1
-                indexes_of_published_bits.append(index)
-                if alice_bits[index] != bob_bits[index]:
-                    diag_error += 1
-        if index < number_of_all_bits:
-            index += 1
-        else:
-            """If we have already run over all bits and didn't publish the expected amount, we start going through
-                        the strings once again"""
-            index = 0
+    """Separate indices by basis"""
+    rect_indices = np.where(basis == '0')[0]
+    diag_indices = np.where(basis == '1')[0]
 
-    """As it is possible to get a VERY small probability of publication, we check for possible divisions by zero:"""
-    try:
-        rect_error = float(rect_error) / float(rect_pub_counter)
-    except ZeroDivisionError:
-        rect_error = 0.0
+    """Determine which rectilinear and diagonal bits are published"""
+    rect_published = rect_indices[random_vals[rect_indices] < rect_pub_prob]
+    diag_published = diag_indices[random_vals[diag_indices] < diag_pub_prob]
 
-    try:
-        diag_error = float(diag_error) / float(diag_pub_counter)
-    except ZeroDivisionError:
-        diag_error = 0.0
+    """Count errors and published bits for rectilinear and diagonal bases"""
+    rect_error = np.sum(alice_bits[rect_published] != bob_bits[rect_published])
+    diag_error = np.sum(alice_bits[diag_published] != bob_bits[diag_published])
+
+    rect_pub_counter = len(rect_published)
+    diag_pub_counter = len(diag_published)
+
+    """Collect non-published bits for keys"""
+    unused_rect_indices = rect_indices[random_vals[rect_indices] >= rect_pub_prob]
+    unused_diag_indices = diag_indices[random_vals[diag_indices] >= diag_pub_prob]
+
+    alice_key.extend(alice_bits[unused_rect_indices])
+    bob_key.extend(bob_bits[unused_rect_indices])
+    alice_key.extend(alice_bits[unused_diag_indices])
+    bob_key.extend(bob_bits[unused_diag_indices])
+
+    """Error calculations, with safe handling for division by zero"""
+    rect_error = rect_error / rect_pub_counter if rect_pub_counter > 0 else 0.0
+    diag_error = diag_error / diag_pub_counter if diag_pub_counter > 0 else 0.0
 
     """Now, given that measurements in the rectilinear basis were not necessarily with the same probability 
     as those in the diagonal basis, we need a more complicated formula for the 'average error estimate' 
     (Lo, Chau, Ardehali, 2004).
     """
-    p = rect_prob  # just a reminder that it's the probability of choosing rect. basis for measurements
+    p = rect_prob
     e1 = rect_error
     e2 = diag_error
-
-    e = (p**2 * e1 + (1 - p)**2 * e2) / (p**2 + (1 - p)**2)
+    e = (p ** 2 * e1 + (1 - p) ** 2 * e2) / (p ** 2 + (1 - p) ** 2) if (p ** 2 + (1 - p) ** 2) > 0 else 0.0
 
     results = {
         'error estimator': e,
