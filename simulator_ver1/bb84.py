@@ -78,19 +78,18 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
         # Apply mask to set the chosen elements to None
         alice_bits[mask] = None
 
-    """Since for measurement purposes on Bob's (receiver's) part info about both basis and bits from Alice (sender)
-    is needed, values from the lists above are organised into a tuple, as this data structure cannot
-    be further modified.
+    """While in reality Bob (receiver) doesn't know the basis choices of Alice (sender) and is receiving laser impulses
+    instead of a whole 'message', for simulation purposes lists of Alice's basis choices and bits are now transferred to 
+    Bob (receiver) to be efficiently compared with his basis choices and have his bits rendered.
     """
-    alice_message = (alice_basis, alice_bits)
-
-    """Now that we have Alice's data rate, quantum channel's gain and Alice's states,
-    we can randomly choose m (Alice's basis choices number) bases for Bob. While he performs his measurements,
-    a portion of Alice's photons do not reach him due to loss on quantum channel. We will reflect that by choosing Bob's
-    bases inside a for loop instead of using random_choice function defined earlier.
-    """
-
     bob_basis = np.random.binomial(1, 1 - rectilinear_basis_prob, alice_basis_length)
+    bob_bits = []
+    for index in range(alice_basis_length):
+        if bob_basis[index] == alice_basis[index]:  # if they measure in the same base, Bob's bit should be the same
+            bob_bits.append(alice_bits[index])
+        else:  # if they measure in a different base, Bob's bit will be random
+            bob_bits.append(random.randint(0, 1))
+
 
 
     """End of quantum channel measurements."""
