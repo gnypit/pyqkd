@@ -102,16 +102,16 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     measurements is not performed explicitly in this simulation, since the quantum channel's gain has already been
     applied to Alice's (sender's) bits using a mask above.
     """
-    alice_sifted_key = ''
-    alice_sifted_basis = ''
-    bob_sifted_key = ''
-    bob_sifted_basis = ''
+    alice_sifted_key = []
+    bob_sifted_key = []
+    sifted_basis = []
 
-    for basis in bob_indicated_basis:
-        if basis == alice_indicated_basis[index]:
-            bob_sifted_key += bob_indicated_bits[index]
-            bob_sifted_basis += bob_indicated_basis[index]
-        index += 1
+    for index in range(alice_basis_length):
+        alice_base = alice_basis[index]  # could be used twice, so the values is remembered beforehand
+        if alice_base == bob_basis[index]:
+            sifted_basis.append(alice_base)
+            alice_sifted_key.append(alice_bits[index])
+            bob_sifted_key.append(bob_bits[index])
 
     """End of the sifting phase"""
     key_length_history['sifting'] = len(bob_sifted_key)
