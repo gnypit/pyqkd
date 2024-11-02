@@ -167,10 +167,9 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     time_error_estimation_end = time.time()
     time_history['error estimation'] = time_error_estimation_end - time_error_estimation_start
 
-    """Naturally we assume it's Bob's key that's flawed.
-    
-    We begin by checking the parity of Alice's and Bob's sifted keys, 
-    shortened by the subsets used for error estimation.
+    """Naturally we assume it's Bob's (receiver's) key that's flawed. We begin error correction stage by checking the 
+    parity of Alice's and Bob's (sender's and receiver's, respectively) sifted keys, shortened by the subsets used for 
+    error estimation.
     
     CASCADE: 1st I need to assign bits to their indexes in original strings. Therefore I create dictionaries
     for Alice and for Bob.
