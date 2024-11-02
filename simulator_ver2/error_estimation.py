@@ -18,9 +18,9 @@ def naive_error(alice_key, bob_key, publication_probability):
     As a result of this function we return the naive estimator and Alice's & Bob's keys without published bits.
     """
     alice_published_bits = []
-    alice_sifted_key_after_error_estimation = []
+    alice_key_after_error_estimation = []
     bob_published_bits = []
-    bob_sifted_key_after_error_estimation = []
+    bob_key_after_error_estimation = []
 
     naive_error_estimate = 0
 
@@ -37,8 +37,8 @@ def naive_error(alice_key, bob_key, publication_probability):
             if alice_bit != bob_bit:
                 naive_error_estimate += 1
         else:  # if a bit wasn't published, we reuse it in the sifted key
-            alice_sifted_key_after_error_estimation.append(alice_key[index])
-            bob_sifted_key_after_error_estimation.append(bob_key[index])
+            alice_key_after_error_estimation.append(alice_key[index])
+            bob_key_after_error_estimation.append(bob_key[index])
 
     try:
         naive_error_estimate = naive_error_estimate / len(alice_published_bits)
@@ -52,8 +52,8 @@ def naive_error(alice_key, bob_key, publication_probability):
 
     results = {
         'error estimator': naive_error_estimate,
-        'alice key': alice_sifted_key_after_error_estimation,
-        'bob key': bob_sifted_key_after_error_estimation,
+        'alice key': alice_key_after_error_estimation,
+        'bob key': bob_key_after_error_estimation,
         'number of published bits': no_published_bits
     }
 
