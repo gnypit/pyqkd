@@ -78,9 +78,9 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
         # Apply mask to set the chosen elements to None
         alice_bits[mask] = None
 
-    """While in reality Bob (receiver) doesn't know the basis choices of Alice (sender) and is receiving laser impulses
-    instead of a whole 'message', for simulation purposes lists of Alice's basis choices and bits are now transferred to 
-    Bob (receiver) to be efficiently compared with his basis choices and have his bits rendered.
+    """While in reality at this stage Bob (receiver) doesn't know the basis choices of Alice (sender) and is receiving 
+    laser impulses instead of a whole 'message', for simulation purposes lists of Alice's basis choices and bits are now 
+    transferred to Bob (receiver) to be efficiently compared with his basis choices and have his bits rendered.
     """
     bob_basis = np.random.binomial(1, 1 - rectilinear_basis_prob, alice_basis_length)
     bob_bits = []
@@ -90,62 +90,23 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
         else:  # if they measure in a different base, Bob's bit will be random
             bob_bits.append(random.randint(0, 1))
 
-
-
-    """End of quantum channel measurements."""
+    """End of quantum channel stage of the BB84 protocol."""
     time_quantum_channel_end = time.time()
     time_history['qubits'] = time_quantum_channel_end - time_quantum_channel_start
 
-    """Alice and Bob each have a string of bits, which will shortly become a key for cipher.
+    """Alice and Bob each have a list of bits, which will shortly become a key for cipher.
     At this point Alice and Bob can switch to communicating on a public channel. Their first step is to 
     perform sifting - decide which bits to keep in their key.
     
-    Bob begins by telling Alice, which photons he measured. He then tells her which basis were used in each measurement.
-    Then it's Alice's turn to send Bob her basis and to cancel out bits (representing states!) from her string 
-    that do not match both successful Bob's measurement and his usage of the same basis in each case.
+    Alice and Bob (sender and receiver, respectively) exchange information on basis used. Checking successful 
+    measurements is not performed explicitly in this simulation, since the quantum channel's gain has already been
+    applied to Alice's (sender's) bits using a mask above.
     """
-
-    time_sifting_start = time.time()
-
-    bob_measurement_indicators = ''
-    for bit in bob_bits:  # is it possible to optimise length of such an indicator?
-        if bit == '0' or bit == '1':
-            bob_measurement_indicators += '1'
-        else:
-            bob_measurement_indicators += '0'
-
-    bob_indicated_basis = ''
-    bob_indicated_bits = ''
-    alice_indicated_bits = ''
-    alice_indicated_basis = ''
-    index = 0
-
-    for indicator in bob_measurement_indicators:  # in optimised approach send only bases for successful measurements
-        if indicator == '1':
-            bob_indicated_basis += bob_basis[index]
-            bob_indicated_bits += bob_bits[index]
-            alice_indicated_bits += alice_bits[index]
-            alice_indicated_basis += alice_basis[index]
-        index += 1
-
-    """ Now we move towards the sifting itself. For the refined error analysis I'll need a string listing basis 
-    choices by Alice for the sifted key, not only the bits:"""
     alice_sifted_key = ''
     alice_sifted_basis = ''
-    index = 0
-    for basis in alice_indicated_basis:
-        if basis == bob_indicated_basis[index]:
-            alice_sifted_key += alice_indicated_bits[index]
-            alice_sifted_basis += alice_basis[index]
-        index += 1
-
-    """Now Bob gets info from Alice about her choices of bases, so that he can omit bits resulting from measurements
-    when he used different basis than Alice. For him basis choices for bits in the sifted key are memorised, as well.
-    """
     bob_sifted_key = ''
     bob_sifted_basis = ''
 
-    index = 0
     for basis in bob_indicated_basis:
         if basis == alice_indicated_basis[index]:
             bob_sifted_key += bob_indicated_bits[index]
