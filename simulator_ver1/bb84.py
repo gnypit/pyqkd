@@ -114,7 +114,7 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
     sifted_basis = []
 
     for index in range(alice_basis_length):
-        alice_base = alice_basis[index]  # could be used twice, so the values is remembered beforehand
+        alice_base = alice_basis[index]  # could be used twice, so the value is remembered beforehand
         if alice_base == bob_basis[index]:
             sifted_basis.append(alice_base)
             alice_sifted_key.append(alice_bits[index])
