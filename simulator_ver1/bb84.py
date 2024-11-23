@@ -221,7 +221,7 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
         alice_blocks = []
         bob_blocks = []
 
-        for block_index in cascade_blocks_generator(string_length=key_len, blocks_size=size):
+        for block_index in cascade_blocks_generator(key_length=key_len, blocks_size=size):
 
             alice_block = {}  # a dictionary for a single block for Alice
             bob_block = {}  # a dictionary for a single block for Bob

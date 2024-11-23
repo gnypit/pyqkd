@@ -158,11 +158,11 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=2):
     return sizes
 
 
-def cascade_blocks_generator(string_length, blocks_size):
-    string_index = list(np.arange(0, string_length, 1))  # I create a list of all indexes (list of ndarray)
-    blocks = random.sample(population=string_index, k=string_length)  # I shuffle the list randomly
+def cascade_blocks_generator(key_length, blocks_size):
+    string_index = list(np.arange(0, key_length, 1))  # I create a list of all indexes (list of ndarray)
+    blocks = random.sample(population=string_index, k=key_length)  # I shuffle the list randomly
 
-    for j in range(0, string_length, blocks_size):  # I generate equally long chunks of shuffled indexes
+    for j in range(0, key_length, blocks_size):  # I generate equally long chunks of shuffled indexes
         yield blocks[j:j + blocks_size]
 
 

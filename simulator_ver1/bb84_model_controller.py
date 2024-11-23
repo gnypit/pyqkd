@@ -433,7 +433,7 @@ class ModelControllerBB84:
             bob_blocks = []
 
             for block_index in bb84.cascade_blocks_generator(
-                    string_length=self.length_of_key_into_cascade, blocks_size=size):
+                    key_length=self.length_of_key_into_cascade, blocks_size=size):
 
                 alice_block = {}  # a dictionary for a single block for Alice
                 bob_block = {}  # a dictionary for a single block for Bob
