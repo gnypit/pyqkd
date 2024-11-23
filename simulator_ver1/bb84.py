@@ -166,34 +166,32 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
         bob_sifted_key_after_error_estimation = error_estimation_results.get('bob key')
     else:
         error_estimate = disturbance_probability
-        alice_sifted_key_after_error_estimation = alice_sifted_key
-        bob_sifted_key_after_error_estimation = bob_sifted_key
+        alice_sifted_key_after_error_estimation = alice_sifted_key  # it is a list
+        bob_sifted_key_after_error_estimation = bob_sifted_key  # it is a list
 
     key_len = len(alice_sifted_key_after_error_estimation)
     key_length_history['error estimation'] = key_len
     time_error_estimation_end = time.time()
     time_history['error estimation'] = time_error_estimation_end - time_error_estimation_start
 
-    """Naturally we assume it's Bob's (receiver's) key that's flawed. We begin error correction stage by checking the 
-    parity of Alice's and Bob's (sender's and receiver's, respectively) sifted keys, shortened by the subsets used for 
-    error estimation.
+    """In BB84, it is the receiver's (Bob's) key that contains errors. Error correction algorithm 'CASCADE' is thus
+    performed, to use binary searches for errors in subsets of the sifted keys. For optimisation purposes all of the 
+    blocks from all of the CASCADE's passes will be stored and QBER exact values will be computed after each pass.  
     
-    CASCADE: 1st I need to assign bits to their indexes in original strings. Therefore I create dictionaries
-    for Alice and for Bob.
+    CASCADE: 
+        1) Bits are assigned to their indexes in new dicts, which will be gradually updated with corrected values.
+        2) Block sizes for the whole CASCADE algorithm (all passes) are computed.
+        3) 
     """
     time_error_correction_start = time.time()
     alice_cascade = {}
     bob_cascade = {}
 
     for index in range(key_len):  # I dynamically create dictionaries with indexes as keys and bits as values
-        alice_cascade[str(index)] = alice_sifted_key_after_error_estimation[index]
-        bob_cascade[str(index)] = bob_sifted_key_after_error_estimation[index]
+        alice_cascade[index] = alice_sifted_key_after_error_estimation[index]
+        bob_cascade[index] = bob_sifted_key_after_error_estimation[index]
 
-    """Now we need to set up CASCADE itself: sizes of blocks in each pass, numeration of passes and a dictionary
-    for corrected bits with their indexes from original Bob's string as keys and correct bits as values.
-    """
-
-    blocks_sizes = cascade_blocks_sizes(
+    blocks_sizes = cascade_blocks_sizes(  # these are computed for all the given number of CASCADE's passes
         quantum_bit_error_rate=error_estimate,
         key_length=key_len,
         n_passes=cascade_n_passes
@@ -215,10 +213,7 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
         try:
             pass_number_of_blocks = int(np.floor(key_len // size))
         except ZeroDivisionError:
-            error_message = [blocks_sizes, pass_number, alice_basis_length, gain, disturbance_probability,
-                             error_estimate, key_len, rectilinear_basis_prob, publication_probability_rectilinear,
-                             cascade_n_passes, 'ZeroDivisionError with size']
-            print(error_message)
+            print(f"ZeroDivisionError. Computed sizes of the CASCADE's blocks are {blocks_sizes}.")
             continue
 
         alice_pass_parity_list = []
@@ -232,8 +227,8 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
             bob_block = {}  # a dictionary for a single block for Bob
 
             for index in block_index:  # I add proper bits to these dictionaries
-                alice_block[str(index)] = alice_cascade[str(index)]
-                bob_block[str(index)] = bob_cascade[str(index)]
+                alice_block[str(index)] = alice_cascade[index]
+                bob_block[str(index)] = bob_cascade[index]
 
             """I append single blocks created for given indexes to lists of block for this particular CASCADE's pass"""
             alice_blocks.append(alice_block)
