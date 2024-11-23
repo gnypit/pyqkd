@@ -7,7 +7,7 @@ import time
 import numpy as np
 
 from simulator_ver2.error_estimation import naive_error, refined_average_error
-from simulator_ver2.cascade import cascade_blocks_sizes, cascade_blocks_generator
+from simulator_ver2.cascade import cascade_blocks_sizes, cascade_blocks_generator, count_key_value_differences
 
 from simulator_ver1.binary import binary
 
@@ -314,27 +314,12 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
         history_cascade.append({'Alice blocks': alice_blocks, 'Bob blocks': bob_blocks})
         pass_number += 1
 
-        """For the purposes of optimizing CASCADE we check the error rate after each pass:"""
-        alice_key_error_check = ''.join(list(alice_cascade.values()))
-        bob_key_error_check = ''.join(list(bob_cascade.values()))
-
-        # TODO: can we make it a separate function?
-        key_error_rate = 0
-        index = 0
-        for bit in alice_key_error_check:
-            if bit != bob_key_error_check[index]:
-                key_error_rate += 1
-            index += 1
-        try:
-            key_error_rate = key_error_rate / len(alice_key_error_check)
-            error_rates.append(key_error_rate)  # its length is equivalent to no. CASCADE passes performed
-            if key_error_rate < 0.0001:  # TODO: is 0.1% a small enough number?
-                break  # let's not waste time for more CASCADE passes if there are 'no more' errors
-        except ZeroDivisionError:
-            error_message = [blocks_sizes, pass_number, alice_basis_length, gain, disturbance_probability,
-                             error_estimate, key_len, rectilinear_basis_prob, publication_probability_rectilinear,
-                             cascade_n_passes, 'ZeroDivisionError with len(alice_key_error_check)']
-            print(error_message)
+        """For the purposes of optimizing CASCADE, the exact QBER is computed and remembered after each pass:"""
+        qber_after_pass = count_key_value_differences(dict1=alice_cascade, dict2=bob_cascade) / len(alice_cascade)
+        error_rates.append(qber_after_pass)
+        if qber_after_pass == 0:
+            """If all the errors have already been corrected, CASCADE is terminated."""
+            break
 
     """Time to create strings from cascade dictionaries into corrected keys"""
     alice_correct_key = ''.join(list(alice_cascade.values()))
