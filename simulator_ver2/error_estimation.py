@@ -76,8 +76,8 @@ def refined_average_error(rect_prob, rect_pub_prob, diag_pub_prob,
     random_vals = np.random.uniform(0, 1, len(alice_bits))
 
     """Separate indices by basis"""
-    rect_indices = np.where(basis == 0)[0]
-    diag_indices = np.where(basis == 1)[0]
+    rect_indices = [index for index in range(len(basis)) if basis[index] == 0]
+    diag_indices = [index for index in range(len(basis)) if basis[index] == 1]
 
     """Determine which rectilinear and diagonal bits are published"""
     rect_published = rect_indices[random_vals[rect_indices] < rect_pub_prob]
