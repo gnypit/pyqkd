@@ -396,8 +396,6 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
         'no. del. bits': deleted_bits_counter,
         'no. cascade pass.': len(error_rates),  # TODO: why is it None???
         'cascade history': history_cascade,
-        'alice states': alice_states,
-        'bob states': bob_states,
         'alice basis': alice_basis,
         'bob basis': bob_basis,
         'alice bits': alice_bits,
