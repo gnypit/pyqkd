@@ -109,7 +109,7 @@ def refined_average_error(rect_prob, rect_pub_prob, diag_pub_prob,
     e = (p ** 2 * e1 + (1 - p) ** 2 * e2) / (p ** 2 + (1 - p) ** 2) if (p ** 2 + (1 - p) ** 2) > 0 else 0.0
 
     """Collect non-published bits for keys"""
-    unused_rect_indices = rect_indices[random_vals[rect_indices] >= rect_pub_prob]
+    unused_rect_indices = rect_indices[random_vals[rect_indices] >= rect_pub_prob]  # TODO: update the code to properly handle bits that weren't published, in their right order!
     unused_diag_indices = diag_indices[random_vals[diag_indices] >= diag_pub_prob]
 
     alice_key.extend(alice_bits[unused_rect_indices])
