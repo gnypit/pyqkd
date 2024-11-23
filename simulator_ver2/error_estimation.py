@@ -80,28 +80,24 @@ def refined_average_error(rect_prob, rect_pub_prob, diag_pub_prob,
     diag_indices = [index for index in range(len(basis)) if basis[index] == 1]
 
     """Determine which rectilinear and diagonal bits are published"""
-    rect_published = rect_indices[random_vals[rect_indices] < rect_pub_prob]
-    diag_published = diag_indices[random_vals[diag_indices] < diag_pub_prob]
+    alice_rect_published = [alice_bits[index] for index in rect_indices if random_vals[index] > rect_pub_prob]
+    alice_diag_published = [alice_bits[index] for index in diag_indices if random_vals[index] > diag_pub_prob]
+    bob_rect_published = [bob_bits[index] for index in rect_indices if random_vals[index] > rect_pub_prob]
+    bob_diag_published = [bob_bits[index] for index in diag_indices if random_vals[index] > diag_pub_prob]
+    # rect_published = rect_indices[random_vals[rect_indices] < rect_pub_prob]
+    # diag_published = diag_indices[random_vals[diag_indices] < diag_pub_prob]
 
     """Count errors and published bits for rectilinear and diagonal bases"""
-    rect_error = np.sum(alice_bits[rect_published] != bob_bits[rect_published])
-    diag_error = np.sum(alice_bits[diag_published] != bob_bits[diag_published])
-
-    rect_pub_counter = len(rect_published)
-    diag_pub_counter = len(diag_published)
-
-    """Collect non-published bits for keys"""
-    unused_rect_indices = rect_indices[random_vals[rect_indices] >= rect_pub_prob]
-    unused_diag_indices = diag_indices[random_vals[diag_indices] >= diag_pub_prob]
-
-    alice_key.extend(alice_bits[unused_rect_indices])
-    bob_key.extend(bob_bits[unused_rect_indices])
-    alice_key.extend(alice_bits[unused_diag_indices])
-    bob_key.extend(bob_bits[unused_diag_indices])
+    # rect_error = np.sum(alice_bits[rect_published] != bob_bits[rect_published])
+    # diag_error = np.sum(alice_bits[diag_published] != bob_bits[diag_published])
+    rect_pub_len = len(alice_rect_published)
+    diag_pub_len = len(alice_diag_published)
 
     """Error calculations, with safe handling for division by zero"""
-    rect_error = rect_error / rect_pub_counter if rect_pub_counter > 0 else 0.0
-    diag_error = diag_error / diag_pub_counter if diag_pub_counter > 0 else 0.0
+    rect_error = np.sum(alice_rect_published != bob_rect_published) / rect_pub_len if rect_pub_len > 0 else 0.0
+    diag_error = np.sum(alice_diag_published != bob_diag_published) / diag_pub_len if diag_pub_len > 0 else 0.0
+    # rect_error = rect_error / rect_pub_counter if rect_pub_counter > 0 else 0.0
+    # diag_error = diag_error / diag_pub_counter if diag_pub_counter > 0 else 0.0
 
     """Now, given that measurements in the rectilinear basis were not necessarily with the same probability 
     as those in the diagonal basis, we need a more complicated formula for the 'average error estimate' 
@@ -112,11 +108,20 @@ def refined_average_error(rect_prob, rect_pub_prob, diag_pub_prob,
     e2 = diag_error
     e = (p ** 2 * e1 + (1 - p) ** 2 * e2) / (p ** 2 + (1 - p) ** 2) if (p ** 2 + (1 - p) ** 2) > 0 else 0.0
 
+    """Collect non-published bits for keys"""
+    unused_rect_indices = rect_indices[random_vals[rect_indices] >= rect_pub_prob]
+    unused_diag_indices = diag_indices[random_vals[diag_indices] >= diag_pub_prob]
+
+    alice_key.extend(alice_bits[unused_rect_indices])
+    bob_key.extend(bob_bits[unused_rect_indices])
+    alice_key.extend(alice_bits[unused_diag_indices])
+    bob_key.extend(bob_bits[unused_diag_indices])
+
     results = {
         'error estimator': e,
         'alice key': alice_key,
         'bob key': bob_key,
-        'number of published bits': rect_pub_counter + diag_pub_counter
+        'number of published bits': rect_pub_len + diag_pub_len
     }
 
     return results
