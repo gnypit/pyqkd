@@ -216,8 +216,8 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
             print(f"ZeroDivisionError. Computed sizes of the CASCADE's blocks are {blocks_sizes}.")
             continue
 
-        alice_pass_parity_list = []
-        bob_pass_parity_list = []
+        alice_pass_parity_list = []  # TODO: why do we need the 'alice_pass_parity_list'?
+        bob_pass_parity_list = []  # TODO: why do we need the 'bob_pass_parity_list'?
         alice_blocks = []
         bob_blocks = []
 
@@ -227,15 +227,15 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
             bob_block = {}  # a dictionary for a single block for Bob
 
             for index in block_index:  # I add proper bits to these dictionaries
-                alice_block[str(index)] = alice_cascade[index]
-                bob_block[str(index)] = bob_cascade[index]
+                alice_block[index] = alice_cascade[index]
+                bob_block[index] = bob_cascade[index]
 
-            """I append single blocks created for given indexes to lists of block for this particular CASCADE's pass"""
+            """Lists of blocks for this particular CASCADE pass alone:"""
             alice_blocks.append(alice_block)
             bob_blocks.append(bob_block)
 
         for index in range(pass_number_of_blocks):
-
+            """Firstly, lists of bits are constructed for easy parity checks:"""
             current_indexes = list(alice_blocks[index].keys())  # same as Bob's
 
             alice_current_bits = list(alice_blocks[index].values())
@@ -245,8 +245,8 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
             bob_bit_values = []
 
             for j in range(len(current_indexes)):
-                alice_bit_values.append(int(alice_current_bits[j]))
-                bob_bit_values.append(int(bob_current_bits[j]))
+                alice_bit_values.append(alice_current_bits[j])
+                bob_bit_values.append(bob_current_bits[j])
 
             alice_pass_parity_list.append(sum(alice_bit_values) % 2)
             bob_pass_parity_list.append(sum(bob_bit_values) % 2)
