@@ -80,10 +80,10 @@ def refined_average_error(rect_prob, rect_pub_prob, diag_pub_prob,
     diag_indices = [index for index in range(len(basis)) if basis[index] == 1]
 
     """Determine which rectilinear and diagonal bits are published"""
-    alice_rect_published = [alice_bits[index] for index in rect_indices if random_vals[index] > rect_pub_prob]
-    alice_diag_published = [alice_bits[index] for index in diag_indices if random_vals[index] > diag_pub_prob]
-    bob_rect_published = [bob_bits[index] for index in rect_indices if random_vals[index] > rect_pub_prob]
-    bob_diag_published = [bob_bits[index] for index in diag_indices if random_vals[index] > diag_pub_prob]
+    alice_rect_published = [alice_bits[index] for index in rect_indices if random_vals[index] < rect_pub_prob]
+    alice_diag_published = [alice_bits[index] for index in diag_indices if random_vals[index] < diag_pub_prob]
+    bob_rect_published = [bob_bits[index] for index in rect_indices if random_vals[index] < rect_pub_prob]
+    bob_diag_published = [bob_bits[index] for index in diag_indices if random_vals[index] < diag_pub_prob]
     # rect_published = rect_indices[random_vals[rect_indices] < rect_pub_prob]
     # diag_published = diag_indices[random_vals[diag_indices] < diag_pub_prob]
 
