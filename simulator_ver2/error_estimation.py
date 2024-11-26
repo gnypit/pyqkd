@@ -115,6 +115,13 @@ def refined_average_error(rect_prob, rect_pub_prob, diag_pub_prob,
 
     """To chyba będzie wygodniej zrobić już na słowniku, porównując oryginalny indeks bitu u Alicji/Boba
     z indeksem danej bazy, a przez to prawdopodobieństwem publikacji."""
+    for index in range(length):
+        """Firstly let's check in which basis was the bit with current index measured:"""
+        basis_choice = basis[index]
+
+        """Secondly, let's verify the publication probability...?"""
+        if basis_choice == 0:
+            """This bit was measured in the rectilinear basis."""
 
     alice_key.extend(alice_bits[unused_rect_indices])
     bob_key.extend(bob_bits[unused_rect_indices])
