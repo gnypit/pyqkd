@@ -71,13 +71,14 @@ def refined_average_error(rect_prob, rect_pub_prob, diag_pub_prob,
     """
     alice_key = []
     bob_key = []
+    length = len(basis)
 
     """Vectorize generation of random publication decision"""
-    random_vals = np.random.uniform(0, 1, len(alice_bits))
+    random_vals = np.random.uniform(0, 1, length)
 
     """Separate indices by basis"""
-    rect_indices = [index for index in range(len(basis)) if basis[index] == 0]
-    diag_indices = [index for index in range(len(basis)) if basis[index] == 1]
+    rect_indices = [index for index in range(length) if basis[index] == 0]
+    diag_indices = [index for index in range(length) if basis[index] == 1]
 
     """Determine which rectilinear and diagonal bits are published"""
     alice_rect_published = [alice_bits[index] for index in rect_indices if random_vals[index] < rect_pub_prob]
