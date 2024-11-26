@@ -81,24 +81,32 @@ def refined_average_error(rect_prob, rect_pub_prob, diag_pub_prob,
     diag_indices = [index for index in range(length) if basis[index] == 1]
 
     """Determine which rectilinear and diagonal bits are published"""
-    alice_rect_published = [alice_bits[index] for index in rect_indices if random_vals[index] < rect_pub_prob]
-    alice_diag_published = [alice_bits[index] for index in diag_indices if random_vals[index] < diag_pub_prob]
-    bob_rect_published = [bob_bits[index] for index in rect_indices if random_vals[index] < rect_pub_prob]
-    bob_diag_published = [bob_bits[index] for index in diag_indices if random_vals[index] < diag_pub_prob]
-    # rect_published = rect_indices[random_vals[rect_indices] < rect_pub_prob]
-    # diag_published = diag_indices[random_vals[diag_indices] < diag_pub_prob]
+    all_published_indices = []
+    alice_rect_published = []
+    alice_diag_published = []
+    bob_rect_published = []
+    bob_diag_published = []
+
+    for index in range(length):
+        if index in rect_indices:
+            if random_vals[index] < rect_pub_prob:
+                alice_rect_published.append(alice_bits[index])
+                bob_rect_published.append(bob_bits[index])
+                all_published_indices.append(index)
+        elif index in diag_indices:
+            if random_vals[index] < diag_pub_prob:
+                alice_diag_published.append(alice_bits[index])
+                bob_diag_published.append(bob_bits[index])
+                all_published_indices.append(index)
+
 
     """Count errors and published bits for rectilinear and diagonal bases"""
-    # rect_error = np.sum(alice_bits[rect_published] != bob_bits[rect_published])
-    # diag_error = np.sum(alice_bits[diag_published] != bob_bits[diag_published])
     rect_pub_len = len(alice_rect_published)
     diag_pub_len = len(alice_diag_published)
 
     """Error calculations, with safe handling for division by zero"""
     rect_error = np.sum(alice_rect_published != bob_rect_published) / rect_pub_len if rect_pub_len > 0 else 0.0
     diag_error = np.sum(alice_diag_published != bob_diag_published) / diag_pub_len if diag_pub_len > 0 else 0.0
-    # rect_error = rect_error / rect_pub_counter if rect_pub_counter > 0 else 0.0
-    # diag_error = diag_error / diag_pub_counter if diag_pub_counter > 0 else 0.0
 
     """Now, given that measurements in the rectilinear basis were not necessarily with the same probability 
     as those in the diagonal basis, we need a more complicated formula for the 'average error estimate' 
