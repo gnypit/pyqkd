@@ -90,9 +90,6 @@ class Member(Chromosome):
         """Default method for self-representing objects of this class."""
         return f"{type(self).__name__}(genes={self.genes}, id={self.id}, parents_id={self.parents_id})"
 
-    def add_parents_id(self, parents_id):
-        self.parents_id = parents_id
-
 
 class Generation:
     def __init__(self, size, fitness_function, genome_generator=None, genome_args=None):
@@ -136,15 +133,13 @@ class Generation:
         self.members.append(new_member)
         identification += 1
 
-    def evaluate_all_members(self, reverse=True, fitness_function=None):
-        """This method applies the fitness function to the generation and sorts the fitness ranking by
-        the fitness values of generation's members - 'reverse' means sorting will be performed
-        from maximum fitness to the minimum.
-
-        If 'fitness_function' is provided, it overrides the one given in the constructor."""
+    def evaluate(self, reverse=True):
+        """This method uses the fitness function stored in members of the generation to create and then sort the fitness
+        ranking by the computed fitness values; 'reverse' means sorting will be performed from max fitness value to min.
+        """
         self.fitness_ranking = []
 
-        for i in range(len(self.members)):
+        for i in range(self.size):
             self.fitness_ranking.append(
                 {'index': i, 'fitness value': self.members[i].evaluate()}
             )
