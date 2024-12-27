@@ -1,4 +1,7 @@
-"""Author: Jakub T. Gnyp, gnyp.jakub@gmail.com"""
+"""Author: Jakub Gnyp; contact: gnyp.jakub@gmail.com, LinkedIn: https://www.linkedin.com/in/gnypit/
+Selection operators in this script take a parent generation from a genetic algorithm
+and return a child (rival) generation.
+"""
 import random
 
 
