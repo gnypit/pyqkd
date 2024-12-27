@@ -34,7 +34,7 @@ def ranking_selection(parent_generation: Generation):  # deterministic
     return parents_candidates
 
 
-def roulette_wheel_selection(self):  # probability-based
+def roulette_wheel_selection(parent_generation: Generation):  # probability-based
     """The conspicuous characteristic of this selection method is the fact that it gives to each member i of the current
     generation a probability p(i) of being selected, proportional to its fitness value f(i). Each member in the
     generation occupies an area on the roulette wheel proportional to its fitness. Then, conceptually, the roulette
@@ -44,12 +44,12 @@ def roulette_wheel_selection(self):  # probability-based
 
     For more details, please refer to 'Introduction to Evolutionary Computing', sect. 5.2.3 'Implementing Selection
     Probabilities'. [DOI 10.1007/978-3-662-44874-8]"""
-    fit_total = 0
+    total_fitness = 0
 
     """In order to select members with regard to their fitness value compared to all of the values,
     we calculate the total sum of fitness values of all members in the current generation:"""
-    for i in range(self.pop_size):
-        fit_total += self.current_fitness_ranking[i].get('fitness value')
+    for i in range(parent_generation.size):
+        total_fitness += parent_generation.fitness_ranking[i].get('fitness value')
 
     """We use 'member_counter' as an index for the fitness ranking. While it's smaller than the elite
     size for the whole population, we simply copy-paste the old members into the new generation. That's why
@@ -68,31 +68,29 @@ def roulette_wheel_selection(self):  # probability-based
     elite-parents will be added now, we have to subtract the 'other' elite_size number of Members from the
     loop limit to preserve the right size of generation - for when the elite will be copied directly
     into children's list:"""
-    while member_counter < self.current_generation.size - self.elite_size:
+    def select_parent(fit_total, fitness_ranking, generation_members, pop_size):
+        """Selects a parent based on fitness-proportional selection."""
+        param = random.uniform(0, fit_total)
+        fit_sum = 0
+        index = 0
+
+        while fit_sum < param and index < pop_size:
+            fit_sum += fitness_ranking[index].get('fitness value')
+            index += 1
+
+        return generation_members[fitness_ranking[index - 1].get('index')]
+
+    while member_counter < parent_generation.size - parent_generation.elite_size:
         """In each iteration we add two parents who will result in two children,
         which is why we use a while loop and 'jump' 2 population members in each iteration."""
-        param = random.uniform(0, fit_total)
-        fit_sum = 0
-        index = 0
-
-        while fit_sum < param and index < self.pop_size:
-            fit_sum += self.current_fitness_ranking[index].get('fitness value')
-            index += 1
-
-        parent1 = self.current_generation.members[self.current_fitness_ranking[index].get('index')]
-        param = random.uniform(0, fit_total)
-        fit_sum = 0
-        index = 0
-
-        while fit_sum < param and index < self.pop_size:
-            fit_sum += self.current_fitness_ranking[index].get('fitness value')
-            index += 1
-
-        parent2 = self.current_generation.members[self.current_fitness_ranking[index].get('index')]
+        parent1 = select_parent(total_fitness, parent_generation.fitness_ranking, parent_generation.members,
+                                parent_generation.size)
+        parent2 = select_parent(total_fitness, parent_generation.fitness_ranking, parent_generation.members,
+                                parent_generation.size)
         parents_candidates.append({'parent1': parent1, 'parent2': parent2})
         member_counter += 2
 
-    self.current_parents.append({'roulette wheel': parents_candidates})
+    return parents_candidates
 
 
 def stochastic_universal_sampling(self):  # probability-based
