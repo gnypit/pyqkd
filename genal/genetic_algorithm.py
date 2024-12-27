@@ -3,7 +3,8 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy import floor
-from crossover_operators import uniform_crossover, single_point_crossover, plco
+import crossover_operators
+import selection_operators
 
 """Global variable to hold IDs of chromosomes for backtracking"""
 identification = 0
@@ -226,18 +227,22 @@ class Population:
               self.current_fitness_ranking[0].get('fitness value')]
         return bf
 
-    def perform_crossover(self, crossover_operator, selection_operator_name):  # TODO: adjust to take a (function) selection operator as an argument, not a name
-        """Let's try passing the selection operator info into the crossover operator, so that instead of forcing
-        taking a list of dict_values we simply call the value with a key.
+    def create_new_generation(self, selection_operator, crossover_operator):  # First to be parallelled
+        """A method for combining selection and crossover operators over the current population to create a new one.
+        Firstly, we have to match the selection operator; then in each case we have to match the crossover operator.
 
-        We need to pass a list of arguments for the crossover operator, if necessary. For args = None crossover
-        operators use default settings/parameters.
+        In each of the selection-oriented cases we feed the selection operator name to the crossover operator
+        method, so that it takes the parents lists designated for a given new generation creation, i.e., to
+        always connect the chosen crossover to chosen selection and yet keep all probable parents lists
+        from different selection processes in one object for multiple processes to access.
+
+        Selection_operator is a function passed to this method for parents selection
+        crossover_operator is a function passed to this method for the crossover of the parents
         """
         children_candidates = []
         for parents_candidates in self.current_parents:
-            # list_of_parents_pairs = list(parents_candidates.values())  # I'm forcing it to be a list object
-            list_of_parents_pairs = parents_candidates.get(selection_operator_name)
-            for parents_pair in list_of_parents_pairs:  # this loop end way to soon, I think
+            list_of_parents_pairs = parents_candidates.get(selection_operator)
+            for parents_pair in list_of_parents_pairs:
                 children_candidates.append(
                     crossover_operator(
                         parents_pair.get('parent1'),
@@ -251,22 +256,6 @@ class Population:
                     'children': children_candidates
                 }
             )
-
-    def create_new_generation(self, selection_operator, crossover_operator):
-        """A method for combining selection and crossover operators over the current population to create a new one.
-        For the moment, we are assuming that there will be a single list of children candidates.
-        Firstly, we have to match the selection operator; then in each case we have to match the crossover operator.
-
-        In each of the selection-oriented cases we feed the selection operator name to the crossover operator
-        method, so that it takes the parents lists designated for a given new generation creation, i.e., to
-        always connect the chosen crossover to chosen selection and yet keep all probable parents lists
-        from different selection processes in one object for multiple processes to access.
-
-        Selection_operator is a function passed to this method for parents selection
-        crossover_operator is a function passed to this method for the crossover of the parents
-        """
-
-        self.perform_crossover(crossover_operator=crossover_operator, selection_operator_name=selection_operator)
 
         """Secondly, we create the new generation with children being a result od selection and crossover operators
         on the current population:"""
@@ -288,7 +277,7 @@ class Population:
             )
             index += 2
 
-        """Finally, we overwrite the current generation with the new one:"""
+        """Finally, we overwrite the current generation with the new one: -> NOT IN PARALLEL VERSION!!!"""
         self.current_generation = new_generation
 
     def mutate(self):
