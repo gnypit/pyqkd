@@ -195,8 +195,6 @@ class Population:
             fitness_function=fit_fun
         )
         self.generations = [self.current_generation]
-        self.current_parents = []
-        self.current_children = []
 
         """What we need is to be able to sort whole generation based on fitness values AND remember chromosomes 
         indexes in their (generation) list in order to be able to crossbreed them with each other based on the
@@ -226,7 +224,7 @@ class Population:
               self.current_fitness_ranking[0].get('fitness value')]
         return bf
 
-    def create_new_generation(self):  # First to be parallelled
+    def create_new_generation(self):  # First to be parallelled & TODO: change the way the selection operators are handled
         """A method for combining selection and crossover operators over the current population to create a new one.
         Firstly, we have to match the selection operator; then in each case we have to match the crossover operator.
 
@@ -301,12 +299,6 @@ class Population:
             self.current_generation.members[index].change_genes(
                 self.genome_generator(self.genome_generator_args)
             )
-
-    def reset_parents(self):
-        self.current_parents = []
-
-    def reset_children(self):
-        self.current_children = []
 
     def change_population_size(self, pop_size):  # TODO isin't it in a conflict with the change to initial size and parent pairs number?
         self.pop_size = pop_size
