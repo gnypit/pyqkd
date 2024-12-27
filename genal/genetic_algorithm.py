@@ -86,41 +86,22 @@ class Member(Chromosome):
 
 
 class Generation:
-    """This class is meant to represent a single (accepted) generation in a genetic algorithm, with its members and
-    characteristic info: current fitness ranking of the members, elite size, object to store potential children,
-    objects to store rival 'populations', from which a new generation will be chosen."""
-    size: int  # number of members in a generation
+    """This class is meant to represent a single (rival) generation in a genetic algorithm, with its members and
+    characteristic info: current fitness ranking of the members, elite size, number of parents' pairs mating
+    and operator-specific arguments, if necessary.
+    """
     members: list[Member]  # list of Member class instances - chromosomes of the generation with their and parents IDS
+    size: int  # number of members in this generation
+    num_parents_mating: int  # number of parent paris mating must be positive and equal to or smaller than the size
+    elite_size: int  # number of members to be copy-pasted directly into a new generation
+    fitness_ranking: list[dict]  # dicts in this list have the index of a member in the generation and its fitness value
 
-    def __init__(self, size, fitness_function, genome_generator=None, genome_args=None):
-        """genome_generator is the function that creates genomes for the initial generation
-        of population members, genome_args are arguments to be used in genome_generator;
-        this method uses a global variable identification for creating unique IDs for created members"""
-
-        global identification
-        self.size = size
-        self.fitness_function = fitness_function
-        # self.members = []
-        self.genome_generator = genome_generator
-        self.genome_generator_args = genome_args
-
-        if self.genome_generator is not None:  # ONLY for the initial generation within the population -> should it be in the GeneticAlgorithm class, or do we need it for mutation too?
-            for index in range(self.size):
-                genes = self.genome_generator(self.genome_generator_args)
-                new_member = Member(
-                    genes=genes,
-                    identification_number=identification,
-                    fitness_function=fitness_function
-                )
-                identification += 1
-                self.members.append(new_member)
-
-        """With parallel computation in mind, with possible multiple rival generations being created, 
-        a more transparent and easier to control approach is to store the current fitness ranking of a given generation
-        inside the Generation class. Besides, the fitness ranking is a property of a generation, 
-        not the whole population.
-        """
-        self.fitness_ranking = []
+    def __init__(self, generation_members, number_of_parents_pairs_mating, elite_size, fitness_ranking):
+        self.members = generation_members
+        self.size = len(generation_members)
+        self.num_parents_mating = number_of_parents_pairs_mating
+        self.elite_size = elite_size
+        self.fitness_ranking = fitness_ranking
 
     def add_member(self, genome, parents_id=None):
         """Method for manual creation of new members"""
@@ -188,8 +169,7 @@ class GeneticAlgorithm:
         directly to the __init__ method within the Generation class, we need to memorise these two variables
         for mutation later on."""
         self.genome_generator = genome_generator
-        self.genome_generator_args = args.get('genome')  # TODO we need to verify it and document outside of code...
-        # TODO ...as there are more and more args everywhere and I don't know how to handle it better
+        self.genome_generator_args = args.get('genome')
         self.selection_args = args.get('selection')
         self.crossover_args = args.get('crossover')
 
@@ -201,6 +181,17 @@ class GeneticAlgorithm:
             fitness_function=fit_fun
         )
         self.generations = [self.current_generation]
+
+        if self.genome_generator is not None:  # ONLY for the initial generation within the population -> should it be in the GeneticAlgorithm class, or do we need it for mutation too?
+            for index in range(self.size):
+                genes = self.genome_generator(self.genome_generator_args)
+                new_member = Member(
+                    genes=genes,
+                    identification_number=identification,
+                    fitness_function=fitness_function
+                )
+                identification += 1
+                self.members.append(new_member)
 
         """What we need is to be able to sort whole generation based on fitness values AND remember chromosomes 
         indexes in their (generation) list in order to be able to crossbreed them with each other based on the
