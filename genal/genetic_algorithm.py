@@ -108,7 +108,7 @@ class Generation:
         if self.genome_generator is not None:  # ONLY for the initial generation within the population
             for index in range(self.size):
                 new_member = Member(
-                    genes=self.genome_generator(self.genome_generator_args),
+                    genes=self.genome_generator(self.genome_generator_args),  # TODO: why is the debugger stuck here?
                     identification_number=identification,
                     fitness_function=fitness_function
                 )
