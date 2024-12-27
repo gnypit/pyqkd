@@ -35,7 +35,7 @@ class Chromosome:
         the Chromosome on its initiation/construction.
         """
         self.genome = genes
-        self.fit_fun = fitness_function
+        self.fit_fun = fitness_function  # special variable
 
     def __repr__(self) -> str:
         """Default method for self-representing objects of this class."""
@@ -86,6 +86,12 @@ class Member(Chromosome):
 
 
 class Generation:
+    """This class is meant to represent a single (accepted) generation in a genetic algorithm, with its members and
+    characteristic info: current fitness ranking of the members, elite size, object to store potential children,
+    objects to store rival 'populations', from which a new generation will be chosen."""
+    size: int  # number of members in a generation
+    members: list[Member]  # list of Member class instances - chromosomes of the generation with their and parents IDS
+
     def __init__(self, size, fitness_function, genome_generator=None, genome_args=None):
         """genome_generator is the function that creates genomes for the initial generation
         of population members, genome_args are arguments to be used in genome_generator;
@@ -94,11 +100,11 @@ class Generation:
         global identification
         self.size = size
         self.fitness_function = fitness_function
-        self.members = []
+        # self.members = []
         self.genome_generator = genome_generator
         self.genome_generator_args = genome_args
 
-        if self.genome_generator is not None:  # ONLY for the initial generation within the population
+        if self.genome_generator is not None:  # ONLY for the initial generation within the population -> should it be in the GeneticAlgorithm class, or do we need it for mutation too?
             for index in range(self.size):
                 genes = self.genome_generator(self.genome_generator_args)
                 new_member = Member(
