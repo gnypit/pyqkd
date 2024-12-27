@@ -158,9 +158,32 @@ def cascade_blocks_sizes(quantum_bit_error_rate, key_length, n_passes=2):
     return sizes
 
 
-def cascade_blocks_generator(string_length, blocks_size):
-    string_index = list(np.arange(0, string_length, 1))  # I create a list of all indexes (list of ndarray)
-    blocks = random.sample(population=string_index, k=string_length)  # I shuffle the list randomly
+def cascade_blocks_generator(key_length, blocks_size):
+    string_index = list(np.arange(0, key_length, 1))  # I create a list of all indexes (list of ndarray)
+    blocks = random.sample(population=string_index, k=key_length)  # I shuffle the list randomly
 
-    for j in range(0, string_length, blocks_size):  # I generate equally long chunks of shuffled indexes
+    for j in range(0, key_length, blocks_size):  # I generate equally long chunks of shuffled indexes
         yield blocks[j:j + blocks_size]
+
+
+def count_key_value_differences(dict1, dict2):
+    """
+    Computes the number of differing values under the same keys between two dictionaries.
+
+    Args:
+        dict1 (dict): The first dictionary.
+        dict2 (dict): The second dictionary.
+
+    Returns:
+        int: The count of keys with differing values between the two dictionaries.
+    """
+    differing_count = 0
+
+    # Loop over the keys in the first dictionary
+    for key in dict1:
+        # Check if the key exists in the second dictionary and the values differ
+        if key in dict2 and dict1[key] != dict2[key]:
+            differing_count += 1
+
+    return differing_count
+

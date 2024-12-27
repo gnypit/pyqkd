@@ -166,34 +166,32 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
         bob_sifted_key_after_error_estimation = error_estimation_results.get('bob key')
     else:
         error_estimate = disturbance_probability
-        alice_sifted_key_after_error_estimation = alice_sifted_key
-        bob_sifted_key_after_error_estimation = bob_sifted_key
+        alice_sifted_key_after_error_estimation = alice_sifted_key  # it is a list
+        bob_sifted_key_after_error_estimation = bob_sifted_key  # it is a list
 
     key_len = len(alice_sifted_key_after_error_estimation)
     key_length_history['error estimation'] = key_len
     time_error_estimation_end = time.time()
     time_history['error estimation'] = time_error_estimation_end - time_error_estimation_start
 
-    """Naturally we assume it's Bob's (receiver's) key that's flawed. We begin error correction stage by checking the 
-    parity of Alice's and Bob's (sender's and receiver's, respectively) sifted keys, shortened by the subsets used for 
-    error estimation.
+    """In BB84, it is the receiver's (Bob's) key that contains errors. Error correction algorithm 'CASCADE' is thus
+    performed, to use binary searches for errors in subsets of the sifted keys. For optimisation purposes all of the 
+    blocks from all of the CASCADE's passes will be stored and QBER exact values will be computed after each pass.  
     
-    CASCADE: 1st I need to assign bits to their indexes in original strings. Therefore I create dictionaries
-    for Alice and for Bob.
+    CASCADE: 
+        1) Bits are assigned to their indexes in new dicts, which will be gradually updated with corrected values.
+        2) Block sizes for the whole CASCADE algorithm (all passes) are computed.
+        3) 
     """
     time_error_correction_start = time.time()
     alice_cascade = {}
     bob_cascade = {}
 
     for index in range(key_len):  # I dynamically create dictionaries with indexes as keys and bits as values
-        alice_cascade[str(index)] = alice_sifted_key_after_error_estimation[index]
-        bob_cascade[str(index)] = bob_sifted_key_after_error_estimation[index]
+        alice_cascade[index] = alice_sifted_key_after_error_estimation[index]
+        bob_cascade[index] = bob_sifted_key_after_error_estimation[index]
 
-    """Now we need to set up CASCADE itself: sizes of blocks in each pass, numeration of passes and a dictionary
-    for corrected bits with their indexes from original Bob's string as keys and correct bits as values.
-    """
-
-    blocks_sizes = cascade_blocks_sizes(
+    blocks_sizes = cascade_blocks_sizes(  # these are computed for all the given number of CASCADE's passes
         quantum_bit_error_rate=error_estimate,
         key_length=key_len,
         n_passes=cascade_n_passes
@@ -215,32 +213,29 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
         try:
             pass_number_of_blocks = int(np.floor(key_len // size))
         except ZeroDivisionError:
-            error_message = [blocks_sizes, pass_number, alice_basis_length, gain, disturbance_probability,
-                             error_estimate, key_len, rectilinear_basis_prob, publication_probability_rectilinear,
-                             cascade_n_passes, 'ZeroDivisionError with size']
-            print(error_message)
+            print(f"ZeroDivisionError. Computed sizes of the CASCADE's blocks are {blocks_sizes}.")
             continue
 
-        alice_pass_parity_list = []
-        bob_pass_parity_list = []
+        alice_pass_parity_list = []  # TODO: why do we need the 'alice_pass_parity_list'?
+        bob_pass_parity_list = []  # TODO: why do we need the 'bob_pass_parity_list'?
         alice_blocks = []
         bob_blocks = []
 
-        for block_index in cascade_blocks_generator(string_length=key_len, blocks_size=size):
+        for block_index in cascade_blocks_generator(key_length=key_len, blocks_size=size):
 
             alice_block = {}  # a dictionary for a single block for Alice
             bob_block = {}  # a dictionary for a single block for Bob
 
             for index in block_index:  # I add proper bits to these dictionaries
-                alice_block[str(index)] = alice_cascade[str(index)]
-                bob_block[str(index)] = bob_cascade[str(index)]
+                alice_block[index] = alice_cascade[index]
+                bob_block[index] = bob_cascade[index]
 
-            """I append single blocks created for given indexes to lists of block for this particular CASCADE's pass"""
+            """Lists of blocks for this particular CASCADE pass alone:"""
             alice_blocks.append(alice_block)
             bob_blocks.append(bob_block)
 
         for index in range(pass_number_of_blocks):
-
+            """Firstly, lists of bits are constructed for easy parity checks:"""
             current_indexes = list(alice_blocks[index].keys())  # same as Bob's
 
             alice_current_bits = list(alice_blocks[index].values())
@@ -250,8 +245,8 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
             bob_bit_values = []
 
             for j in range(len(current_indexes)):
-                alice_bit_values.append(int(alice_current_bits[j]))
-                bob_bit_values.append(int(bob_current_bits[j]))
+                alice_bit_values.append(alice_current_bits[j])
+                bob_bit_values.append(bob_current_bits[j])
 
             alice_pass_parity_list.append(sum(alice_bit_values) % 2)
             bob_pass_parity_list.append(sum(bob_bit_values) % 2)
@@ -314,27 +309,12 @@ def simulation_bb84(gain=1., alice_basis_length=256, rectilinear_basis_prob=0.5,
         history_cascade.append({'Alice blocks': alice_blocks, 'Bob blocks': bob_blocks})
         pass_number += 1
 
-        """For the purposes of optimizing CASCADE we check the error rate after each pass:"""
-        alice_key_error_check = ''.join(list(alice_cascade.values()))
-        bob_key_error_check = ''.join(list(bob_cascade.values()))
-
-        # TODO: can we make it a separate function?
-        key_error_rate = 0
-        index = 0
-        for bit in alice_key_error_check:
-            if bit != bob_key_error_check[index]:
-                key_error_rate += 1
-            index += 1
-        try:
-            key_error_rate = key_error_rate / len(alice_key_error_check)
-            error_rates.append(key_error_rate)  # its length is equivalent to no. CASCADE passes performed
-            if key_error_rate < 0.0001:  # TODO: is 0.1% a small enough number?
-                break  # let's not waste time for more CASCADE passes if there are 'no more' errors
-        except ZeroDivisionError:
-            error_message = [blocks_sizes, pass_number, alice_basis_length, gain, disturbance_probability,
-                             error_estimate, key_len, rectilinear_basis_prob, publication_probability_rectilinear,
-                             cascade_n_passes, 'ZeroDivisionError with len(alice_key_error_check)']
-            print(error_message)
+        """For the purposes of optimizing CASCADE, the exact QBER is computed and remembered after each pass:"""
+        qber_after_pass = count_key_value_differences(dict1=alice_cascade, dict2=bob_cascade) / len(alice_cascade)
+        error_rates.append(qber_after_pass)
+        if qber_after_pass == 0:
+            """If all the errors have already been corrected, CASCADE is terminated."""
+            break
 
     """Time to create strings from cascade dictionaries into corrected keys"""
     alice_correct_key = ''.join(list(alice_cascade.values()))
