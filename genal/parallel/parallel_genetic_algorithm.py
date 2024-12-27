@@ -1,9 +1,9 @@
 import multiprocessing
-from genal.genetic_algorithm import Population, Generation
+from genal.genetic_algorithm import GeneticAlgorithm, Generation
 from numpy import arange
 
 
-class ParallelPopulation(Population):
+class ParallelGeneticAlgorithm(GeneticAlgorithm):
     """This class is supposed to enable fitness calculations in parallel. It is based on Python's multiprocessing module
     https://docs.python.org/3/library/multiprocessing.html
     """

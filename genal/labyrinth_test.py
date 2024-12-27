@@ -347,7 +347,7 @@ def main_pygad():
 
 
 def main_pyqkd():
-    test = genetic_algorithm.Population(
+    test = genetic_algorithm.GeneticAlgorithm(
         initial_pop_size=4,
         fit_fun=fitness_fun_pyqkd,
         genome_generator=generator,

@@ -2,7 +2,7 @@
 import random
 
 
-def ranking_selection(self):  # deterministic
+def ranking_selection(parent_generarion):  # deterministic
     """We use 'member_counter' as an index for the fitness ranking. While it's smaller than the elite
     size for the whole population, we simply copy-paste the old members into the new generation. That's why
     we automatically calculate it and focus on selecting pairs of members from the current generation as parents
@@ -21,13 +21,13 @@ def ranking_selection(self):  # deterministic
     elite-parents will be added now, we have to subtract the 'other' elite_size number of Members from the
     loop limit to preserve the right size of generation - for when the elite will be copied directly
     into children's list:"""
-    while member_counter < self.current_generation.size - self.elite_size:
-        parent1 = self.current_generation.members[self.current_fitness_ranking[member_counter].get('index')]
-        parent2 = self.current_generation.members[self.current_fitness_ranking[member_counter + 1].get('index')]
+    while member_counter < parent_generarion.current_generation.size - parent_generarion.elite_size:
+        parent1 = parent_generarion.current_generation.members[parent_generarion.current_fitness_ranking[member_counter].get('index')]
+        parent2 = parent_generarion.current_generation.members[parent_generarion.current_fitness_ranking[member_counter + 1].get('index')]
         parents_candidates.append({'parent1': parent1, 'parent2': parent2})
         member_counter += 2
 
-    self.current_parents.append({'ranking': parents_candidates})
+    parent_generarion.current_parents.append({'ranking': parents_candidates})
 
     def roulette_wheel_selection(self):  # probability-based
         """The conspicuous characteristic of this selection method is the fact that it gives to

@@ -142,7 +142,7 @@ class Generation:
         self.fitness_ranking.sort(key=sort_dict_by_fit, reverse=reverse)
 
 
-class Population:
+class GeneticAlgorithm:
     def __init__(self, initial_pop_size, fit_fun, genome_generator, elite_size, selection_operator, crossover_operator,
                  number_of_generations, args: dict, no_parents_pairs=None, mutation_prob=0.0, seed=None):
         """initial_pop_size is the size of an initial population, fit_fun is a chosen fitness function to be used in a
