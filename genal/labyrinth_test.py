@@ -4,7 +4,7 @@ import random
 
 
 def fitness_fun(chromosome, route_idx=None):
-    route = chromosome.genes
+    route = chromosome.genome
 
     # Zaczynamy w (1, 1)
     i, j = 1, 1

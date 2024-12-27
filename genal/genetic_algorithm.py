@@ -21,8 +21,7 @@ class Chromosome:
     problems with sharing memory in parallel programming.
     """
     fit_val: float = None
-    gene_names: str = 'default'
-    genes: dict  # I want to work on dicts - it's clearer and faster
+    genome: type[list | dict]
 
     def __init__(self, genes: type[list | dict], fitness_function=None):
         """Each chromosome represents a possible solution to a given problem. Parameters characterising these solutions
@@ -30,29 +29,23 @@ class Chromosome:
         fitness function. Then, based on the fitness (function's) values, they are compared, sorted, selected for
         crossover, etc.
 
+        Here, `genome` is either a dict with genes as values and names provided by the User as keys, or simply a list.
+
         For computational purposes of parallel programming, the fitness function can be passed to
         the Chromosome on its initiation/construction.
         """
-        if type(genes) is list:
-            name = 'gene'
-            genome = {}
-            for i in range(len(genes)):
-                genome[name + str(i)] = genes[i]
-        elif type(genes) is dict:
-            self.genes = genes
-            self.gene_names = 'custom'
-
+        self.genome = genes
         self.fit_fun = fitness_function
 
     def __repr__(self) -> str:
         """Default method for self-representing objects of this class."""
-        return (f"{type(self).__name__}(genes={self.genes}, fitness function={self.fit_fun}, "
+        return (f"{type(self).__name__}(genes={self.genome}, fitness function={self.fit_fun}, "
                 f"fitness value={self.fit_val})")
 
     def change_genes(self, genes):
         """Method meant to be used when mutation occurs, to modify the genes in an already created chromosome.
         Can be called upon manually."""
-        self.genes = genes
+        self.genome = genes
 
     def evaluate(self, fitness_function=None):
         """Method for applying fitness function to this chromosome (it's genes, to be precise).
@@ -62,7 +55,7 @@ class Chromosome:
         if fitness_function is None:
             self.fit_fun = fitness_function
         elif self.fit_fun is not None:  # fitness function was provided on initialisation
-            self.fit_val = self.fit_fun(self.genes)
+            self.fit_val = self.fit_fun(self.genome)
         else:
             self.fit_val = 0
 
@@ -77,7 +70,7 @@ class Member(Chromosome):
     parents_id: list  # it's a list with IDs of the parents
 
     def __init__(self, genes: type[list | dict], identification_number: int, fitness_function=None):
-        """Apart from what 'Chromosome' class' constructor needs, here identification number should be passed."""
+        """Apart from what 'Chromosome' class constructor needs, here identification number should be passed."""
         super().__init__(genes=genes, fitness_function=fitness_function)
         self.id = identification_number
 
@@ -89,7 +82,7 @@ class Member(Chromosome):
 
     def __repr__(self) -> str:
         """Default method for self-representing objects of this class."""
-        return f"{type(self).__name__}(genes={self.genes}, id={self.id}, parents_id={self.parents_id})"
+        return f"{type(self).__name__}(genes={self.genome}, id={self.id}, parents_id={self.parents_id})"
 
 
 class Generation:
@@ -107,8 +100,9 @@ class Generation:
 
         if self.genome_generator is not None:  # ONLY for the initial generation within the population
             for index in range(self.size):
+                genes = self.genome_generator(self.genome_generator_args)
                 new_member = Member(
-                    genes=self.genome_generator(self.genome_generator_args),  # TODO: why is the debugger stuck here?
+                    genes=genes,
                     identification_number=identification,
                     fitness_function=fitness_function
                 )
@@ -228,7 +222,7 @@ class Population:
         self.fitness_rankings.append(self.current_fitness_ranking)
 
     def best_fit(self):  # we return gene sequence of the chromosome of the highest fitness value with it's fit value
-        bf = [self.current_generation.members[self.current_fitness_ranking[0].get('index')].genes,
+        bf = [self.current_generation.members[self.current_fitness_ranking[0].get('index')].genome,
               self.current_fitness_ranking[0].get('fitness value')]
         return bf
 
@@ -275,10 +269,10 @@ class Population:
         index = 0
         while index < self.elite_size:
             new_generation.add_member(
-                genome=self.current_generation.members[self.current_fitness_ranking[index].get('index')].genes
+                genome=self.current_generation.members[self.current_fitness_ranking[index].get('index')].genome
             )
             new_generation.add_member(
-                genome=self.current_generation.members[self.current_fitness_ranking[index + 1].get('index')].genes
+                genome=self.current_generation.members[self.current_fitness_ranking[index + 1].get('index')].genome
             )
             index += 2
 

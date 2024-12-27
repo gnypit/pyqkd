@@ -5,8 +5,8 @@ def fitness_negative_time(chromosome, protocol_results):
     """Function assigning to every chromosome fitness value equal to the time of bb84 simulation with
     hyperparameters given as genes multiplied by -1.
     """
-    if (chromosome.genes.get('length') == 0 or chromosome.genes.get('publication_prob_rectilinear') == 0.0 or
-            chromosome.genes.get('publication_prob_diagonal')):  # punishment for no key or no error
+    if (chromosome.genome.get('length') == 0 or chromosome.genome.get('publication_prob_rectilinear') == 0.0 or
+            chromosome.genome.get('publication_prob_diagonal')):  # punishment for no key or no error
         # estimation
         return -1000000.0
     else:
@@ -22,7 +22,7 @@ def fitness_negative_time(chromosome, protocol_results):
 
 
 def fitness_inv(chromosome, protocol_results):  # we use internal time measurement and error rate of the final key
-    if chromosome.genes.get('length') != 0 and chromosome.genes.get('pub_prob_rect') != 0.0 and chromosome.genes.get(
+    if chromosome.genome.get('length') != 0 and chromosome.genome.get('pub_prob_rect') != 0.0 and chromosome.genome.get(
             'pub_prob_diag') != 0:
 
         error_rate = protocol_results.get('error rate')  # is between 0 and 1
@@ -39,7 +39,7 @@ def fitness_inv(chromosome, protocol_results):  # we use internal time measureme
 
 
 def evaluation(chromosome, protocol_results):
-    if chromosome.genes.get('length') != 0 and chromosome.genes.get('pub_prob_rect') != 0.0 and chromosome.genes.get(
+    if chromosome.genome.get('length') != 0 and chromosome.genome.get('pub_prob_rect') != 0.0 and chromosome.genome.get(
             'pub_prob_diag') != 0:
         """Fitness value without normalisation:"""
         fit_value: float = -1.0 * (
@@ -54,19 +54,19 @@ def factored_fit(chromosome, quantum_gain, disturbance_prob):
     """Method assigning to the chromosome a factor of 1 minus final key error rate and number of CASCADE passes
     performed in the simulation of BB84, divided by the max number of passes to be performed -> (1-e) * n/N if
     the final key length is equal to or greater than 256; otherwise it's 0."""
-    if chromosome.genes.get('length') != 0 and chromosome.genes.get('pub_prob_rect') != 0.0 and chromosome.genes.get(
+    if chromosome.genome.get('length') != 0 and chromosome.genome.get('pub_prob_rect') != 0.0 and chromosome.genome.get(
             'pub_prob_diag') != 0:
         protocol_results = simulation_bb84(gain=quantum_gain,
-                                           alice_basis_length=chromosome.genes.get('length'),
-                                           rectilinear_basis_prob=chromosome.genes.get('rect_basis_prob'),
+                                           alice_basis_length=chromosome.genome.get('length'),
+                                           rectilinear_basis_prob=chromosome.genome.get('rect_basis_prob'),
                                            disturbance_probability=disturbance_prob,
-                                           publication_probability_rectilinear=chromosome.genes.get('pub_prob_rect'),
-                                           publication_probability_diagonal=chromosome.genes.get('pub_prob_diag'),
-                                           cascade_n_passes=chromosome.genes.get('no_pass'))
+                                           publication_probability_rectilinear=chromosome.genome.get('pub_prob_rect'),
+                                           publication_probability_diagonal=chromosome.genome.get('pub_prob_diag'),
+                                           cascade_n_passes=chromosome.genome.get('no_pass'))
 
         if protocol_results.get('key length') >= 0:
-            cascade_effectiveness = float(protocol_results.get('no. cascade pass.')) / float(chromosome.genes.get('no_pass'))
-            bit_effectiveness = protocol_results.get('key length') / chromosome.genes.get('length')
+            cascade_effectiveness = float(protocol_results.get('no. cascade pass.')) / float(chromosome.genome.get('no_pass'))
+            bit_effectiveness = protocol_results.get('key length') / chromosome.genome.get('length')
             error_rate = protocol_results.get('error rate')
             fit_value = (1 - error_rate) * cascade_effectiveness * bit_effectiveness
             return fit_value

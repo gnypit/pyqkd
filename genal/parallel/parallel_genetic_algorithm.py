@@ -64,7 +64,7 @@ class ParallelPopulation(Population):
     def best_fit(
             self):  # we return a gene sequence of the chromosomes with the highest fitness value with it's fit value
         # TODO adjust to multiple generations to evaluate
-        bf = [self.current_generation.members[self.current_fitness_ranking[0].get('index')].genes,
+        bf = [self.current_generation.members[self.current_fitness_ranking[0].get('index')].genome,
               self.current_fitness_ranking[0].get('fitness value')]
         return bf
 

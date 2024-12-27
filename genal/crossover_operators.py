@@ -17,8 +17,8 @@ def single_point_crossover(parent1, parent2, args):
     """Parents will be crossed such that genes from first one (numbered from 0) up to crossover_point
     included shall go to one child, and the rest to the other."""
 
-    parent1_genes = list(parent1.genes)
-    parent2_genes = list(parent2.genes)
+    parent1_genes = list(parent1.genome)
+    parent2_genes = list(parent2.genome)
 
     if args is None:
         crossover_point = None
@@ -55,8 +55,8 @@ def uniform_crossover(parent1, parent2, args):
 
     choice_prob is the probability of choosing a gene from the first parent in a single Bernoulli trial.
     """
-    parent1_genes = list(parent1.genes)
-    parent2_genes = list(parent2.genes)
+    parent1_genes = list(parent1.genome)
+    parent2_genes = list(parent2.genome)
 
     if args is None:
         choice_prob = 0.5
@@ -91,8 +91,8 @@ def plco(parent1, parent2, args):  # partially linear crossover operator
 
     transit point is the index from which crossover is linear; beforehand it's single point
     """
-    parent1_genes = list(parent1.genes)
-    parent2_genes = list(parent2.genes)
+    parent1_genes = list(parent1.genome)
+    parent2_genes = list(parent2.genome)
     no_genes = len(parent1_genes)
 
     if args is None:

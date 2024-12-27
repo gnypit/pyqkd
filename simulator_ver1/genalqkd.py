@@ -15,12 +15,12 @@ def sort_dict_by_fit(dictionary):
 
 def run_simulation(process_id, chromosome, protocol, quantum_gain, disturbance_prob, work_begin, work_end, flag):
     protocol_results = simulation_bb84(gain=quantum_gain,
-                                       alice_basis_length=chromosome.genes.get('length'),
-                                       rectilinear_basis_prob=chromosome.genes.get('rect_basis_prob'),
+                                       alice_basis_length=chromosome.genome.get('length'),
+                                       rectilinear_basis_prob=chromosome.genome.get('rect_basis_prob'),
                                        disturbance_probability=disturbance_prob,
-                                       publication_probability_rectilinear=chromosome.genes.get('pub_prob_rect'),
-                                       publication_probability_diagonal=chromosome.genes.get('pub_prob_diag'),
-                                       cascade_n_passes=chromosome.genes.get('no_pass'))
+                                       publication_probability_rectilinear=chromosome.genome.get('pub_prob_rect'),
+                                       publication_probability_diagonal=chromosome.genome.get('pub_prob_diag'),
+                                       cascade_n_passes=chromosome.genome.get('no_pass'))
     chromosome.set_results(protocol_results)
 
 
@@ -170,8 +170,8 @@ class GeneticAlgorithm:
     def single_point_crossover(self, crossover_point, parent1, parent2):  # may be 'static'
         """Parents will be crossed such that genes from first one (numbered from 0) up to crossover_point
         included shall go to one child, and the rest to the other."""
-        parent1_genes = list(parent1.genes.values())
-        parent2_genes = list(parent2.genes.values())
+        parent1_genes = list(parent1.genome.values())
+        parent2_genes = list(parent2.genome.values())
 
         gene_counter = 0
         child1_genes = []
@@ -209,8 +209,8 @@ class GeneticAlgorithm:
 
         choice_prob is the probability of choosing a gene from the first parent in a single Bernoulli trial.
         """
-        parent1_genes = list(parent1.genes.values())
-        parent2_genes = list(parent2.genes.values())
+        parent1_genes = list(parent1.genome.values())
+        parent2_genes = list(parent2.genome.values())
 
         child1_genes = []
         child2_genes = []
@@ -247,8 +247,8 @@ class GeneticAlgorithm:
 
         child_gene = alfa * parent1_gene + beta * parent2_gene
         """
-        parent1_genes = list(parent1.genes.values())
-        parent2_genes = list(parent2.genes.values())
+        parent1_genes = list(parent1.genome.values())
+        parent2_genes = list(parent2.genome.values())
 
         child1 = Chromosome(
             length=parent1_genes[0],
