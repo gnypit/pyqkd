@@ -149,8 +149,8 @@ class Generation:
 
 
 class Population:
-    def __init__(self, initial_pop_size, fit_fun, genome_generator, elite_size, args: dict, no_parents_pairs=None,
-                 mutation_prob=0.0, seed=None):
+    def __init__(self, initial_pop_size, fit_fun, genome_generator, elite_size, selection_operator, crossover_operator,
+                 number_of_generations, args: dict, no_parents_pairs=None, mutation_prob=0.0, seed=None):
         """initial_pop_size is the size of an initial population, fit_fun is a chosen fitness function to be used in a
         genetic algorithm, genom_generator is the function that creates genomes for the initial generation
         of population members, args are arguments to be used in genome_generator & selection/crossover operators,
@@ -170,6 +170,11 @@ class Population:
         self.fit_fun = fit_fun
         self.elite_size = elite_size
         self.mutation_prob = mutation_prob
+        self.no_generations = number_of_generations
+
+        """For now remembering a single operator for selection and a single for crossover:"""  # TODO: to be changed in the parallel version
+        self.selection_operator = selection_operator
+        self.crossover_operator = crossover_operator
 
         """If the provided number of parents pairs would require more Members than the current (initial) generation has,
         it'll be limited to the maximum possible number. Also, if no specific number of parent pairs is provided,
@@ -227,7 +232,7 @@ class Population:
               self.current_fitness_ranking[0].get('fitness value')]
         return bf
 
-    def create_new_generation(self, selection_operator, crossover_operator):  # First to be parallelled
+    def create_new_generation(self):  # First to be parallelled
         """A method for combining selection and crossover operators over the current population to create a new one.
         Firstly, we have to match the selection operator; then in each case we have to match the crossover operator.
 
@@ -241,10 +246,10 @@ class Population:
         """
         children_candidates = []
         for parents_candidates in self.current_parents:
-            list_of_parents_pairs = parents_candidates.get(selection_operator)
+            list_of_parents_pairs = parents_candidates.get(self.selection_operator)
             for parents_pair in list_of_parents_pairs:
                 children_candidates.append(
-                    crossover_operator(
+                    self.crossover_operator(
                         parents_pair.get('parent1'),
                         parents_pair.get('parent2'),
                         args=self.crossover_args
@@ -311,6 +316,12 @@ class Population:
 
     def change_population_size(self, pop_size):  # TODO isin't it in a conflict with the change to initial size and parent pairs number?
         self.pop_size = pop_size
+
+    def run(self):
+        for _ in range(self.no_generations):
+            self.evaluate_generation()
+            self.create_new_generation()
+            self.mutate()
 
     def fitness_plot(self):
         historic_best_fits = []
