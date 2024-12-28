@@ -93,7 +93,7 @@ def roulette_wheel_selection(parent_generation: Generation):  # probability-base
     return parents_candidates
 
 
-def stochastic_universal_sampling(self):  # probability-based
+def stochastic_universal_sampling(parent_generation: Generation):  # probability-based
     """It is an improved version of the roulette-wheel selection operator, as described in 'Introduction to
     Evolutionary Computing' in section 5.2.3. We begin similarly to the roulette wheel, because we still base
     the probabilities of selection on the cumulative probability distribution, associated with the fitness values.
@@ -101,13 +101,13 @@ def stochastic_universal_sampling(self):  # probability-based
     fit_total = 0  # TODO: is it a problem when some fitness values are negative?
     cumulative_prob_distribution = []
 
-    for i in range(self.pop_size):
-        fit_total += self.current_fitness_ranking[i].get('fitness value')
-        cumulative_prob_distribution.append(self.current_fitness_ranking[i].get('fitness value'))
+    for i in range(parent_generation.size):
+        fit_total += parent_generation.fitness_ranking[i].get('fitness value')
+        cumulative_prob_distribution.append(parent_generation.fitness_ranking[i].get('fitness value'))
 
     cumulative_prob_distribution = [fit / fit_total for fit in cumulative_prob_distribution]
 
-    random_value = random.uniform(0, 1 / self.current_generation.size)  # that's too big a value...
+    random_value = random.uniform(0, 1 / parent_generation.size)  # that's too big a value...
     parents = []
     index = 0
 
@@ -131,13 +131,13 @@ def stochastic_universal_sampling(self):  # probability-based
     elite-parents will be added now, we have to subtract the 'other' elite_size number of Members from the
     loop limit to preserve the right size of generation - for when the elite will be copied directly
     into children's list:"""
-    while member_counter < self.current_generation.size - self.elite_size:
+    while member_counter < parent_generation.size - parent_generation.elite_size:
         try:
             while random_value <= cumulative_prob_distribution[index]:  # TODO IndexError: list index out of range
                 """We keep assigning given member as a new parent until the condition is met. This way we reflect
                 the probability of it's selection."""
-                new_parent = self.current_generation.members[self.current_fitness_ranking[index].get('index')]
-                random_value += 1 / self.current_generation.size
+                new_parent = parent_generation.members[parent_generation.fitness_ranking[index].get('index')]
+                random_value += 1 / parent_generation.size
                 member_counter += 1
                 parents.append(new_parent)
             index += 1
@@ -147,9 +147,9 @@ def stochastic_universal_sampling(self):  # probability-based
 
     """Now I rewrite parents into an organised list of pairs as dictionaries..."""
     index = 0
-    while index < self.current_generation.size:
+    while index < parent_generation.size:
         parents_candidates.append({'parent1': parents[index], 'parent2': parents[index + 1]})
         index += 2
 
     """...and append it to the list of candidate parents lists:"""
-    self.current_parents.append({'sus': parents_candidates})
+    return parents_candidates
