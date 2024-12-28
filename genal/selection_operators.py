@@ -62,7 +62,7 @@ def roulette_wheel_selection(parent_generation: Generation):  # probability-base
     parents_candidates = []
 
     """Because I decided to not only preserve the elite, but also perform crossover on it, I'll disregard
-    a part of current generation's members with worst fitness, so that the size os population is constant.
+    a part of current generation's members with worst fitness, so that the size of population is constant.
     We'll have elite_size number of elite Members copied, elite_size number of Members being the children of the 
     elite, and that leaves us with (pop_size - 2 * elite_size) number of places in the generation. Since the
     elite-parents will be added now, we have to subtract the 'other' elite_size number of Members from the
