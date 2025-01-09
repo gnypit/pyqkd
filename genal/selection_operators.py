@@ -5,6 +5,34 @@ and return a child (rival) generation.
 import random
 from genetic_algorithm import Generation  # TODO: make sure there are no cycling imports
 
+def tournament_selection(parent_generation: Generation):
+    """
+    Performs tournament selection to choose parent candidates for mating.
+    
+    Args:
+        parent_generation (Generation): An instance of the Generation class containing members and mating configuration.
+        
+    Returns:
+        list[Member]: A list of selected parent candidates.
+    """
+    
+    # Initialize a list to store the best candidates from each tournament
+    best_members = []
+
+    for _ in range(parent_generation.num_parents_mating):
+        # Randomly select a subset of members for the tournament
+        tournament_members = random.sample(
+            parent_generation.members, 
+            parent_generation.num_parents_mating
+        )
+        
+        # Identify the member with the highest fitness value in the tournament
+        best_member = max(tournament_members, key=lambda mem: mem.fit_val)
+        
+        # Add the best member from this tournament to the list of selected candidates
+        best_members.append(best_member)
+    
+    return best_members
 
 def ranking_selection(parent_generation: Generation):  # deterministic
     """We use 'member_counter' as an index for the fitness ranking. While it's smaller than the elite
