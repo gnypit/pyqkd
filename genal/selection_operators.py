@@ -11,24 +11,18 @@ def tournament_selection(parent_generation: Generation):
     
     Args:
         parent_generation (Generation): An instance of the Generation class containing members and mating configuration.
-        
+                
     Returns:
         list[Member]: A list of selected parent candidates.
     """
+    best_members = []
     
     # Initialize a list to store the best candidates from each tournament
-    best_members = []
-
     for _ in range(parent_generation.num_parents_mating):
         # Randomly select a subset of members for the tournament
-        tournament_members = random.sample(
-            parent_generation.members, 
-            parent_generation.num_parents_mating
-        )
-        
+        tournament_members = random.sample(parent_generation.members, parent_generation.pool_size)
         # Identify the member with the highest fitness value in the tournament
         best_member = max(tournament_members, key=lambda mem: mem.fit_val)
-        
         # Add the best member from this tournament to the list of selected candidates
         best_members.append(best_member)
     
