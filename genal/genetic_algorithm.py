@@ -139,7 +139,7 @@ class Generation:
 
 class GeneticAlgorithm:
     def __init__(self, initial_pop_size, fit_fun, genome_generator, elite_size, selection_operator, crossover_operator,
-                 number_of_generations, args: dict, no_parents_pairs=None, mutation_prob=0.0, seed=None):
+                 number_of_generations, args: dict,pool_size,no_parents_pairs=None, mutation_prob=0.0, seed=None):
         """initial_pop_size is the size of an initial population, fit_fun is a chosen fitness function to be used in a
         genetic algorithm, genom_generator is the function that creates genomes for the initial generation
         of population members, args are arguments to be used in genome_generator & selection/crossover operators,
@@ -186,7 +186,8 @@ class GeneticAlgorithm:
             size=initial_pop_size,
             genome_generator=genome_generator,
             genome_args=self.genome_generator_args,
-            fitness_function=fit_fun
+            fitness_function=fit_fun,
+            pool_size=pool_size
         )
         self.generations = [self.current_generation]
 
