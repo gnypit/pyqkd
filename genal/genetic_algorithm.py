@@ -104,12 +104,10 @@ class Generation:
         self.num_parents_mating = number_of_parents_pairs_mating
         self.elite_size = elite_size
         self.fitness_ranking = fitness_ranking
-        if 0<pool_size<=self.num_parents_mating:
-            
+        if 0 < pool_size <= self.num_parents_mating:
             self.pool_size=pool_size
         else:
-            # Erro inform pool_size range
-            raise ValueError("erro inform poolsize")
+            raise ValueError(f"Pool size = {pool_size} is not between 0 and number of parents mating ({self.num.parents_mating})")
 
     def add_member(self, genome, parents_id=None):
         """Method for manual creation of new members"""
