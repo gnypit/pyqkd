@@ -96,18 +96,19 @@ class Generation:
     num_parents_mating: int  # number of parent paris mating must be positive and equal to or smaller than the size
     elite_size: int  # number of members to be copy-pasted directly into a new generation
     fitness_ranking: list[dict]  # dicts in this list have the index of a member in the generation and its fitness value
-    pool_size:int # pool size
+    pool_size: int  # pool size
 
-    def __init__(self, generation_members, number_of_parents_pairs_mating, elite_size, fitness_ranking,pool_size):
+    def __init__(self, generation_members, number_of_parents_pairs_mating, elite_size, fitness_ranking, pool_size):
         self.members = generation_members
         self.size = len(generation_members)
         self.num_parents_mating = number_of_parents_pairs_mating
         self.elite_size = elite_size
         self.fitness_ranking = fitness_ranking
         if 0 < pool_size <= self.num_parents_mating:
-            self.pool_size=pool_size
+            self.pool_size = pool_size
         else:
-            raise ValueError(f"Pool size = {pool_size} is not between 0 and number of parents mating ({self.num.parents_mating})")
+            raise ValueError(f"Pool size = {pool_size} is not between 0 and number of parents mating "
+                             f"({self.num_parents_mating})")
 
     def add_member(self, genome, parents_id=None):
         """Method for manual creation of new members"""
@@ -137,7 +138,7 @@ class Generation:
 
 class GeneticAlgorithm:
     def __init__(self, initial_pop_size, fit_fun, genome_generator, elite_size, selection_operator, crossover_operator,
-                 number_of_generations, args: dict,pool_size,no_parents_pairs=None, mutation_prob=0.0, seed=None):
+                 number_of_generations, args: dict, pool_size, no_parents_pairs=None, mutation_prob=0.0, seed=None):
         """initial_pop_size is the size of an initial population, fit_fun is a chosen fitness function to be used in a
         genetic algorithm, genom_generator is the function that creates genomes for the initial generation
         of population members, args are arguments to be used in genome_generator & selection/crossover operators,
@@ -228,7 +229,8 @@ class GeneticAlgorithm:
               self.current_fitness_ranking[0].get('fitness value')]
         return bf
 
-    def create_new_generation(self):  # First to be parallelled & TODO: change the way the selection operators are handled
+    def create_new_generation(
+            self):  # First to be parallelled & TODO: change the way the selection operators are handled
         """A method for combining selection and crossover operators over the current population to create a new one.
         Firstly, we have to match the selection operator; then in each case we have to match the crossover operator.
 
@@ -304,7 +306,8 @@ class GeneticAlgorithm:
                 self.genome_generator(self.genome_generator_args)
             )
 
-    def change_population_size(self, pop_size):  # TODO isin't it in a conflict with the change to initial size and parent pairs number?
+    def change_population_size(self,
+                               pop_size):  # TODO isin't it in a conflict with the change to initial size and parent pairs number?
         self.pop_size = pop_size
 
     def run(self):
