@@ -24,7 +24,7 @@ class Chromosome:
     fit_val: float = None
     genome: type[list | dict]
 
-    def __init__(self, genes: type[list | dict], fitness_function=None):
+    def __init__(self, genome: type[list | dict], fitness_function=None):
         """Each chromosome represents a possible solution to a given problem. Parameters characterising these solutions
         are called genes; their set is sometimes referred to as 'genome'. They are supposed to be evaluated by the
         fitness function. Then, based on the fitness (function's) values, they are compared, sorted, selected for
@@ -35,7 +35,7 @@ class Chromosome:
         For computational purposes of parallel programming, the fitness function can be passed to
         the Chromosome on its initiation/construction.
         """
-        self.genome = genes
+        self.genome = genome
         self.fit_fun = fitness_function  # special variable
 
     def __repr__(self) -> str:
@@ -70,9 +70,9 @@ class Member(Chromosome):
     id: int
     parents_id: list  # it's a list with IDs of the parents
 
-    def __init__(self, genes: type[list | dict], identification_number: int, fitness_function=None):
+    def __init__(self, genome: type[list | dict], identification_number: int, fitness_function=None):
         """Apart from what 'Chromosome' class constructor needs, here identification number should be passed."""
-        super().__init__(genes=genes, fitness_function=fitness_function)
+        super().__init__(genome=genome, fitness_function=fitness_function)
         self.id = identification_number
 
     def add_parents_id(self, parents_id: list):
@@ -87,34 +87,38 @@ class Member(Chromosome):
 
 
 class Generation:
-    """This class is meant to represent a single (rival) generation in a genetic algorithm, with its members and
-    characteristic info: current fitness ranking of the members, elite size, number of parents' pairs mating
-    and operator-specific arguments, if necessary.
-    """
-    members: list[Member]  # list of Member class instances - chromosomes of the generation with their and parents IDS
-    size: int  # number of members in this generation
-    num_parents_mating: int  # number of parent paris mating must be positive and equal to or smaller than the size
-    elite_size: int  # number of members to be copy-pasted directly into a new generation
-    fitness_ranking: list[dict]  # dicts in this list have the index of a member in the generation and its fitness value
-    pool_size: int  # pool size
+    """This class is meant to represent a single (rival) generation in a (parallel) genetic algorithm. It has methods
+    for adding members either in constructor or manually and to evaluate the generation as a whole.
 
-    def __init__(self, generation_members, number_of_parents_pairs_mating, elite_size, fitness_ranking, pool_size):
+    Args:
+        generation_members (list[Member]): chromosomes of the generation with their and parents' IDs
+        num_parents_pairs (int): how many pairs of members can be parents, e.g., 20 pairs means 40 mating chromosomes
+        elite_size (int): number of members to be copy-pasted directly into a new generation
+        pool_size (int): parameter for the tournament selection operator
+    """
+    members: list[Member]
+    num_parents_pairs: int
+    elite_size: int
+    pool_size: int
+    size: int  # number of members in the generation
+    fitness_ranking: list[dict]  # dicts in this list have the index of a member in the generation and its fitness value
+
+    def __init__(self, generation_members, num_parents_pairs, elite_size, pool_size):
+        """Constructor for any generation: initial, current or rival."""
         self.members = generation_members
-        self.size = len(generation_members)
-        self.num_parents_mating = number_of_parents_pairs_mating
+        self.num_parents_pairs = num_parents_pairs
         self.elite_size = elite_size
-        self.fitness_ranking = fitness_ranking
-        if 0 < pool_size <= self.num_parents_mating:
+        if 0 < pool_size <= self.num_parents_pairs:
             self.pool_size = pool_size
         else:
             raise ValueError(f"Pool size = {pool_size} is not between 0 and number of parents mating "
-                             f"({self.num_parents_mating})")
+                             f"({self.num_parents_pairs})")
+        self.size = len(generation_members)
 
     def add_member(self, genome, parents_id=None):
         """Method for manual creation of new members"""
-
         global identification
-        new_member = Member(genes=genome, identification_number=identification)
+        new_member = Member(genome=genome, identification_number=identification)
 
         if parents_id is not None:
             new_member.add_parents_id(parents_id=parents_id)
@@ -126,8 +130,6 @@ class Generation:
         """This method uses the fitness function stored in members of the generation to create and then sort the fitness
         ranking by the computed fitness values; 'reverse' means sorting will be performed from max fitness value to min.
         """
-        self.fitness_ranking = []
-
         for i in range(self.size):
             self.fitness_ranking.append(
                 {'index': i, 'fitness value': self.members[i].evaluate()}
@@ -137,6 +139,17 @@ class Generation:
 
 
 class GeneticAlgorithm:
+    """Fundamental class for execution of the genetic algorithm. It implements a simple slave-master construction
+    of a parallel genetic algorithm, but computationally it is executed with a single thread/process.
+
+    Args:
+        initial_pop_size (int): size of the population (each generation)
+        fit_fun (function): passed to members of the population; returns a float value based on a member's genome
+        genome_generator (function): function which returns genome of a single member
+        selection_operator (function)
+        crossover_operator (function)
+        number_of_generations (int): how many consecutive accepted generations are supposed to be created and evaluated
+    """
     def __init__(self, initial_pop_size, fit_fun, genome_generator, elite_size, selection_operator, crossover_operator,
                  number_of_generations, args: dict, pool_size, no_parents_pairs=None, mutation_prob=0.0, seed=None):
         """initial_pop_size is the size of an initial population, fit_fun is a chosen fitness function to be used in a
@@ -194,7 +207,7 @@ class GeneticAlgorithm:
             for index in range(self.size):
                 genes = self.genome_generator(self.genome_generator_args)
                 new_member = Member(
-                    genes=genes,
+                    genome=genes,
                     identification_number=identification,
                     fitness_function=fitness_functions
                 )
