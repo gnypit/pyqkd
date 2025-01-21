@@ -5,6 +5,7 @@ and return a child (rival) generation.
 import random
 from genetic_algorithm import Generation  # TODO: make sure there are no cycling imports
 
+
 def tournament_selection(parent_generation: Generation):
     """
     Performs tournament selection to choose parent candidates for mating.
@@ -16,17 +17,18 @@ def tournament_selection(parent_generation: Generation):
         list[Member]: A list of selected parent candidates.
     """
     best_members = []
-    
+
     # Initialize a list to store the best candidates from each tournament
-    for _ in range(parent_generation.num_parents_mating):
+    for _ in range(parent_generation.num_parents_pairs):
         # Randomly select a subset of members for the tournament
         tournament_members = random.sample(parent_generation.members, parent_generation.pool_size)
         # Identify the member with the highest fitness value in the tournament
         best_member = max(tournament_members, key=lambda mem: mem.fit_val)
         # Add the best member from this tournament to the list of selected candidates
         best_members.append(best_member)
-    
+
     return best_members
+
 
 def ranking_selection(parent_generation: Generation):  # deterministic
     """We use 'member_counter' as an index for the fitness ranking. While it's smaller than the elite
@@ -90,6 +92,7 @@ def roulette_wheel_selection(parent_generation: Generation):  # probability-base
     elite-parents will be added now, we have to subtract the 'other' elite_size number of Members from the
     loop limit to preserve the right size of generation - for when the elite will be copied directly
     into children's list:"""
+
     def select_parent(fit_total, fitness_ranking, generation_members, pop_size):
         """Selects a parent based on fitness-proportional selection."""
         param = random.uniform(0, fit_total)
