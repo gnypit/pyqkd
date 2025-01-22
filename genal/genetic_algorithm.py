@@ -87,7 +87,7 @@ class Member(Chromosome):
         return f"{type(self).__name__}(genes={self.genome}, id={self.id}, parents_id={self.parents_id})"
 
 
-class Generation:
+class Generation:  # TODO: we need constructor to take members, method for changes caused by mutation, method for evaluation and to return best fit; in the future add diversity measures
     """This class is meant to represent a single (rival) generation in a (parallel) genetic algorithm. It has methods
     for adding members either in constructor or manually and to evaluate the generation as a whole.
 
@@ -279,7 +279,7 @@ class GeneticAlgorithm:  # TODO: separate constructor and creating the initial p
               self.current_fitness_ranking[0].get('fitness value')]
         return bf
 
-    def create_new_generation(
+    def create_new_generation(  # TODO: take a selection and a crossover operator on input & create a new instance of the Generation class based on self.current_gen
             self):  # First to be parallelled & TODO: change the way the selection operators are handled
         """A method for combining selection and crossover operators over the current population to create a new one.
         Firstly, we have to match the selection operator; then in each case we have to match the crossover operator.
