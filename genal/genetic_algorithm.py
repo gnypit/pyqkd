@@ -225,12 +225,14 @@ class GeneticAlgorithm:  # TODO: separate constructor and creating the initial p
 
     def _create_initial_generation(self):
         """Creating the first - initial - generation in this population."""
+        global identification
+        new_members = []
+        for _ in range(self.pop_size):
+            genes = self.genome_generator()
+            new_member = Member(genome=genes, identification_number=identification, fitness_function=self.fit_fun)
+            identification += 1
         self.current_generation = Generation(
-            size=initial_pop_size,
-            genome_generator=genome_generator,
-            genome_args=self.genome_generator_args,
-            fitness_function=fitness_function,
-            pool_size=pool_size
+
         )
         self.generations = [self.current_generation]
 
