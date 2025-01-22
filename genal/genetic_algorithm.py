@@ -104,7 +104,7 @@ class Generation:
     size: int  # number of members in the generation
     fitness_ranking: list[dict]  # dicts in this list have the index of a member in the generation and its fitness value
 
-    def __init__(self, generation_members, num_parents_pairs, elite_size, pool_size):
+    def __init__(self, generation_members: list[Member], num_parents_pairs: int, elite_size: int, pool_size: int):
         """Constructor for any generation: initial, current or rival."""
         self.members = generation_members
         self.num_parents_pairs = num_parents_pairs
