@@ -183,33 +183,32 @@ class GeneticAlgorithm:  # TODO: separate constructor and creating the initial p
 
     fit_fun: Callable
     genome_gen: Callable
-    selection: list[Callable]
-    crossover: list[Callable]
+    operators: dict = {}
 
     no_parent_pairs: int
     mutation_prob: float
 
     current_gen: Generation
     rival_gen: dict[int: Generation]
-    best_fit_history: []
+    best_fit_history: list = []
 
     def __init__(self, initial_pop_size: int, number_of_generations: int, elite_size: int, args: dict,
                  fitness_function: Callable, genome_generator: Callable,
                  selection: list[Callable] | Callable, crossover: list[Callable] | Callable,
                  pool_size, no_parents_pairs=None, mutation_prob=0.0, seed=None):  # TODO: put pool_size in the args dict for self.selection_args = args.get('selection') below
         """GeneticAlgorithm class constructor"""
+        self.pop_size = initial_pop_size
+        self.no_generations = number_of_generations
+        self.elite_size = elite_size
+
+        self.genome_generator_args = args.get('genome')
+        self.selection_args = args.get('selection')
+        self.crossover_args = args.get('crossover')
+
+        self.fit_fun = fitness_function
+        self.mutation_prob = mutation_prob
         if seed is not None:
             random.seed(a=seed)  # useful for debugging
-
-        self.pop_size = initial_pop_size
-        self.fit_fun = fitness_function
-        self.elite_size = elite_size
-        self.mutation_prob = mutation_prob
-        self.no_generations = number_of_generations
-
-        """For now remembering a single operator for selection and a single for crossover:"""  # TODO: to be changed in the parallel version
-        self.selection_operator = selection
-        self.crossover_operator = crossover
 
         """If the provided number of parents pairs would require more Members than the current (initial) generation has,
         it'll be limited to the maximum possible number. Also, if no specific number of parent pairs is provided,
@@ -220,12 +219,15 @@ class GeneticAlgorithm:  # TODO: separate constructor and creating the initial p
             self.no_parents_pairs = no_parents_pairs
 
         """Even though for the initial population we can pass the genome generator with it's arguments
-        directly to the __init__ method within the Generation class, we need to memorise these two variables
-        for mutation later on."""
+        directly to the __init__ method within the Generation class, we need to memorise it for mutation later on."""
         self.genome_generator = genome_generator
-        self.genome_generator_args = args.get('genome')
-        self.selection_args = args.get('selection')
-        self.crossover_args = args.get('crossover')
+
+        """Based on lists of (callable) function selected by the User from selection_operators.py 
+        and crossover_operators.py, a more general dict is created with all the possible combinations of the operators.
+        """
+        operators_list = [(sel_op, cross_op) for sel_op in selection for cross_op in crossover]
+        for i in range(len(operators_list)):  # I prefer dicts, as they are faster than lists
+            self.operators[i] = operators_list[i]
 
         """Creating the first - initial - generation in this population and lists to handle future generations"""
         self.current_generation = Generation(
