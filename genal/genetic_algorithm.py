@@ -229,7 +229,8 @@ class GeneticAlgorithm:  # TODO: separate constructor and creating the initial p
         for i in range(len(operators_list)):  # I prefer dicts, as they are faster than lists
             self.operators[i] = operators_list[i]
 
-        """Creating the first - initial - generation in this population and lists to handle future generations"""
+    def _create_initial_generation(self):
+        """Creating the first - initial - generation in this population."""
         self.current_generation = Generation(
             size=initial_pop_size,
             genome_generator=genome_generator,
