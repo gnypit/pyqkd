@@ -349,7 +349,7 @@ def main_pygad():
 def main_pyqkd():
     test = genetic_algorithm.GeneticAlgorithm(
         initial_pop_size=4,
-        fit_fun=fitness_fun_pyqkd,
+        fitness_function=fitness_fun_pyqkd,
         genome_generator=generator,
         elite_size=0,
         args={
@@ -357,8 +357,8 @@ def main_pyqkd():
             'selection': None,
             'crossover': None
         },
-        selection_operator=selection_operators.ranking_selection,
-        crossover_operator=crossover_operators.uniform_crossover,
+        selection=selection_operators.ranking_selection,
+        crossover=crossover_operators.uniform_crossover,
         no_parents_pairs=2,
         mutation_prob=mutation_prob,
         number_of_generations=10

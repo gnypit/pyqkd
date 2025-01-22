@@ -8,7 +8,7 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
     https://docs.python.org/3/library/multiprocessing.html
     """
 
-    def __init__(self, operator_pairs: list, pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=0.0,
+    def __init__(self, operator_pairs: list, pop_size, fitness_function, genome_generator, args, elite_size, mutation_prob=0.0,
                  seed=None):
         """The list of operators needs to be a dictionary of dictionaries of the following structure:
         operator_pairs = {
@@ -18,7 +18,7 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             'generationN': {'selection': ..., 'crossover': ...}
         }
         """
-        super().__init__(initial_pop_size, fit_fun, genome_generator, args, elite_size, mutation_prob=mutation_prob, seed=seed)
+        super().__init__(initial_pop_size, fitness_function, genome_generator, args, elite_size, mutation_prob=mutation_prob, seed=seed)
         self.operator_pairs = operator_pairs
         self.number_of_cpu_cores = multiprocessing.cpu_count()
 

@@ -6,6 +6,7 @@ from numpy import floor
 import crossover_operators
 import selection_operators
 from simulator_ver1 import fitness_functions
+from collections.abc import Callable  # https://stackoverflow.com/questions/37835179/how-can-i-specify-the-function-type-in-my-type-hints
 
 """Global variable to hold IDs of chromosomes for backtracking"""
 identification = 0
@@ -144,38 +145,71 @@ class GeneticAlgorithm:  # TODO: separate constructor and creating the initial p
 
     Args:
         initial_pop_size (int): size of the population (each generation)
-        fit_fun (function): passed to members of the population; returns a float value based on a member's genome
-        genome_generator (function): function which returns genome of a single member
-        selection_operator (function)
-        crossover_operator (function)
         number_of_generations (int): how many consecutive accepted generations are supposed to be created and evaluated
+        elite_size (int): number of best members of each generation to be copy-pasted into the new generation
+        args (dict): are arguments to be used in genome_generator & selection/crossover operators
+        fitness_function (Callable): func passed to members of the population; returns a float value
+            based on a member's genome
+        genome_generator (Callable): func which returns genome of a single member
+        selection (list[Callable] | Callable): list of func from selection_operators.py for parent selection
+        crossover (list[Callable] | Callable): list of func from crossover_operators.py for children creation
+        no_parents_pairs (int): optional; is the designated number of parent pairs for future generations,
+            e.g., if the initial population size is 1000 and no_parents_pairs = 200,
+            there will be 2 * 200 = 400 children
+        mutation_prob (int): 0.0 by default; probability of selecting a member of a generation to reset its genome
+            with the genome_generator
+        seed (int | float | str | bytes | bytearray | None = None): optional; parameter 'a' for random.seed
     """
-    def __init__(self, initial_pop_size, fit_fun, genome_generator, elite_size, selection_operator, crossover_operator,
-                 number_of_generations, args: dict, pool_size, no_parents_pairs=None, mutation_prob=0.0, seed=None):
-        """initial_pop_size is the size of an initial population, fit_fun is a chosen fitness function to be used in a
-        genetic algorithm, genom_generator is the function that creates genomes for the initial generation
-        of population members, args are arguments to be used in genome_generator & selection/crossover operators,
-        mutation_prob is a probability of a single member's genome being initialised from scratch,
-        seed is an optional argument useful for comparison of pseudo-random number generation
+    pop_size: int
+    no_generations: int
+    elite_size: int
 
-        no_parents_pairs is the designated number of parent pairs for future generations,
-        e.g., if the initial population size is 1000 and no_parents_pairs = 200, there will be 2 * 200 = 400 children
-        in the next generation, which becomes a constant population size. Additionally, the elite_size number of
-        Members is copied from an i-th generation to the (i+1)-th generation.
-        """
+    args: dict
+    """What the args dict should look like:
+    
+    args = {
+        'genome': (g1, g2, ...),
+        'selection': [(s11, s12, ...), ..., (sN1, sN2, ...)],
+        'crossover': [(c11, c12, ...), ..., (cM1, cM2, ...)]
+    }
+    
+    Where:
+        1) g1, g2, etc., are args for the genome_generator func; 
+        2) s11, s12, etc., are args for the 1st selection operator passed in the selection_operators list of func 
+            and sN1, sN2, etc., are args of the Nth selection operator;
+        3) c11, c12, etc., are args for the 1st crossover operator passed in the crossover_operators list of func 
+            and cM1, cM2, etc., are args of the Mth crossover operator;
+    """
 
+    fit_fun: Callable
+    genome_gen: Callable
+    selection: list[Callable]
+    crossover: list[Callable]
+
+    no_parent_pairs: int
+    mutation_prob: float
+
+    current_gen: Generation
+    rival_gen: dict[int: Generation]
+    best_fit_history: []
+
+    def __init__(self, initial_pop_size: int, number_of_generations: int, elite_size: int, args: dict,
+                 fitness_function: Callable, genome_generator: Callable,
+                 selection: list[Callable] | Callable, crossover: list[Callable] | Callable,
+                 pool_size, no_parents_pairs=None, mutation_prob=0.0, seed=None):  # TODO: put pool_size in the args dict for self.selection_args = args.get('selection') below
+        """GeneticAlgorithm class constructor"""
         if seed is not None:
             random.seed(a=seed)  # useful for debugging
 
         self.pop_size = initial_pop_size
-        self.fit_fun = fit_fun
+        self.fit_fun = fitness_function
         self.elite_size = elite_size
         self.mutation_prob = mutation_prob
         self.no_generations = number_of_generations
 
         """For now remembering a single operator for selection and a single for crossover:"""  # TODO: to be changed in the parallel version
-        self.selection_operator = selection_operator
-        self.crossover_operator = crossover_operator
+        self.selection_operator = selection
+        self.crossover_operator = crossover
 
         """If the provided number of parents pairs would require more Members than the current (initial) generation has,
         it'll be limited to the maximum possible number. Also, if no specific number of parent pairs is provided,
@@ -198,7 +232,7 @@ class GeneticAlgorithm:  # TODO: separate constructor and creating the initial p
             size=initial_pop_size,
             genome_generator=genome_generator,
             genome_args=self.genome_generator_args,
-            fitness_function=fit_fun,
+            fitness_function=fitness_function,
             pool_size=pool_size
         )
         self.generations = [self.current_generation]
