@@ -116,16 +116,10 @@ class Generation:  # TODO: we need constructor to take members, method for chang
                              f"({self.num_parents_pairs})")
         self.size = len(generation_members)
 
-    def add_member(self, genome, parents_id=None):
-        """Method for manual creation of new members"""
-        global identification
-        new_member = Member(genome=genome, identification_number=identification)
-
-        if parents_id is not None:
-            new_member.add_parents_id(parents_id=parents_id)
-
-        self.members.append(new_member)
-        identification += 1
+    def mutate_member(self, prob: float):
+        """Method for applying a basic mutation operator to this generation - it randomly chooses a member to have their
+        genome rested with the genome generator based on passed mutation probability `prob`."""
+        pass
 
     def evaluate(self, reverse=True):
         """This method uses the fitness function stored in members of the generation to create and then sort the fitness
@@ -315,17 +309,17 @@ class GeneticAlgorithm:  # TODO: separate constructor and creating the initial p
         new_generation = Generation(size=self.no_parents_pairs * 2, fitness_function=self.fit_fun)
 
         for pair in self.current_children[0].get('children'):
-            new_generation.add_member(genome=pair[0])
-            new_generation.add_member(genome=pair[1])
+            new_generation.mutate_member(genome=pair[0])
+            new_generation.mutate_member(genome=pair[1])
 
         """Thirdly, we add the elite - it doesn't matter that it's at the end of the new generation, because it'll be
         sorted anyway after new Members evaluation."""
         index = 0
         while index < self.elite_size:
-            new_generation.add_member(
+            new_generation.mutate_member(
                 genome=self.current_generation.members[self.current_fitness_ranking[index].get('index')].genome
             )
-            new_generation.add_member(
+            new_generation.mutate_member(
                 genome=self.current_generation.members[self.current_fitness_ranking[index + 1].get('index')].genome
             )
             index += 2
