@@ -138,7 +138,7 @@ class Generation:
         self.fitness_ranking.sort(key=sort_dict_by_fit, reverse=reverse)
 
 
-class GeneticAlgorithm:
+class GeneticAlgorithm:  # TODO: separate constructor and creating the initial population & separate comments
     """Fundamental class for execution of the genetic algorithm. It implements a simple slave-master construction
     of a parallel genetic algorithm, but computationally it is executed with a single thread/process.
 
