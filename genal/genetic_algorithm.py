@@ -177,9 +177,9 @@ class GeneticAlgorithm:
 
     fit_fun: Callable
     genome_gen: Callable
-    operators: dict = {}
+    operators: list  # I usually prefer dicts, but I want to be able to iterate over combinations of operators in here
 
-    no_parent_pairs: int
+    no_parents_pairs: int
     mutation_prob: float
 
     current_gen: Generation
@@ -220,11 +220,8 @@ class GeneticAlgorithm:
         """Based on lists of (callable) function selected by the User from selection_operators.py 
         and crossover_operators.py, a more general dict is created with all the possible combinations of the operators.
         """
-        operators_list = [(sel_op, cross_op) for sel_op in selection for cross_op in crossover]
-        for i in range(len(operators_list)):  # I prefer dicts, as they are faster than lists
-            self.operators[i] = operators_list[i]
-
-        self.pool_size = pool_size  # will be redundant after the selection args will be properly handled
+        self.operators = [(sel_op, cross_op) for sel_op in selection for cross_op in crossover]
+        self.pool_size = pool_size  # will be redundant after the selection args are properly handled
 
     def _create_initial_generation(self):
         """Creating the first - initial - generation in this population."""
@@ -240,7 +237,7 @@ class GeneticAlgorithm:
             identification += 1
         self.current_generation = Generation(
             generation_members=first_members,
-            num_parents_pairs=self.no_parent_pairs,
+            num_parents_pairs=self.no_parents_pairs,
             elite_size=self.elite_size,
             pool_size=self.pool_size
         )
@@ -257,59 +254,43 @@ class GeneticAlgorithm:
               self.current_generation.fitness_ranking[0].get('fitness value')]
         return bf
 
-    def create_new_generation(  # TODO: take a selection and a crossover operator on input & create a new instance of the Generation class based on self.current_gen
-            self):  # First to be parallelled & TODO: change the way the selection operators are handled
-        """A method for combining selection and crossover operators over the current population to create a new one.
-        Firstly, we have to match the selection operator; then in each case we have to match the crossover operator.
+    def _create_rival_generations(self):  # TODO: Creating new generations, even before fitness evaluation, could be done in parallel with Pool / ProcessPoolExecutor
+        """This method takes combinations of selection and crossover operators to create new, potential generations.
+        Each such potential generation is a rival to the others - later only one will be accepted based on provided
+        metrics, e.g. in which of the rival generations is a member with the highest fitness value."""
+        global identification
 
-        In each of the selection-oriented cases we feed the selection operator name to the crossover operator
-        method, so that it takes the parents lists designated for a given new generation creation, i.e., to
-        always connect the chosen crossover to chosen selection and yet keep all probable parents lists
-        from different selection processes in one object for multiple processes to access.
-
-        Selection_operator is a function passed to this method for parents selection
-        crossover_operator is a function passed to this method for the crossover of the parents
-        """
-        children_candidates = []
-        for parents_candidates in self.current_parents:
-            list_of_parents_pairs = parents_candidates.get(self.selection_operator)
-            for parents_pair in list_of_parents_pairs:
-                children_candidates.append(
-                    self.crossover_operator(
-                        parents_pair.get('parent1'),
-                        parents_pair.get('parent2'),
-                        args=self.crossover_args
-                    )
+        rival_id = 0
+        for selection, crossover in self.operators:
+            """We iterate over all combinations of operators, each time creating a new rival generation."""
+            new_members = []
+            parents_in_order = selection(self.current_generation, self.selection_args)
+            for index in range(self.no_parents_pairs):
+                """We always take 2 consecutive members from the parents_in_order list and pass them to the crossover
+                operator to get genomes of new members, for the rival generation, to be created."""
+                child1_genome, child2_genome = crossover(
+                    parents_in_order[index],
+                    parents_in_order[index+1],
+                    self.crossover_args
                 )
-            self.current_children.append(
-                {
-                    'selection operator': parents_candidates.keys(),
-                    'children': children_candidates
-                }
+                new_members.append(Member(
+                    genome=child1_genome,
+                    identification_number=identification,
+                    fitness_function=self.fit_fun)
+                )
+                new_members.append(Member(
+                    genome=child2_genome,
+                    identification_number=identification + 1,
+                    fitness_function=self.fit_fun)
+                )
+                identification += 2
+            self.rival_gen[rival_id] = Generation(
+                generation_members=new_members,
+                num_parents_pairs=self.no_parents_pairs,
+                elite_size=self.elite_size,
+                pool_size=self.pool_size  # let's keep it for now for debugging with a single rival generation
             )
-
-        """Secondly, we create the new generation with children being a result od selection and crossover operators
-        on the current population:"""
-        new_generation = Generation(size=self.no_parents_pairs * 2, fitness_function=self.fit_fun)
-
-        for pair in self.current_children[0].get('children'):
-            new_generation.mutate_member(genome=pair[0])
-            new_generation.mutate_member(genome=pair[1])
-
-        """Thirdly, we add the elite - it doesn't matter that it's at the end of the new generation, because it'll be
-        sorted anyway after new Members evaluation."""
-        index = 0
-        while index < self.elite_size:
-            new_generation.mutate_member(
-                genome=self.current_generation.members[self.current_fitness_ranking[index].get('index')].genome
-            )
-            new_generation.mutate_member(
-                genome=self.current_generation.members[self.current_fitness_ranking[index + 1].get('index')].genome
-            )
-            index += 2
-
-        """Finally, we overwrite the current generation with the new one: -> NOT IN PARALLEL VERSION!!!"""
-        self.current_generation = new_generation
+            rival_id += 1
 
     def mutate(self):
         """Mutation probability is the probability of 'resetting' a member of the current generation, i.e. changing
@@ -341,7 +322,7 @@ class GeneticAlgorithm:
     def run(self):
         for _ in range(self.no_generations):
             self.evaluate_generation()
-            self.create_new_generation()
+            self._create_rival_generations()
             self.mutate()
 
     def fitness_plot(self):
