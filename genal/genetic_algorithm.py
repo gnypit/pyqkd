@@ -16,6 +16,10 @@ def sort_dict_by_fit(dictionary):
     """Used as a key in 'sort' method applied to a dict with chromosomes and their fitness values."""
     return dictionary['fitness value']
 
+def uniform_gene_generator(gene_space: list, length: int):
+    """Simple function for generating a sample of given length from the gene_space with a uniform probability."""
+
+
 
 class Chromosome:
     """Basic class representing chromosomes, the most fundamental objects in genetic algorithms.
