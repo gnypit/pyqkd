@@ -260,7 +260,12 @@ class GeneticAlgorithm:  # TODO: separate constructor and creating the initial p
         self.current_fitness_ranking.sort(key=sort_dict_by_fit, reverse=reverse)
         self.fitness_rankings.append(self.current_fitness_ranking)
 
-    def best_fit(self):  # we return gene sequence of the chromosome of the highest fitness value with it's fit value
+    def _choose_best_rival_generation(self):
+        """This method selects one of the rival generations from the rival_gen dict, based on the highest max fitness
+        value, to be accepted as a new current generation."""
+        pass
+
+    def best_solution(self):  # we return genome of member with the highest fitness value with it's fit value
         bf = [self.current_generation.members[self.current_fitness_ranking[0].get('index')].genome,
               self.current_fitness_ranking[0].get('fitness value')]
         return bf

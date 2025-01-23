@@ -61,7 +61,7 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             for key, member in members_dict.items():
                 member.evaluate()
 
-    def best_fit(
+    def best_solution(
             self):  # we return a gene sequence of the chromosomes with the highest fitness value with it's fit value
         # TODO adjust to multiple generations to evaluate
         bf = [self.current_generation.members[self.current_fitness_ranking[0].get('index')].genome,
