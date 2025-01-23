@@ -315,10 +315,6 @@ class GeneticAlgorithm:
                 self.genome_generator(self.genome_generator_args)
             )
 
-    def change_population_size(self,
-                               pop_size):  # TODO isin't it in a conflict with the change to initial size and parent pairs number?
-        self.pop_size = pop_size
-
     def run(self):
         for _ in range(self.no_generations):
             self.evaluate_generation()
