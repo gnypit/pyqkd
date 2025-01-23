@@ -244,21 +244,8 @@ class GeneticAlgorithm:  # TODO: separate constructor and creating the initial p
             elite_size=self.elite_size,
             pool_size=self.pool_size
         )
+        self.current_generation.evaluate()
         self.accepted_gen.append(self.current_generation)
-
-    def evaluate_generation(self, reverse=True):  # true for sorting from the highest fitness value to the lowest
-        """This method applies the fitness function to the current generation and sorts the fitness ranking by
-        the fitness values of current generation's members - 'reverse' means sorting will be performed
-        from maximum fitness to the minimum."""
-        self.current_fitness_ranking = []
-
-        for i in range(len(self.current_generation.members)):
-            self.current_fitness_ranking.append(
-                {'index': i, 'fitness value': self.fit_fun(self.current_generation.members[i])}
-            )
-
-        self.current_fitness_ranking.sort(key=sort_dict_by_fit, reverse=reverse)
-        self.fitness_rankings.append(self.current_fitness_ranking)
 
     def _choose_best_rival_generation(self):
         """This method selects one of the rival generations from the rival_gen dict, based on the highest max fitness
@@ -266,8 +253,8 @@ class GeneticAlgorithm:  # TODO: separate constructor and creating the initial p
         pass
 
     def best_solution(self):  # we return genome of member with the highest fitness value with it's fit value
-        bf = [self.current_generation.members[self.current_fitness_ranking[0].get('index')].genome,
-              self.current_fitness_ranking[0].get('fitness value')]
+        bf = [self.current_generation.members[self.current_generation.fitness_ranking[0].get('index')].genome,
+              self.current_generation.fitness_ranking[0].get('fitness value')]
         return bf
 
     def create_new_generation(  # TODO: take a selection and a crossover operator on input & create a new instance of the Generation class based on self.current_gen
