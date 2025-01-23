@@ -184,7 +184,8 @@ class GeneticAlgorithm:  # TODO: separate constructor and creating the initial p
 
     current_gen: Generation
     rival_gen: dict[int: Generation]
-    best_fit_history: list = []
+    accepted_gen: list[Generation]
+    best_fit_history: list[float]
 
     def __init__(self, initial_pop_size: int, number_of_generations: int, elite_size: int, args: dict,
                  fitness_function: Callable, genome_generator: Callable,
@@ -223,38 +224,27 @@ class GeneticAlgorithm:  # TODO: separate constructor and creating the initial p
         for i in range(len(operators_list)):  # I prefer dicts, as they are faster than lists
             self.operators[i] = operators_list[i]
 
+        self.pool_size = pool_size  # will be redundant after the selection args will be properly handled
+
     def _create_initial_generation(self):
         """Creating the first - initial - generation in this population."""
         global identification
-        new_members = []
+        first_members = []
         for _ in range(self.pop_size):
-            genes = self.genome_generator()
-            new_member = Member(genome=genes, identification_number=identification, fitness_function=self.fit_fun)
+            genes = self.genome_generator(self.genome_generator_args)
+            first_members.append(Member(
+                genome=genes,
+                identification_number=identification,
+                fitness_function=self.fit_fun)
+            )
             identification += 1
         self.current_generation = Generation(
-
+            generation_members=first_members,
+            num_parents_pairs=self.no_parent_pairs,
+            elite_size=self.elite_size,
+            pool_size=self.pool_size
         )
-        self.generations = [self.current_generation]
-
-        if self.genome_generator is not None:  # ONLY for the initial generation within the population -> should it be in the GeneticAlgorithm class, or do we need it for mutation too?
-            for index in range(self.size):
-                genes = self.genome_generator(self.genome_generator_args)
-                new_member = Member(
-                    genome=genes,
-                    identification_number=identification,
-                    fitness_function=fitness_functions
-                )
-                identification += 1
-                self.members.append(new_member)
-
-        """What we need is to be able to sort whole generation based on fitness values AND remember chromosomes 
-        indexes in their (generation) list in order to be able to crossbreed them with each other based on the
-        fitness ranking. Thus, for each generation we create a list of dictionaries for this ranking. 
-        These dictionaries shall have just two keys: index (of a chromosome) and a fitness value 
-        (of the same chromosome). Once we compute such a fitness ranking for the whole generation, 
-        we shall sort it using sort_dict_by_fit function."""
-        self.fitness_rankings = []
-        self.current_fitness_ranking = None
+        self.accepted_gen.append(self.current_generation)
 
     def evaluate_generation(self, reverse=True):  # true for sorting from the highest fitness value to the lowest
         """This method applies the fitness function to the current generation and sorts the fitness ranking by
