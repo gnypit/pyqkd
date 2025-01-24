@@ -3,7 +3,7 @@ Selection operators in this script take a parent generation from a genetic algor
 and return a child (rival) generation.
 """
 import random
-from genetic_algorithm import Generation  # TODO: make sure there are no cycling imports
+from genetic_algorithm import Generation
 
 
 def tournament_selection(parent_generation: Generation):

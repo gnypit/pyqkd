@@ -43,7 +43,7 @@ if __name__ == '__main__':
         gene_space=np.linspace(start=0, stop=1, num=100000),
         num_generations=70,
         num_parents_mating=9,
-        fitness_func=fitness_function,
+        fitness_func=fitness_function_pygad,
         sol_per_pop=18,
         num_genes=6,
         parent_selection_type='tournament',
@@ -61,4 +61,4 @@ if __name__ == '__main__':
     print(f"Fitness value of the best solution: {solution_fitness}")
     print(f"It took {generations_number} generations to find an optimal solution.")
 
-    ga_instance.plot_fitness()
+    #  ga_instance.plot_fitness()
