@@ -14,8 +14,9 @@ def sort_dict_by_fit(dictionary):
     return dictionary['fitness value']
 
 
-def uniform_gene_generator(gene_space: list, length: int):
+def uniform_gene_generator(*args):
     """Simple function for generating a sample of given length from the gene_space with a uniform probability."""
+    gene_space, length = args[0]
     return np.random.choice(gene_space, length)
 
 
