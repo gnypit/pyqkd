@@ -130,7 +130,17 @@ class Generation:
 
 
 class GeneticAlgorithm:
-    def __init__(self, initial_pop_size, fit_fun, genome_generator, elite_size, selection_operator, crossover_operator,
+    
+    def __zip_crossover_selection(self,selection_operator,crossover_operator):
+        # Creates a list that combines pairs of elements from 'selection_operator' 
+        # and 'crossover_operator'. For each index 'i', it adds a tuple containing 
+        # 'selection_operator[i]' and 'crossover_operator[i]' to the 'listoperator' list.
+        listoperator=[]        
+        for i in range(len(selection_operator)):
+            listoperator.append((selection_operator[i],crossover_operator[i]))
+        return listoperator
+    
+    def __init__(self, initial_pop_size, fit_fun, genome_generator, elite_size, selection_operator:list, crossover_operator:list,
                  number_of_generations, args: dict, no_parents_pairs=None, mutation_prob=0.0, seed=None):
         """initial_pop_size is the size of an initial population, fit_fun is a chosen fitness function to be used in a
         genetic algorithm, genom_generator is the function that creates genomes for the initial generation
@@ -154,8 +164,7 @@ class GeneticAlgorithm:
         self.no_generations = number_of_generations
 
         """For now remembering a single operator for selection and a single for crossover:"""  # TODO: to be changed in the parallel version
-        self.selection_operator = selection_operator
-        self.crossover_operator = crossover_operator
+        self.operator=self.__zip_crossover_selection(selection_operator=selection_operator,crossover_operator=crossover_operator)
 
         """If the provided number of parents pairs would require more Members than the current (initial) generation has,
         it'll be limited to the maximum possible number. Also, if no specific number of parent pairs is provided,
