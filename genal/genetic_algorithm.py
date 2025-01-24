@@ -234,6 +234,11 @@ class GeneticAlgorithm:
         """Based on lists of (callable) function selected by the User from selection_operators.py 
         and crossover_operators.py, a more general dict is created with all the possible combinations of the operators.
         """
+        if type(selection) is not list:
+            selection = [selection]
+        if type(crossover) is not list:
+            crossover = [crossover]
+
         self.operators = self.__zip_crossover_selection(selection_operators=selection, crossover_operators=crossover)
         # self.operators = [(sel_op, cross_op) for sel_op in selection for cross_op in crossover]
         self.pool_size = pool_size  # will be redundant after the selection args are properly handled
