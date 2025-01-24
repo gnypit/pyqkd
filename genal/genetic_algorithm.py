@@ -2,10 +2,8 @@
 import random
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy import floor
-import crossover_operators
-import selection_operators
-from simulator_ver1 import fitness_functions
+from collections.abc import \
+    Callable  # https://stackoverflow.com/questions/37835179/how-can-i-specify-the-function-type-in-my-type-hints
 
 """Global variable to hold IDs of chromosomes for backtracking"""
 identification = 0
@@ -16,6 +14,11 @@ def sort_dict_by_fit(dictionary):
     return dictionary['fitness value']
 
 
+def uniform_gene_generator(gene_space: list, length: int):
+    """Simple function for generating a sample of given length from the gene_space with a uniform probability."""
+    return np.random.choice(gene_space, length)
+
+
 class Chromosome:
     """Basic class representing chromosomes, the most fundamental objects in genetic algorithms.
     Based on author's experience, both fitness function and value are remembered directly in chromosomes to resolve any
@@ -24,7 +27,7 @@ class Chromosome:
     fit_val: float = None
     genome: type[list | dict]
 
-    def __init__(self, genes: type[list | dict], fitness_function=None):
+    def __init__(self, genome: type[list | dict], fitness_function=None):
         """Each chromosome represents a possible solution to a given problem. Parameters characterising these solutions
         are called genes; their set is sometimes referred to as 'genome'. They are supposed to be evaluated by the
         fitness function. Then, based on the fitness (function's) values, they are compared, sorted, selected for
@@ -35,7 +38,7 @@ class Chromosome:
         For computational purposes of parallel programming, the fitness function can be passed to
         the Chromosome on its initiation/construction.
         """
-        self.genome = genes
+        self.genome = genome
         self.fit_fun = fitness_function  # special variable
 
     def __repr__(self) -> str:
@@ -70,9 +73,9 @@ class Member(Chromosome):
     id: int
     parents_id: list  # it's a list with IDs of the parents
 
-    def __init__(self, genes: type[list | dict], identification_number: int, fitness_function=None):
+    def __init__(self, genome: type[list | dict], identification_number: int, fitness_function=None):
         """Apart from what 'Chromosome' class constructor needs, here identification number should be passed."""
-        super().__init__(genes=genes, fitness_function=fitness_function)
+        super().__init__(genome=genome, fitness_function=fitness_function)
         self.id = identification_number
 
     def add_parents_id(self, parents_id: list):
@@ -86,47 +89,44 @@ class Member(Chromosome):
         return f"{type(self).__name__}(genes={self.genome}, id={self.id}, parents_id={self.parents_id})"
 
 
-class Generation:
-    """This class is meant to represent a single (rival) generation in a genetic algorithm, with its members and
-    characteristic info: current fitness ranking of the members, elite size, number of parents' pairs mating
-    and operator-specific arguments, if necessary.
+class Generation:  # TODO: we need constructor to take members, method for changes caused by mutation, method for evaluation and to return best fit; in the future add diversity measures
+    """This class is meant to represent a single (rival) generation in a (parallel) genetic algorithm. It has methods
+    for adding members either in constructor or manually and to evaluate the generation as a whole.
+
+    Args:
+        generation_members (list[Member]): chromosomes of the generation with their and parents' IDs
+        num_parents_pairs (int): how many pairs of members can be parents, e.g., 20 pairs means 40 mating chromosomes
+        elite_size (int): number of members to be copy-pasted directly into a new generation
+        pool_size (int): parameter for the tournament selection operator
     """
-    members: list[Member]  # list of Member class instances - chromosomes of the generation with their and parents IDS
-    size: int  # number of members in this generation
-    num_parents_mating: int  # number of parent paris mating must be positive and equal to or smaller than the size
-    elite_size: int  # number of members to be copy-pasted directly into a new generation
+    members: list[Member]
+    num_parents_pairs: int
+    elite_size: int
+    pool_size: int
+    size: int  # number of members in the generation
     fitness_ranking: list[dict]  # dicts in this list have the index of a member in the generation and its fitness value
-    pool_size:int # pool size
 
-    def __init__(self, generation_members, number_of_parents_pairs_mating, elite_size, fitness_ranking,pool_size):
+    def __init__(self, generation_members: list[Member], num_parents_pairs: int, elite_size: int, pool_size: int):
+        """Constructor for any generation: initial, current or rival."""
         self.members = generation_members
-        self.size = len(generation_members)
-        self.num_parents_mating = number_of_parents_pairs_mating
+        self.num_parents_pairs = num_parents_pairs
         self.elite_size = elite_size
-        self.fitness_ranking = fitness_ranking
-        if 0 < pool_size <= self.num_parents_mating:
-            self.pool_size=pool_size
+        if 0 < pool_size <= self.num_parents_pairs:
+            self.pool_size = pool_size
         else:
-            raise ValueError(f"Pool size = {pool_size} is not between 0 and number of parents mating ({self.num.parents_mating})")
+            raise ValueError(f"Pool size = {pool_size} is not between 0 and number of parents mating "
+                             f"({self.num_parents_pairs})")
+        self.size = len(generation_members)
 
-    def add_member(self, genome, parents_id=None):
-        """Method for manual creation of new members"""
-
-        global identification
-        new_member = Member(genes=genome, identification_number=identification)
-
-        if parents_id is not None:
-            new_member.add_parents_id(parents_id=parents_id)
-
-        self.members.append(new_member)
-        identification += 1
+    def mutate_member(self, prob: float):
+        """Method for applying a basic mutation operator to this generation - it randomly chooses a member to have their
+        genome rested with the genome generator based on passed mutation probability `prob`."""
+        pass
 
     def evaluate(self, reverse=True):
         """This method uses the fitness function stored in members of the generation to create and then sort the fitness
         ranking by the computed fitness values; 'reverse' means sorting will be performed from max fitness value to min.
         """
-        self.fitness_ranking = []
-
         for i in range(self.size):
             self.fitness_ranking.append(
                 {'index': i, 'fitness value': self.members[i].evaluate()}
@@ -136,42 +136,85 @@ class Generation:
 
 
 class GeneticAlgorithm:
+    """Fundamental class for execution of the genetic algorithm. It implements a simple slave-master construction
+    of a parallel genetic algorithm, but computationally it is executed with a single thread/process.
 
+    Args:
+        initial_pop_size (int): size of the population (each generation)
+        number_of_generations (int): how many consecutive accepted generations are supposed to be created and evaluated
+        elite_size (int): number of best members of each generation to be copy-pasted into the new generation
+        args (dict): are arguments to be used in genome_generator & selection/crossover operators
+        fitness_function (Callable): func passed to members of the population; returns a float value
+            based on a member's genome
+        genome_generator (Callable): func which returns genome of a single member
+        selection (list[Callable] | Callable): list of func from selection_operators.py for parent selection
+        crossover (list[Callable] | Callable): list of func from crossover_operators.py for children creation
+        no_parents_pairs (int): optional; is the designated number of parent pairs for future generations,
+            e.g., if the initial population size is 1000 and no_parents_pairs = 200,
+            there will be 2 * 200 = 400 children
+        mutation_prob (int): 0.0 by default; probability of selecting a member of a generation to reset its genome
+            with the genome_generator
+        seed (int | float | str | bytes | bytearray | None = None): optional; parameter 'a' for random.seed
+    """
+    pop_size: int
+    no_generations: int
+    elite_size: int
+
+    args: dict
+    """What the args dict should look like:
     
-    def __zip_crossover_selection(self,selection_operator,crossover_operator):
-        # Creates a list that combines pairs of elements from 'selection_operator' 
-        # and 'crossover_operator'. For each index 'i', it adds a tuple containing 
-        # 'selection_operator[i]' and 'crossover_operator[i]' to the 'listoperator' list.
+    args = {
+        'genome': (g1, g2, ...),
+        'selection': [(s11, s12, ...), ..., (sN1, sN2, ...)],
+        'crossover': [(c11, c12, ...), ..., (cM1, cM2, ...)]
+    }
+    
+    Where:
+        1) g1, g2, etc., are args for the genome_generator func; 
+        2) s11, s12, etc., are args for the 1st selection operator passed in the selection_operators list of func 
+            and sN1, sN2, etc., are args of the Nth selection operator;
+        3) c11, c12, etc., are args for the 1st crossover operator passed in the crossover_operators list of func 
+            and cM1, cM2, etc., are args of the Mth crossover operator;
+    """
+    fit_fun: Callable
+    genome_gen: Callable
+    operators: list  # I usually prefer dicts, but I want to be able to iterate over combinations of operators in here
+
+    no_parents_pairs: int
+    mutation_prob: float
+
+    current_gen: Generation
+    rival_gen: dict[int, Generation]
+    accepted_gen: list[Generation]
+    best_fit_history: list[float]
+      
+    def __zip_crossover_selection(self, selection_operators, crossover_operators):
+        """Creates a list that combines pairs of elements from 'selection_operators' 
+        and 'crossover_operators'. For each index 'i', it adds a tuple containing 
+        'selection_operator[i]' and 'crossover_operator[i]' to the 'listoperator' list."""
         listoperator=[]        
         for i in range(len(selection_operator)):
             listoperator.append((selection_operator[i],crossover_operator[i]))
         return listoperator
-    
-    def __init__(self, initial_pop_size, fit_fun, genome_generator, elite_size, selection_operator:list, crossover_operator:list,
-                 number_of_generations, args: dict, no_parents_pairs=None, mutation_prob=0.0, seed=None):
-        """initial_pop_size is the size of an initial population, fit_fun is a chosen fitness function to be used in a
-        genetic algorithm, genom_generator is the function that creates genomes for the initial generation
-        of population members, args are arguments to be used in genome_generator & selection/crossover operators,
-        mutation_prob is a probability of a single member's genome being initialised from scratch,
-        seed is an optional argument useful for comparison of pseudo-random number generation
 
-        no_parents_pairs is the designated number of parent pairs for future generations,
-        e.g., if the initial population size is 1000 and no_parents_pairs = 200, there will be 2 * 200 = 400 children
-        in the next generation, which becomes a constant population size. Additionally, the elite_size number of
-        Members is copied from an i-th generation to the (i+1)-th generation.
-        """
+    def __init__(self, initial_pop_size: int, number_of_generations: int, elite_size: int, args: dict,
+                 fitness_function: Callable, genome_generator: Callable,
+                 selection: list[Callable] | Callable, crossover: list[Callable] | Callable,
+                 pool_size, no_parents_pairs=None, mutation_prob=0.0,
+                 seed=None):  # TODO: put pool_size in the args dict for self.selection_args = args.get('selection') below
+        """GeneticAlgorithm class constructor"""
+        self.pop_size = initial_pop_size
+        self.no_generations = number_of_generations
+        self.elite_size = elite_size
 
+        self.genome_generator_args = args.get('genome')
+        self.selection_args = args.get('selection')
+        self.crossover_args = args.get('crossover')
+
+        self.fit_fun = fitness_function
+        self.mutation_prob = mutation_prob
         if seed is not None:
             random.seed(a=seed)  # useful for debugging
-
-        self.pop_size = initial_pop_size
-        self.fit_fun = fit_fun
-        self.elite_size = elite_size
-        self.mutation_prob = mutation_prob
-        self.no_generations = number_of_generations
-
-        """For now remembering a single operator for selection and a single for crossover:"""  # TODO: to be changed in the parallel version
-        self.operator=self.__zip_crossover_selection(selection_operator=selection_operator,crossover_operator=crossover_operator)
 
         """If the provided number of parents pairs would require more Members than the current (initial) generation has,
         it'll be limited to the maximum possible number. Also, if no specific number of parent pairs is provided,
@@ -182,114 +225,89 @@ class GeneticAlgorithm:
             self.no_parents_pairs = no_parents_pairs
 
         """Even though for the initial population we can pass the genome generator with it's arguments
-        directly to the __init__ method within the Generation class, we need to memorise these two variables
-        for mutation later on."""
+        directly to the __init__ method within the Generation class, we need to memorise it for mutation later on."""
         self.genome_generator = genome_generator
-        self.genome_generator_args = args.get('genome')
-        self.selection_args = args.get('selection')
-        self.crossover_args = args.get('crossover')
 
-        """Creating the first - initial - generation in this population and lists to handle future generations"""
-        self.current_generation = Generation(
-            size=initial_pop_size,
-            genome_generator=genome_generator,
-            genome_args=self.genome_generator_args,
-            fitness_function=fit_fun,
-            pool_size=pool_size
-        )
-        self.generations = [self.current_generation]
+        """Based on lists of (callable) function selected by the User from selection_operators.py 
+        and crossover_operators.py, a more general dict is created with all the possible combinations of the operators.
+        """
+        self.operators = [(sel_op, cross_op) for sel_op in selection for cross_op in crossover]
+        self.pool_size = pool_size  # will be redundant after the selection args are properly handled
 
-        if self.genome_generator is not None:  # ONLY for the initial generation within the population -> should it be in the GeneticAlgorithm class, or do we need it for mutation too?
-            for index in range(self.size):
-                genes = self.genome_generator(self.genome_generator_args)
-                new_member = Member(
-                    genes=genes,
-                    identification_number=identification,
-                    fitness_function=fitness_functions
-                )
-                identification += 1
-                self.members.append(new_member)
-
-        """What we need is to be able to sort whole generation based on fitness values AND remember chromosomes 
-        indexes in their (generation) list in order to be able to crossbreed them with each other based on the
-        fitness ranking. Thus, for each generation we create a list of dictionaries for this ranking. 
-        These dictionaries shall have just two keys: index (of a chromosome) and a fitness value 
-        (of the same chromosome). Once we compute such a fitness ranking for the whole generation, 
-        we shall sort it using sort_dict_by_fit function."""
-        self.fitness_rankings = []
-        self.current_fitness_ranking = None
-
-    def evaluate_generation(self, reverse=True):  # true for sorting from the highest fitness value to the lowest
-        """This method applies the fitness function to the current generation and sorts the fitness ranking by
-        the fitness values of current generation's members - 'reverse' means sorting will be performed
-        from maximum fitness to the minimum."""
-        self.current_fitness_ranking = []
-
-        for i in range(len(self.current_generation.members)):
-            self.current_fitness_ranking.append(
-                {'index': i, 'fitness value': self.fit_fun(self.current_generation.members[i])}
+    def _create_initial_generation(self):
+        """Creating the first - initial - generation in this population."""
+        global identification
+        first_members = []
+        for _ in range(self.pop_size):
+            genes = self.genome_generator(self.genome_generator_args)
+            first_members.append(Member(
+                genome=genes,
+                identification_number=identification,
+                fitness_function=self.fit_fun)
             )
+            identification += 1
+        self.current_generation = Generation(
+            generation_members=first_members,
+            num_parents_pairs=self.no_parents_pairs,
+            elite_size=self.elite_size,
+            pool_size=self.pool_size
+        )
+        self.current_generation.evaluate()
+        self.accepted_gen.append(self.current_generation)
+        self.best_fit_history.append(self.current_generation.fitness_ranking[0].get('fitness value'))
 
-        self.current_fitness_ranking.sort(key=sort_dict_by_fit, reverse=reverse)
-        self.fitness_rankings.append(self.current_fitness_ranking)
-
-    def best_fit(self):  # we return gene sequence of the chromosome of the highest fitness value with it's fit value
-        bf = [self.current_generation.members[self.current_fitness_ranking[0].get('index')].genome,
-              self.current_fitness_ranking[0].get('fitness value')]
+    def best_solution(self):  # we return genome of member with the highest fitness value with it's fit value
+        bf = [self.current_generation.members[self.current_generation.fitness_ranking[0].get('index')].genome,
+              self.current_generation.fitness_ranking[0].get('fitness value')]
         return bf
 
-    def create_new_generation(self):  # First to be parallelled & TODO: change the way the selection operators are handled
-        """A method for combining selection and crossover operators over the current population to create a new one.
-        Firstly, we have to match the selection operator; then in each case we have to match the crossover operator.
+    def _create_rival_generations(self):  # TODO: Creating new generations, even before fitness evaluation, could be done in parallel with Pool / ProcessPoolExecutor
+        """This method takes combinations of selection and crossover operators to create new, potential generations.
+        Each such potential generation is a rival to the others - later only one will be accepted based on provided
+        metrics, e.g. in which of the rival generations is a member with the highest fitness value."""
+        global identification
 
-        In each of the selection-oriented cases we feed the selection operator name to the crossover operator
-        method, so that it takes the parents lists designated for a given new generation creation, i.e., to
-        always connect the chosen crossover to chosen selection and yet keep all probable parents lists
-        from different selection processes in one object for multiple processes to access.
-
-        Selection_operator is a function passed to this method for parents selection
-        crossover_operator is a function passed to this method for the crossover of the parents
-        """
-        children_candidates = []
-        for parents_candidates in self.current_parents:
-            list_of_parents_pairs = parents_candidates.get(self.selection_operator)
-            for parents_pair in list_of_parents_pairs:
-                children_candidates.append(
-                    self.crossover_operator(
-                        parents_pair.get('parent1'),
-                        parents_pair.get('parent2'),
-                        args=self.crossover_args
-                    )
+        rival_id = 0
+        for selection, crossover in self.operators:
+            """We iterate over all combinations of operators, each time creating a new rival generation."""
+            new_members = []
+            parents_in_order = selection(self.current_generation, self.selection_args)
+            for index in range(self.no_parents_pairs):
+                """We always take 2 consecutive members from the parents_in_order list and pass them to the crossover
+                operator to get genomes of new members, for the rival generation, to be created."""
+                child1_genome, child2_genome = crossover(
+                    parents_in_order[index],
+                    parents_in_order[index + 1],
+                    self.crossover_args
                 )
-            self.current_children.append(
-                {
-                    'selection operator': parents_candidates.keys(),
-                    'children': children_candidates
-                }
+                new_members.append(Member(
+                    genome=child1_genome,
+                    identification_number=identification,
+                    fitness_function=self.fit_fun)
+                )
+                new_members.append(Member(
+                    genome=child2_genome,
+                    identification_number=identification + 1,
+                    fitness_function=self.fit_fun)
+                )
+                identification += 2
+            self.rival_gen[rival_id] = Generation(
+                generation_members=new_members,
+                num_parents_pairs=self.no_parents_pairs,
+                elite_size=self.elite_size,
+                pool_size=self.pool_size  # let's keep it for now for debugging with a single rival generation
             )
+            rival_id += 1
 
-        """Secondly, we create the new generation with children being a result od selection and crossover operators
-        on the current population:"""
-        new_generation = Generation(size=self.no_parents_pairs * 2, fitness_function=self.fit_fun)
-
-        for pair in self.current_children[0].get('children'):
-            new_generation.add_member(genome=pair[0])
-            new_generation.add_member(genome=pair[1])
-
-        """Thirdly, we add the elite - it doesn't matter that it's at the end of the new generation, because it'll be
-        sorted anyway after new Members evaluation."""
-        index = 0
-        while index < self.elite_size:
-            new_generation.add_member(
-                genome=self.current_generation.members[self.current_fitness_ranking[index].get('index')].genome
-            )
-            new_generation.add_member(
-                genome=self.current_generation.members[self.current_fitness_ranking[index + 1].get('index')].genome
-            )
-            index += 2
-
-        """Finally, we overwrite the current generation with the new one: -> NOT IN PARALLEL VERSION!!!"""
-        self.current_generation = new_generation
+    def _choose_best_rival_generation(self):
+        """This method selects one of the rival generations from the rival_gen dict, based on the highest max fitness
+        value, to be accepted as a new current generation."""
+        fitness_comparison = {}
+        for id_of_rival, generation in self.rival_gen.items():
+            fitness_comparison[id_of_rival] = generation.fitness_ranking[0].get('fitness value')
+        self.current_generation = self.rival_gen.get(max(fitness_comparison, key=fitness_comparison.get))
+        self.accepted_gen.append(self.current_generation)
+        self.best_fit_history.append(self.current_generation.fitness_ranking[0].get('fitness value'))
 
     def mutate(self):
         """Mutation probability is the probability of 'resetting' a member of the current generation, i.e. changing
@@ -297,7 +315,7 @@ class GeneticAlgorithm:
         number of members to be mutated and then generate pseudo-randomly a list of member indexes in the current
         generation to be mutated.
         """
-        number_of_mutations = floor(self.mutation_prob * self.current_generation.size)
+        number_of_mutations = np.floor(self.mutation_prob * self.current_generation.size)
 
         """Size of generation is a constant, it has to be adjusted to the lack of elite; the elite Members are not
         supposed to be mutated. Additionally, number of mutations has to be an integer, e.g., 
@@ -314,21 +332,11 @@ class GeneticAlgorithm:
                 self.genome_generator(self.genome_generator_args)
             )
 
-    def change_population_size(self, pop_size):  # TODO isin't it in a conflict with the change to initial size and parent pairs number?
-        self.pop_size = pop_size
-
     def run(self):
+        self._create_initial_generation()
         for _ in range(self.no_generations):
-            self.evaluate_generation()
-            self.create_new_generation()
+            self._create_rival_generations()
             self.mutate()
 
     def fitness_plot(self):
-        historic_best_fits = []
-        for old_fitness_ranking in self.fitness_rankings:
-            historic_best_fits.append(old_fitness_ranking[0].get('fitness value'))
-
-        generation_indexes = np.arange(start=0, stop=len(historic_best_fits), step=1)
-
-        plt.plot(generation_indexes, historic_best_fits)
-        plt.show()
+        pass
