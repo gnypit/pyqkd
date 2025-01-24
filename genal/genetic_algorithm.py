@@ -27,6 +27,7 @@ class Chromosome:
     """
     fit_val: float = None
     genome: type[list | dict]
+    fit_fun: Callable
 
     def __init__(self, genome: type[list | dict], fitness_function=None):
         """Each chromosome represents a possible solution to a given problem. Parameters characterising these solutions
@@ -57,9 +58,10 @@ class Chromosome:
         If the fitness function was passed on in the constructor of this class, it has to be provided as an argument of
         this method. Fitness value is remembered in a field of this classed and returned on output. If no fitness
         function is provided, the assigned fitness value is 0."""
-        if fitness_function is None:
+        if self.fit_fun is not None:
+            self.fit_val = self.fit_fun(self.genome)
+        elif fitness_function is not None:
             self.fit_fun = fitness_function
-        elif self.fit_fun is not None:  # fitness function was provided on initialisation
             self.fit_val = self.fit_fun(self.genome)
         else:
             self.fit_val = 0
@@ -118,6 +120,7 @@ class Generation:  # TODO: we need constructor to take members, method for chang
             raise ValueError(f"Pool size = {pool_size} is not between 0 and number of parents mating "
                              f"({self.num_parents_pairs})")
         self.size = len(generation_members)
+        self.fitness_ranking = []
 
     def mutate_member(self, prob: float):
         """Method for applying a basic mutation operator to this generation - it randomly chooses a member to have their
@@ -263,8 +266,8 @@ class GeneticAlgorithm:
             pool_size=self.pool_size
         )
         self.current_generation.evaluate()
-        self.accepted_gen.append(self.current_generation)
-        self.best_fit_history.append(self.current_generation.fitness_ranking[0].get('fitness value'))
+        self.accepted_gen = [self.current_generation]
+        self.best_fit_history = [self.current_generation.fitness_ranking[0].get('fitness value')]
 
     def best_solution(self):  # we return genome of member with the highest fitness value with it's fit value
         bf = [self.current_generation.members[self.current_generation.fitness_ranking[0].get('index')].genome,
@@ -281,7 +284,7 @@ class GeneticAlgorithm:
         for selection, crossover in self.operators:
             """We iterate over all combinations of operators, each time creating a new rival generation."""
             new_members = []
-            parents_in_order = selection(self.current_generation, self.selection_args)
+            parents_in_order = selection(self.current_generation, self.selection_args)  # TODO: TypeError: tournament_selection() takes 1 positional argument but 2 were given
             for index in range(self.no_parents_pairs):
                 """We always take 2 consecutive members from the parents_in_order list and pass them to the crossover
                 operator to get genomes of new members, for the rival generation, to be created."""
