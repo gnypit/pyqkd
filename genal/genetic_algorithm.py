@@ -188,7 +188,7 @@ class GeneticAlgorithm:
     mutation_prob: float
 
     current_gen: Generation
-    rival_gen: dict[int: Generation]
+    rival_gen: dict[int, Generation]
     accepted_gen: list[Generation]
     best_fit_history: list[float]
 
@@ -249,19 +249,14 @@ class GeneticAlgorithm:
         )
         self.current_generation.evaluate()
         self.accepted_gen.append(self.current_generation)
-
-    def _choose_best_rival_generation(self):
-        """This method selects one of the rival generations from the rival_gen dict, based on the highest max fitness
-        value, to be accepted as a new current generation."""
-        pass
+        self.best_fit_history.append(self.current_generation.fitness_ranking[0].get('fitness value'))
 
     def best_solution(self):  # we return genome of member with the highest fitness value with it's fit value
         bf = [self.current_generation.members[self.current_generation.fitness_ranking[0].get('index')].genome,
               self.current_generation.fitness_ranking[0].get('fitness value')]
         return bf
 
-    def _create_rival_generations(
-            self):  # TODO: Creating new generations, even before fitness evaluation, could be done in parallel with Pool / ProcessPoolExecutor
+    def _create_rival_generations(self):  # TODO: Creating new generations, even before fitness evaluation, could be done in parallel with Pool / ProcessPoolExecutor
         """This method takes combinations of selection and crossover operators to create new, potential generations.
         Each such potential generation is a rival to the others - later only one will be accepted based on provided
         metrics, e.g. in which of the rival generations is a member with the highest fitness value."""
@@ -299,6 +294,16 @@ class GeneticAlgorithm:
             )
             rival_id += 1
 
+    def _choose_best_rival_generation(self):
+        """This method selects one of the rival generations from the rival_gen dict, based on the highest max fitness
+        value, to be accepted as a new current generation."""
+        fitness_comparison = {}
+        for id_of_rival, generation in self.rival_gen.items():
+            fitness_comparison[id_of_rival] = generation.fitness_ranking[0].get('fitness value')
+        self.current_generation = self.rival_gen.get(max(fitness_comparison, key=fitness_comparison.get))
+        self.accepted_gen.append(self.current_generation)
+        self.best_fit_history.append(self.current_generation.fitness_ranking[0].get('fitness value'))
+
     def mutate(self):
         """Mutation probability is the probability of 'resetting' a member of the current generation, i.e. changing
         it genome randomly. For optimisation purposes instead of a loop over the whole generation, I calculate the
@@ -323,17 +328,10 @@ class GeneticAlgorithm:
             )
 
     def run(self):
+        self._create_initial_generation()
         for _ in range(self.no_generations):
-            self.evaluate_generation()
             self._create_rival_generations()
             self.mutate()
 
     def fitness_plot(self):
-        historic_best_fits = []
-        for old_fitness_ranking in self.fitness_rankings:
-            historic_best_fits.append(old_fitness_ranking[0].get('fitness value'))
-
-        generation_indexes = np.arange(start=0, stop=len(historic_best_fits), step=1)
-
-        plt.plot(generation_indexes, historic_best_fits)
-        plt.show()
+        pass
