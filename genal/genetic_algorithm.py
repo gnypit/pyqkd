@@ -2,11 +2,11 @@
 import random
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy import floor
 import crossover_operators
 import selection_operators
 from simulator_ver1 import fitness_functions
-from collections.abc import Callable  # https://stackoverflow.com/questions/37835179/how-can-i-specify-the-function-type-in-my-type-hints
+from collections.abc import \
+    Callable  # https://stackoverflow.com/questions/37835179/how-can-i-specify-the-function-type-in-my-type-hints
 
 """Global variable to hold IDs of chromosomes for backtracking"""
 identification = 0
@@ -16,9 +16,10 @@ def sort_dict_by_fit(dictionary):
     """Used as a key in 'sort' method applied to a dict with chromosomes and their fitness values."""
     return dictionary['fitness value']
 
+
 def uniform_gene_generator(gene_space: list, length: int):
     """Simple function for generating a sample of given length from the gene_space with a uniform probability."""
-
+    return np.random.choice(gene_space, length)
 
 
 class Chromosome:
@@ -194,7 +195,8 @@ class GeneticAlgorithm:
     def __init__(self, initial_pop_size: int, number_of_generations: int, elite_size: int, args: dict,
                  fitness_function: Callable, genome_generator: Callable,
                  selection: list[Callable] | Callable, crossover: list[Callable] | Callable,
-                 pool_size, no_parents_pairs=None, mutation_prob=0.0, seed=None):  # TODO: put pool_size in the args dict for self.selection_args = args.get('selection') below
+                 pool_size, no_parents_pairs=None, mutation_prob=0.0,
+                 seed=None):  # TODO: put pool_size in the args dict for self.selection_args = args.get('selection') below
         """GeneticAlgorithm class constructor"""
         self.pop_size = initial_pop_size
         self.no_generations = number_of_generations
@@ -258,7 +260,8 @@ class GeneticAlgorithm:
               self.current_generation.fitness_ranking[0].get('fitness value')]
         return bf
 
-    def _create_rival_generations(self):  # TODO: Creating new generations, even before fitness evaluation, could be done in parallel with Pool / ProcessPoolExecutor
+    def _create_rival_generations(
+            self):  # TODO: Creating new generations, even before fitness evaluation, could be done in parallel with Pool / ProcessPoolExecutor
         """This method takes combinations of selection and crossover operators to create new, potential generations.
         Each such potential generation is a rival to the others - later only one will be accepted based on provided
         metrics, e.g. in which of the rival generations is a member with the highest fitness value."""
@@ -274,7 +277,7 @@ class GeneticAlgorithm:
                 operator to get genomes of new members, for the rival generation, to be created."""
                 child1_genome, child2_genome = crossover(
                     parents_in_order[index],
-                    parents_in_order[index+1],
+                    parents_in_order[index + 1],
                     self.crossover_args
                 )
                 new_members.append(Member(
@@ -302,7 +305,7 @@ class GeneticAlgorithm:
         number of members to be mutated and then generate pseudo-randomly a list of member indexes in the current
         generation to be mutated.
         """
-        number_of_mutations = floor(self.mutation_prob * self.current_generation.size)
+        number_of_mutations = np.floor(self.mutation_prob * self.current_generation.size)
 
         """Size of generation is a constant, it has to be adjusted to the lack of elite; the elite Members are not
         supposed to be mutated. Additionally, number of mutations has to be an integer, e.g., 
