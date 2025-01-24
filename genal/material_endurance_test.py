@@ -42,9 +42,9 @@ if __name__ == '__main__':
     ga_instance = pygad.GA(
         gene_space=np.linspace(start=0, stop=1, num=100000),
         num_generations=70,
-        num_parents_mating=9,
+        num_parents_mating=10,
         fitness_func=fitness_function_pygad,
-        sol_per_pop=18,
+        sol_per_pop=20,
         num_genes=6,
         parent_selection_type='tournament',
         mutation_type='random',
@@ -65,7 +65,7 @@ if __name__ == '__main__':
 
     """Secondly, approach with our GeneticAlgorithm:"""
     new_ga_instance = genetic_algorithm.GeneticAlgorithm(
-        initial_pop_size=18,
+        initial_pop_size=20,
         number_of_generations=70,
         elite_size=0,
         args={
@@ -78,7 +78,9 @@ if __name__ == '__main__':
         selection=selection_operators.tournament_selection,
         crossover=crossover_operators.single_point_crossover,
         pool_size=7,
-        no_parents_pairs=9,
+        no_parents_pairs=10,  # has to be even for now
         mutation_prob=float(1 / 6)
     )
     new_ga_instance.run()
+
+    print(f"Our code returned {new_ga_instance.best_solution()}")
