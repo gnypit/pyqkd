@@ -62,3 +62,23 @@ if __name__ == '__main__':
     print(f"It took {generations_number} generations to find an optimal solution.")
 
     #  ga_instance.plot_fitness()
+
+    """Secondly, approach with our GeneticAlgorithm:"""
+    new_ga_instance = genetic_algorithm.GeneticAlgorithm(
+        initial_pop_size=18,
+        number_of_generations=70,
+        elite_size=0,
+        args={
+            'genome': (np.linspace(start=0, stop=1, num=100000), 6),  # six genes
+            'selection': 7,  # pool size for the tournament selection operator
+            'crossover': None  # for single point crossover operator
+        },
+        fitness_function=fitness_function,
+        genome_generator=genetic_algorithm.uniform_gene_generator,
+        selection=selection_operators.tournament_selection,
+        crossover=crossover_operators.single_point_crossover,
+        pool_size=7,
+        no_parents_pairs=9,
+        mutation_prob=float(1 / 6)
+    )
+    new_ga_instance.run()
