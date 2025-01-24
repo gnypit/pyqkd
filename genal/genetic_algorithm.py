@@ -176,7 +176,6 @@ class GeneticAlgorithm:
         3) c11, c12, etc., are args for the 1st crossover operator passed in the crossover_operators list of func 
             and cM1, cM2, etc., are args of the Mth crossover operator;
     """
-
     fit_fun: Callable
     genome_gen: Callable
     operators: list  # I usually prefer dicts, but I want to be able to iterate over combinations of operators in here
@@ -188,6 +187,15 @@ class GeneticAlgorithm:
     rival_gen: dict[int, Generation]
     accepted_gen: list[Generation]
     best_fit_history: list[float]
+      
+    def __zip_crossover_selection(self, selection_operators, crossover_operators):
+        """Creates a list that combines pairs of elements from 'selection_operators' 
+        and 'crossover_operators'. For each index 'i', it adds a tuple containing 
+        'selection_operator[i]' and 'crossover_operator[i]' to the 'listoperator' list."""
+        listoperator=[]        
+        for i in range(len(selection_operator)):
+            listoperator.append((selection_operator[i],crossover_operator[i]))
+        return listoperator
 
     def __init__(self, initial_pop_size: int, number_of_generations: int, elite_size: int, args: dict,
                  fitness_function: Callable, genome_generator: Callable,
