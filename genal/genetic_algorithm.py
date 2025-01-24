@@ -190,12 +190,15 @@ class GeneticAlgorithm:
       
     def __zip_crossover_selection(self, selection_operators, crossover_operators):
         """Creates a list that combines pairs of elements from 'selection_operators' 
-        and 'crossover_operators'. For each index 'i', it adds a tuple containing 
-        'selection_operator[i]' and 'crossover_operator[i]' to the 'listoperator' list."""
-        listoperator=[]        
-        for i in range(len(selection_operator)):
-            listoperator.append((selection_operator[i],crossover_operator[i]))
-        return listoperator
+        and 'crossover_operators'. For each index 'i', it adds tuples to the 'list_to_operator' list containing
+        'selection_operator[i]' and 'crossover_operator[j]' for each index 'j'.
+
+        This way there are tuples for all combinations of operators."""
+        list_to_operator = []
+        for i in range(len(selection_operators)):
+            for j in range(len(crossover_operators)):
+                list_to_operator.append((selection_operators[i],crossover_operators[j]))
+        return list_to_operator
 
     def __init__(self, initial_pop_size: int, number_of_generations: int, elite_size: int, args: dict,
                  fitness_function: Callable, genome_generator: Callable,
@@ -231,7 +234,8 @@ class GeneticAlgorithm:
         """Based on lists of (callable) function selected by the User from selection_operators.py 
         and crossover_operators.py, a more general dict is created with all the possible combinations of the operators.
         """
-        self.operators = [(sel_op, cross_op) for sel_op in selection for cross_op in crossover]
+        self.operators = self.__zip_crossover_selection(selection_operators=selection, crossover_operators=crossover)
+        # self.operators = [(sel_op, cross_op) for sel_op in selection for cross_op in crossover]
         self.pool_size = pool_size  # will be redundant after the selection args are properly handled
 
     def _create_initial_generation(self):
