@@ -1,6 +1,7 @@
 """Jakub T. Gnyp, gnyp.jakub@gmail.com
 Labyrinth test case for the Genetic Algorithm - script with functions for visualizations.
 Required program: ImageMagick https://www.techspot.com/downloads/5515-imagemagick.html
+Alternatively one can use Pillow instead.
 """
 import genetic_algorithm
 import selection_operators
