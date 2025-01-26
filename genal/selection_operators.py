@@ -19,7 +19,7 @@ def tournament_selection(parent_generation: Generation):
     best_members = []
 
     # Initialize a list to store the best candidates from each tournament
-    for _ in range(parent_generation.num_parents_pairs):
+    for _ in range(parent_generation.num_parents_pairs * 2):
         # Randomly select a subset of members for the tournament
         tournament_members = random.sample(parent_generation.members, parent_generation.pool_size)
         # Identify the member with the highest fitness value in the tournament
