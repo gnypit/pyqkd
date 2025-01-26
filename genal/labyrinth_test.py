@@ -218,7 +218,7 @@ def fitness_fun_pygad(genetic_algorithm_instance, route, route_idx):
     return fitness_val
 
 
-def fitness_fun_pyqkd(route):
+def fitness_fun_pyqkd_simple(route):
     """We're using the Taxi metric to evaluate path through the labyrinth. Additionally, we give bonuses
     and punishments for specific behaviours, so that path suggested by chromosomes were as close to actually possible
     ones as possible, taking into account "bouncing back" from walls.
@@ -245,6 +245,52 @@ def fitness_fun_pyqkd(route):
     """Actual fitness value, max 1:"""
     fitness_val = sum_exit_coordinates - x_distance - y_distance # using Taxi metric
     fitness_val = fitness_val / sum_exit_coordinates
+
+    return fitness_val
+
+
+def fitness_fun_pyqkd(route):
+    """We're using the Taxi metric to evaluate path through the labyrinth. Additionally, we give bonuses
+    and punishments for specific behaviours, so that path suggested by chromosomes were as close to actually possible
+    ones as possible, taking into account "bouncing back" from walls.
+    """
+    position = {'y': 1, 'x': 1}  # we're starting in (1,1)
+
+    """Not to encounter the 'mutable' attribute of dicts, in the position history list we save copies of positions
+    after each step:"""
+    history = [copy.deepcopy(position)]
+    is_probem = 0  # starting number of unwanted behaviours
+    bonus = 0  # starting bonus value
+
+    for move in route:  # changing position based on moves
+
+        if position.get('x') == exit_labyrinth.get('x') and position.get('y') == exit_labyrinth.get('y') and move == 0:
+            bonus += bonus_point  # bonus for staying at the exit
+            continue
+
+        new_y, new_x = position.get('y') + moves_mapping.get(move)[0], position.get('x') + moves_mapping.get(move)[1]
+
+        """Checkin, if the new position is an allowed field:"""
+        if labyrinth[new_y, new_x] == 0:
+            position['x'], position['y'] = new_x, new_y
+            history.append(copy.deepcopy(position))
+
+            """Checking, if a punishment for repeating the position is required:"""
+            if history.count(position) > 1:
+                is_probem += pos_repeat_point
+        else:  # field, onto which the chromosome want to step, is not allowed!
+            is_probem += hitting_a_wall_point
+
+    """For the final fitness value, first we calculate some additional variables:"""
+    x_distance = abs(exit_labyrinth.get('x') - position.get('x'))
+    y_distance = abs(exit_labyrinth.get('y') - position.get('y'))
+    sum_exit_coordinates = exit_labyrinth.get('x') + exit_labyrinth.get('y')
+
+    """Actual fitness value, max 1:"""
+    fitness_val = (sum_exit_coordinates - x_distance - y_distance) * 2  # using Taxi metric
+    fitness_val += bonus  # adding bonus for waiting at the end
+    fitness_val -= is_probem  # subtracting punishments
+    fitness_val = fitness_val / (sum_exit_coordinates * 2 + max_bonus)
 
     return fitness_val
 
@@ -351,21 +397,21 @@ def main_pyqkd():
         start = time()
 
         ga_instance = genetic_algorithm.GeneticAlgorithm(
-            initial_pop_size=16,
-            number_of_generations=10,
+            initial_pop_size=sol_per_pop,
+            number_of_generations=num_generations,
             elite_size=2,
             args={
                 'genome': (gene_space, num_genes),
-                'selection': 4,
+                'selection': k_tournament,
                 'crossover': None
             },
             fitness_function=fitness_fun_pyqkd,
             genome_generator=genetic_algorithm.uniform_gene_generator,
             selection=selection_operators.tournament_selection,
             crossover=crossover_operators.single_point_crossover,
-            pool_size=4,
-            no_parents_pairs=8,
-            mutation_prob=float(1/16)
+            pool_size=k_tournament,
+            no_parents_pairs=num_parents_mating,
+            mutation_prob=mutation_prob
         )
 
         ga_instance.run()
