@@ -218,12 +218,12 @@ def fitness_fun_pygad(genetic_algorithm_instance, route, route_idx):
     return fitness_val
 
 
-def fitness_fun_pyqkd(generation_member: genetic_algorithm.Member):
+def fitness_fun_pyqkd(genome):
     """Używamy metryki Taxi do ewaluacji tras przez labirynt. Dodatkowo, przydzielamy kary i nagrody za poszczególne
     zachowania, aby trasy proponowane przez chromosomy były jak najbliższe tym faktycznym, po uwzględnieniu
     "odbijania się" od ścian.
     """
-    route = generation_member.genome
+    route = genome
     position = {'y': 1, 'x': 1}  # zaczynamy w (1,1)
 
     """Aby uniknąć kłopotu z cechą 'mutable' słowników, zapamiętujemy w liście historii położeń kopię
@@ -358,24 +358,94 @@ def main_pygad():
 
 
 def main_pyqkd():
-    test = genetic_algorithm.GeneticAlgorithm(
-        initial_pop_size=4,
-        fitness_function=fitness_fun_pyqkd,
-        genome_generator=generator,
-        elite_size=0,
-        args={
-            'genome': (gene_space, num_genes),
-            'selection': None,
-            'crossover': None
-        },
-        selection=selection_operators.ranking_selection,
-        crossover=crossover_operators.uniform_crossover,
-        no_parents_pairs=2,
-        mutation_prob=mutation_prob,
-        number_of_generations=10
-    )
-    test.run()
+    """pyqkd.genal approach to solving the labyrinth"""
+    fitness_list = []
+    times = []
+    output_list = []
+    generations_no = []  # number of generations in which a single GA found it's proposition for a solution
+
+    for i in tqdm.tqdm(range(10)):
+        start = time()
+
+        ga_instance = genetic_algorithm.GeneticAlgorithm(
+            initial_pop_size=1000,
+            number_of_generations=num_generations,
+            elite_size=10,
+            args={
+                'genome': (gene_space, num_genes),
+                'selection': k_tournament,
+                'crossover': None
+            },
+            fitness_function=fitness_fun_pyqkd,
+            genome_generator=genetic_algorithm.uniform_gene_generator,
+            selection=selection_operators.tournament_selection,
+            crossover=crossover_operators.single_point_crossover,
+            pool_size=k_tournament,
+            no_parents_pairs=500,
+            mutation_prob=0.05
+        )
+
+        ga_instance.run()
+        end = time()
+        times.append(end - start)
+
+        """Manually visualising fitness history through generations."""
+        fig, ax = plt.subplots()
+        fitness = ga_instance.best_fit_history
+        generations = list(range(len(fitness)))
+
+        ax.plot(generations, fitness, color="lime", linewidth=4, drawstyle='steps-post', label='Fitness')
+
+        ax.set_xlabel("Generations")
+        ax.set_ylabel("Fitness")
+        ax.set_title("pyqkd - Generations vs. Fitness")
+        ax.legend()  # żeby mieć pewność, że legenda się wyświetli
+        ax.grid(True)
+        plt.show()
+
+        """Remembering the solution:"""
+        solution, solution_fitness = ga_instance.best_solution()
+        # generations_no.append(ga_instance.best_solution_generation)
+        fitness_list.append(solution_fitness)
+        output_list.append(solution)
+
+        """Visualising results (routes, which were tried by chromosomes)"""
+        gif_filename = 'chromosome_animation' + str(i) + '.gif'
+        picture_filename = 'chromosome_picture' + str(i) + '.png'
+        see_route(labyrinth=labyrinth, moves_mapping=moves_mapping, steps=output_list[-1],
+                  gif_filename=gif_filename, summary_filename=picture_filename)
+
+        """Visualising the actual routes, not allowing to walk through the walls"""
+        x, y = 1, 1
+        history = []
+
+        for step in output_list[-1]:
+            new_y, new_x = y + moves_mapping.get(step)[0], x + moves_mapping.get(step)[1]
+            if 0 <= new_y <= 11 and 0 <= new_x <= 11:
+                """After verifying that new coordinates are inside the labyrinth (in the matrix at all),
+                we check if they are an allowed field:"""
+                if labyrinth[new_y, new_x] == 0:
+                    x, y = new_x, new_y
+                    history.append(step)
+                else:
+                    history.append(0)
+            else:
+                print(f"We got coordinates x={new_x} and y={new_y} from outside the labyrinth (when drawing).")
+
+        gif_filename = 'actual_route_animation' + str(i) + '.gif'
+        picture_filename = 'actual_route_picture' + str(i) + '.png'
+        see_route(labyrinth=labyrinth, moves_mapping=moves_mapping, steps=history,
+                  gif_filename=gif_filename, summary_filename=picture_filename)
+
+    print(f"Mean time of pyqkd's GA running: {np.mean(times)}")
+    print(f"Mean fitness value of the pyqkd's GA best solutions: {np.mean(fitness_list)}")
+    # print(f"Mean number of generations in the PyGAD's GA to get the best solution: {np.mean(generations_no)}")
+
+    print(f"Results history: \n")
+    for j in range(len(output_list)):
+        print(output_list[j])
 
 
 if __name__ == '__main__':
-    main_pygad()
+    # main_pygad()
+    main_pyqkd()
