@@ -350,7 +350,7 @@ class GeneticAlgorithm:
     def run(self):
         self._create_initial_generation()
         for _ in range(self.no_generations):
-            self._create_rival_generations()
+            self._create_rival_generations()  # TODO: why are rival generations too short?
             self._choose_best_rival_generation()
             self.mutate()
 
