@@ -286,7 +286,7 @@ class GeneticAlgorithm:
             new_members = []
             parents_in_order = selection(self.current_generation)  # TODO: TypeError: tournament_selection() takes 1 positional argument but 2 were given; we still don't pass the args in a cohesive manner
             self.rival_gen = {}
-            for index in range(self.no_parents_pairs // 2):
+            for index in range(self.no_parents_pairs):
                 """We always take 2 consecutive members from the parents_in_order list and pass them to the crossover
                 operator to get genomes of new members, for the rival generation, to be created."""
                 child1_genome, child2_genome = crossover(
