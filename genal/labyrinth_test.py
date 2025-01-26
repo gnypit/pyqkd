@@ -218,50 +218,33 @@ def fitness_fun_pygad(genetic_algorithm_instance, route, route_idx):
     return fitness_val
 
 
-def fitness_fun_pyqkd(genome):
-    """Używamy metryki Taxi do ewaluacji tras przez labirynt. Dodatkowo, przydzielamy kary i nagrody za poszczególne
-    zachowania, aby trasy proponowane przez chromosomy były jak najbliższe tym faktycznym, po uwzględnieniu
-    "odbijania się" od ścian.
+def fitness_fun_pyqkd(route):
+    """We're using the Taxi metric to evaluate path through the labyrinth. Additionally, we give bonuses
+    and punishments for specific behaviours, so that path suggested by chromosomes were as close to actually possible
+    ones as possible, taking into account "bouncing back" from walls.
     """
-    route = genome
-    position = {'y': 1, 'x': 1}  # zaczynamy w (1,1)
+    position = {'y': 1, 'x': 1}  # we're starting in (1,1)
 
-    """Aby uniknąć kłopotu z cechą 'mutable' słowników, zapamiętujemy w liście historii położeń kopię
-    początkowego stanu słownika położeń, zamiast przypisywać do listy dynamiczną strukturę danych.
-    """
+    """Not to encounter the 'mutable' attribute of dicts, in the position history list we save copies of positions
+    after each step:"""
     history = [copy.deepcopy(position)]
-    is_probem = 0  # początkowa wartość licznika problemów, do którego przydzielamy punkty kar
-    bonus = 0  # początkowa wartość bonusu, do której dodajemy punkty nagród
 
-    for move in route:  # zmieniamy położenie w zależności od wykonanego ruchu
-
-        if position.get('x') == exit_labyrinth.get('x') and position.get('y') == exit_labyrinth.get('y') and move == 0:
-            bonus += bonus_point  # bonus za pozostanie w mecie
-            continue
-
+    for move in route:  # changing position based on moves
         new_y, new_x = position.get('y') + moves_mapping.get(move)[0], position.get('x') + moves_mapping.get(move)[1]
 
-        """Sprawdzamy, czy nowe współrzędne wskazują na dozwolone pole:"""
-        if labyrinth[new_y, new_x] == 0:
+        """Checking, if the new position is inside the labyrinth:"""
+        if 1 <= new_x <= 10 and 1 <= new_y <= 10:
             position['x'], position['y'] = new_x, new_y
             history.append(copy.deepcopy(position))
 
-            """Sprawdzamy, czy trzeba przydzielić karę za powtórzenie pozycji:"""
-            if history.count(position) > 1:
-                is_probem += pos_repeat_point
-        else:  # pole, na które chce wejść chromosom, nie jest dozwolone!
-            is_probem += hitting_a_wall_point
-
-    """Najpierw obliczamy pomocnicze zmienne, dla czytelności:"""
+    """For the final fitness value, first we calculate some additional variables:"""
     x_distance = abs(exit_labyrinth.get('x') - position.get('x'))
     y_distance = abs(exit_labyrinth.get('y') - position.get('y'))
     sum_exit_coordinates = exit_labyrinth.get('x') + exit_labyrinth.get('y')
 
-    """Faktyczna wartość fitnessu, maksymalnie 1:"""
-    fitness_val = (sum_exit_coordinates - x_distance - y_distance) * 2  # użycie metryki taxi
-    fitness_val += bonus  # dodajemy punkty nagród za czekanie w mecie "do końca"
-    fitness_val -= is_probem  # odejmujemy punkty kar
-    fitness_val = fitness_val / (sum_exit_coordinates * 2 + max_bonus)
+    """Actual fitness value, max 1:"""
+    fitness_val = sum_exit_coordinates - x_distance - y_distance # using Taxi metric
+    fitness_val = fitness_val / sum_exit_coordinates
 
     return fitness_val
 
@@ -368,21 +351,21 @@ def main_pyqkd():
         start = time()
 
         ga_instance = genetic_algorithm.GeneticAlgorithm(
-            initial_pop_size=1000,
-            number_of_generations=num_generations,
-            elite_size=10,
+            initial_pop_size=16,
+            number_of_generations=10,
+            elite_size=2,
             args={
                 'genome': (gene_space, num_genes),
-                'selection': k_tournament,
+                'selection': 4,
                 'crossover': None
             },
             fitness_function=fitness_fun_pyqkd,
             genome_generator=genetic_algorithm.uniform_gene_generator,
             selection=selection_operators.tournament_selection,
             crossover=crossover_operators.single_point_crossover,
-            pool_size=k_tournament,
-            no_parents_pairs=500,
-            mutation_prob=0.05
+            pool_size=4,
+            no_parents_pairs=8,
+            mutation_prob=float(1/16)
         )
 
         ga_instance.run()
@@ -410,8 +393,8 @@ def main_pyqkd():
         output_list.append(solution)
 
         """Visualising results (routes, which were tried by chromosomes)"""
-        gif_filename = 'chromosome_animation' + str(i) + '.gif'
-        picture_filename = 'chromosome_picture' + str(i) + '.png'
+        gif_filename = 'pyqkd_chromosome_animation' + str(i) + '.gif'
+        picture_filename = 'pyqkd_chromosome_picture' + str(i) + '.png'
         see_route(labyrinth=labyrinth, moves_mapping=moves_mapping, steps=output_list[-1],
                   gif_filename=gif_filename, summary_filename=picture_filename)
 
@@ -432,8 +415,8 @@ def main_pyqkd():
             else:
                 print(f"We got coordinates x={new_x} and y={new_y} from outside the labyrinth (when drawing).")
 
-        gif_filename = 'actual_route_animation' + str(i) + '.gif'
-        picture_filename = 'actual_route_picture' + str(i) + '.png'
+        gif_filename = 'pyqkd_actual_route_animation' + str(i) + '.gif'
+        picture_filename = 'pyqkd_actual_route_picture' + str(i) + '.png'
         see_route(labyrinth=labyrinth, moves_mapping=moves_mapping, steps=history,
                   gif_filename=gif_filename, summary_filename=picture_filename)
 
@@ -444,8 +427,10 @@ def main_pyqkd():
     print(f"Results history: \n")
     for j in range(len(output_list)):
         print(output_list[j])
+        print(fitness_list[j])
 
 
 if __name__ == '__main__':
     # main_pygad()
     main_pyqkd()
+    # fitness_fun_pyqkd([1, 1, 4, 3, 4, 3, 3, 2, 4, 0, 0, 1, 1, 1, 1, 2, 0, 4, 0, 2, 2, 2, 1, 2, 2, 3, 4, 3, 2, 4])

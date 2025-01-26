@@ -311,6 +311,7 @@ class GeneticAlgorithm:
                 elite_size=self.elite_size,
                 pool_size=self.pool_size  # let's keep it for now for debugging with a single rival generation
             )
+            self.rival_gen[rival_id].evaluate()
             rival_id += 1
 
     def _choose_best_rival_generation(self):
@@ -350,6 +351,7 @@ class GeneticAlgorithm:
         self._create_initial_generation()
         for _ in range(self.no_generations):
             self._create_rival_generations()
+            self._choose_best_rival_generation()
             self.mutate()
 
     def fitness_plot(self):
