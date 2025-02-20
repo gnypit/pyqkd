@@ -1,193 +1,170 @@
 """Inspired by James Cutajar: https://github.com/cutajarj/multithreadinginpython
 Created for an online computational intelligence course with Helion.pl sp. z o.o."""
-from multiprocessing import Process, Array, cpu_count
+
+#Parallel, delayed, randint sys, numpy
 from time import time
 from random import randint
-from numpy import dot
+import numpy as np
+from joblib import Parallel, delayed
+import sys
 
-"""To test the code, we create two 3x3 matrices:"""
-matrix_a = [
-    [3, 1, -4],
-    [2, -3, 1],
-    [5, -2, 0]
-]
+# Number cores
+NUM_CORES=3
 
-matrix_b = [
-    [1, -2, -1],
-    [0, 5, 4],
-    [-1, -2, 3]
-]
+def numpy_dot(m1:list, m2:list):
+    """
+    Multiplica duas matrizes usando numpy.dot e mede o tempo de execução.
 
-"""For a more robust test, 10x10 matrices:"""
-matrix_big_a = [
-    [-1, -3, 3, -5, 2, 4, 1, 2, -4, -4],
-    [-5, -3, 1, -1, 0, 5, 2, -1, -4, -2],
-    [0, -2, -5, -3, -2, -4, 5, 0, -4, -5],
-    [-4, 2, 1, 1, 3, -4, 0, 2, 2, 0],
-    [1, -3, -5, 4, -4, 2, -3, -5, 4, -1],
-    [-4, 2, 0, -3, -5, -2, 2, 3, -2, -5],
-    [3, 5, 2, -5, 5, -5, 3, -5, -3, -2],
-    [3, 3, -3, -2, -2, -4, 2, -1, 0, -2],
-    [-4, -5, -5, 4, -3, -4, 5, 3, -3, 3],
-    [-4, -3, -5, -3, -4, 5, -4, 0, -2, 0]
-]
-matrix_big_b = [
-    [5, 2, 1, -2, -5, -1, 2, -1, 0, 2],
-    [4, 4, 4, -3, 1, -2, -2, 4, -3, -4],
-    [1, 5, 1, 1, -1, 0, 4, -1, 0, -4],
-    [-1, 2, -5, 5, -4, 2, -4, -5, 1, 5],
-    [-1, 2, 1, -4, -4, 3, -5, -1, 5, -4],
-    [3, 1, -3, 4, -2, 0, -2, -3, 0, -4],
-    [-1, -4, 2, -1, -1, -4, -3, 5, -2, 2],
-    [0, 2, 0, 0, 5, 2, 0, -2, 3, 2],
-    [3, -5, 5, 2, 2, 0, 2, 0, -4, -4],
-    [-1, -1, 0, 0, 4, -3, 3, 5, -2, 3]
-]
+    Args:
+        m1 (numpy.ndarray): first  matrix.
+        m2 (numpy.ndarray): second matrix.
 
+    Returns:
+        tuple: (resultado da multiplicação, tempo de execução)
+    """
+    numpy_time_start = time()
+    result1 = np.dot(m1, m2)
+    numpy_time_end = time()
 
-def fill_in_matrix(matrix, size):
-    for row in range(size):
-        for col in range(size):
-            matrix[row * size + col] = randint(-5, 5)
+    return result1,numpy_time_start-numpy_time_end
+    
+def fill_in_matrix(size:int,maxint:int,minint:int):
+    """
+    Generates a square matrix of a given size filled with random integers within a specified range.
 
+    Parameters:
+        size (int): The size of the square matrix (number of rows and columns).
+        maxint (int): The maximum integer value (inclusive) for the random numbers.
+        minint (int): The minimum integer value (inclusive) for the random numbers.
 
-def matrix_multiplication(matrix1, matrix2, size=3):
-    """Function takes matrices as 2D tables and multiplies them with nested loops."""
-    result = [[0] * size for _ in range(size)]
+    Returns:
+        np.array: A square matrix of the specified size filled with random integers.
+    """
+
+    matrix=[]
+    for _ in range(size):
+        array=[]        
+        for _ in range(size):
+            array.append(randint(maxint,minint))
+        matrix.append(array)
+    return matrix
+
+def multiplication_row_column(row:list[int],column:list[int]):
+    """
+    Computes the dot product of two vectors (lists or arrays).
+
+    Parameters:
+        vector1 (list or np.array): The first vector.
+        vector2 (list or np.array): The second vector.
+
+    Returns:
+        int or float: The dot product of the two vectors.
+    """
+
+    result=0    
+    for i in range(len(row)):
+        result+=row[i]*column[i]
+    return result
+        
+def matrix_multiplication(matrix1:np.array, matrix2:np.array):
+    """
+    Performs matrix multiplication using parallel processing.
+
+    Parameters:
+        matrix1 (np.array): The first matrix (m x n).
+        matrix2 (np.array): The second matrix (n x p).
+
+    Returns:
+        np.array: The resulting matrix (m x p).
+        float: The time taken for the computation.
+    """
+
+    matrix2_t=np.transpose(matrix2)
     time_start = time()
-    for row in range(size):
-        for col in range(size):
-            for i in range(size):
-                result[row][col] += matrix1[row][i] * matrix2[i][col]
+    result=Parallel(n_jobs=NUM_CORES)(delayed(multiplication_row_column)(i,j)for i in matrix1 for j in matrix2_t)
     time_end = time()
     t = time_end - time_start
 
-    return result, t
+    return result,t
 
 
-def matrix_as_list_multiplication(matrix1, matrix2, size=3):
-    """Function rewrites matrices from 2D tables into 1D tables and multiples them in this form."""
-    m1 = [matrix1[i][j] for i, j in [[_i, _j] for _i in range(size) for _j in range(size)]]
-    m2 = [matrix2[i][j] for i, j in [[_i, _j] for _i in range(size) for _j in range(size)]]
-    result = [0] * (size ** 2)  # zakładamy, że nasze wszystkie macierze są kwadratowe
+
+def matrix_as_list_multiplication(matrix1, matrix2):
+    """
+    Multiplica duas matrizes transformando-as em listas 1D para otimizar a operação.
+    
+    Parameters:
+        matrix1 (list of list): Primeira matriz (2D).
+        matrix2 (list of list): Segunda matriz (2D).
+    
+    Returns:
+        tuple: Matriz resultante (2D) e tempo de execução.
+    """
+    size = len(matrix1)
+
+
+    m1 = [matrix1[i] for i in range(size)]
+    m2_transposed = [[matrix2[j][i] for j in range(size)] for i in range(size)]  # Transposição
 
     time_start = time()
-    for row in range(size):
-        for col in range(size):
-            for i in range(size):
-                """From row and column number we create a single index."""
-                result[row * size + col] += m1[row * size + i] * m2[i * size + col]
+
+    result = Parallel(n_jobs=-1)(
+        delayed(multiplication_row_column)(m1[i], m2_transposed[j])
+        for i in range(size) for j in range(size)
+    )
+
     end_time = time()
-    t = end_time - time_start
+    elapsed_time = end_time - time_start
 
-    result_2d = [[0] * size for _ in range(size)]
-    for index in range(len(result)):
-        """From a single index we create again row and column number."""
-        row = index // size
-        col = index % size
-        result_2d[row][col] = result[index]
+    result_2d = [result[i * size:(i + 1) * size] for i in range(size)]
 
-    return result_2d, t
+    return result_2d, elapsed_time
 
 
-def compute_row(id, m1, m2, result, size, no_processes):
-    """Tish function computes some rows of the matrix that will be the result of multiplying m1 & m2.
-    If we have 10 processes and 200x200 matrices, and the id passed to this function is, e.g., 7,
-    then this function will compute rows number: 7, 17, 27, 37, etc. (one at a time!).
-
-   For this purpose, each time we take a single row from m1 and compute inner products with all the columns
-   from matrix m2."""
-    rows_to_compute = range(id, size, no_processes)
-
-    """After identifying rows to compute (each process has different ones!) loops work similarly to the
-    matrix_as_list_multiplication function:"""
-    for row in rows_to_compute:
-        for col in range(size):
-            for i in range(size):
-                """From a single index we create again row and column number."""
-                result[row * size + col] += m1[row * size + i] * m2[i * size + col]
 
 
-def test(m1, m2, size=3, print_result=True):
-    numpy_time_start = time()
-    result1 = dot(m1, m2)
-    numpy_time_end = time()
-    time1 = round(numpy_time_end - numpy_time_start, 3)
+def test(m1, m2,print_result=True):
+    """
+    Function to compare the performance of three different matrix multiplication methods:
+        1. Using the `numpy.dot` function (numpy_dot).
+        2. Using a custom matrix multiplication implementation (matrix_multiplication).
+        3. Using a custom matrix multiplication implementation with matrices represented as lists (matrix_as_list_multiplication).
 
-    result2, time2 = matrix_multiplication(m1, m2, size=size)
-    result3, time3 = matrix_as_list_multiplication(m1, m2, size=size)
+    Parameters:
+        - m1: First matrix to be multiplied.
+        - m2: Second matrix to be multiplied.
+        - print_result: If True, prints the results of the multiplications. Otherwise, only prints the execution times.
 
-    time2, time3 = round(time2, 3), round(time3, 3)
+    Returns:
+        - The function does not return any value; it only prints the results and execution times.
+    """
+
+    result1, t_dot_numpy=numpy_dot(m1, m2)
+    result2, t_dot_matrix_multiplication=matrix_multiplication(m1, m2)
+    result3, t_dot_list_multiplication=matrix_as_list_multiplication(m1,m2)
+
+
+    
 
     if print_result:
-        print(f"Numpy returned {result1} in {time1} seconds\n"
-              f"First func returned {result2} in {time2} seconds\n"
-              f"Second func returned {result3} in {time3} seconds")
+        print(f"Numpy returned {result1} in {t_dot_numpy:.3f} seconds\n")
+        print(f"Numpy returned {result2} in {t_dot_matrix_multiplication:.3f} seconds\n")
+        print(f"Numpy returned {result3} in {t_dot_matrix_multiplication:.3f} seconds\n")
     else:
-        print(f"Numpy returned result in {time1} seconds\n"
-              f"First func returned result in {time2} seconds\n"
-              f"Second func returned result in {time3} seconds")
+        print(f"Numpy returned result in {t_dot_numpy:.3f} seconds\n")
+        print(f"multiplication matrix returned result in {t_dot_matrix_multiplication:.3f} seconds\n")
+        print(f"multiplication list matrix returned result in {t_dot_list_multiplication:.3f} seconds\n")
+
 
 
 if __name__ == '__main__':
-    test(m1=matrix_big_a, m2=matrix_big_b, size=10)  # test(m1=matrix_a, m2=matrix_b)
+    
+    matrix_big_a=fill_in_matrix(int(sys.argv[1]),-5,5)
+    matrix_big_b=fill_in_matrix(int(sys.argv[1]),-5,5)
 
-    """We initiate matrices as objects in the shared memory"""
-    big_a = [matrix_big_a[i][j] for i, j in [[_i, _j] for _i in range(10) for _j in range(10)]]
-    big_b = [matrix_big_b[i][j] for i, j in [[_i, _j] for _i in range(10) for _j in range(10)]]
+    test(m1=matrix_big_a, m2=matrix_big_b)
 
-    matrix1_array = Array('i', big_a, lock=False)  # we don't need the blockade, processes only read this Array
-    matrix2_array = Array('i', big_b, lock=False)  # we don't need the blockade, processes only read this Array
-    result_array = Array('i', [0] * 100, lock=False)  # we don't need the blockade, processes have access to separate parts for modification
 
-    """We create and start the processes and time measurement."""
-    process_count = 5
-    processes = []
-    process_time_start = time()
-    for proc_id in range(process_count):
-        p = Process(target=compute_row, args=(
-            proc_id, matrix1_array, matrix2_array, result_array, 10, process_count
-        ))
-        processes.append(p)
-        p.start()
+    
 
-    for p in processes:
-        p.join()
-
-    print(f"Processes worked for {time() - process_time_start:.2f}s")
-    print(result_array[:])
-
-    """Now for slightly bigger matrices"""
-    matrix_size = 200
-    matrix1_array = Array('i', [0] * (matrix_size ** 2), lock=False)
-    matrix2_array = Array('i', [0] * (matrix_size ** 2), lock=False)
-    result_array = Array('i', [0] * (matrix_size ** 2), lock=False)
-
-    fill_in_matrix(matrix=matrix1_array, size=matrix_size)
-    fill_in_matrix(matrix=matrix2_array, size=matrix_size)
-
-    process_count = cpu_count()
-    processes = []
-    process_time_start = time()
-    for proc_id in range(process_count):
-        p = Process(target=compute_row, args=(
-            proc_id, matrix1_array, matrix2_array, result_array, matrix_size, process_count
-        ))
-        processes.append(p)
-        p.start()
-    for p in processes:
-        p.join()
-    process_time_end = time()
-
-    result_array = Array('i', [0] * (matrix_size ** 2), lock=False)
-    sequential_time_start = time()
-    for row in range(matrix_size):
-        for col in range(matrix_size):
-            for i in range(matrix_size):
-                result_array[row * matrix_size + col] += matrix1_array[row * matrix_size + i] * matrix2_array[
-                    i * matrix_size + col
-                    ]
-    sequential_time_end = time()
-
-    print(f"Processes worked for {process_time_end - process_time_start} seconds\n"
-          f"Sequential code worked for {sequential_time_end - sequential_time_start} seconds")
+ 
