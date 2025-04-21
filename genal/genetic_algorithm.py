@@ -53,16 +53,20 @@ class Chromosome:
     genome: type[list | dict]
     fit_fun: Callable
 
-    def __init__(self, genome: type[list | dict], fitness_function=None):
-        """Each chromosome represents a possible solution to a given problem. Parameters characterising these solutions
+    def __init__(self, genome: type[list | dict], fitness_function: Callable=None):
+        """Constructor of the Chromosome class.
+
+        Each chromosome represents a possible solution to a given problem. Parameters characterising these solutions
         are called genes; their set is sometimes referred to as 'genome'. They are supposed to be evaluated by the
         fitness function. Then, based on the fitness (function's) values, they are compared, sorted, selected for
-        crossover, etc.
+        crossover, etc. However, this class is limited to storage of genes, fitness function and value, and to fitness
+        evaluation.
 
-        Here, `genome` is either a dict with genes as values and names provided by the User as keys, or simply a list.
-
-        For computational purposes of parallel programming, the fitness function can be passed to
-        the Chromosome on its initiation/construction.
+        Parameters:
+            genome (type[list | dict]): Either a dict with genes as values and names provided by the User as keys,
+                or simply a list of genes.
+            fitness_function (Callable=None): Optional; callable fitness function provided by the User, which computes
+                fitness value based on genome. Can be passed later, thus it is None by default.
         """
         self.genome = genome
         self.fit_fun = fitness_function  # special variable
