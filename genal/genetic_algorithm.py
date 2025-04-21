@@ -76,10 +76,13 @@ class Chromosome:
         return (f"{type(self).__name__}(genes={self.genome}, fitness function={self.fit_fun}, "
                 f"fitness value={self.fit_val})")
 
-    def change_genes(self, genes):
+    def change_genes(self, new_genes: type[list | dict]):
         """Method meant to be used when mutation occurs, to modify the genes in an already created chromosome.
-        Can be called upon manually."""
-        self.genome = genes
+
+        Parameters:
+            new_genes (type[list | dict]): New genome to be stored by the chromosome.
+        """
+        self.genome = new_genes
 
     def evaluate(self, fitness_function=None):
         """Method for applying fitness function to this chromosome (it's genes, to be precise).
