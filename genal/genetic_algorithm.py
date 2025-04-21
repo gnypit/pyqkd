@@ -9,14 +9,16 @@ from collections.abc import \
 identification = 0
 
 
-def sort_dict_by_fit(dictionary: dict):
-    """Used as a key in 'sort' method applied to a dict with chromosomes and their fitness values.
+def sort_dict_by_fit(dictionary: None):
+    """Used as a key in 'sort' method applied to a list of dictionaries with chromosomes' indexes in a generation as
+     keys and their fitness values as values. Used to sort dicts in the list by fitness value.
 
     Parameters:
-        dictionary (dict): The dictionary in which we wish to sort members of GA's generation using fitness value.
+        dictionary (None): A None arg, allowing the `sort` method to use this function for key creation to sort
+            dictionaries in the list.
 
     Returns:
-        dict: The same dict as provided, but sorted by fitness value.
+        None: The same list of dictionaries as provided, but sorted by fitness value inside these dicts.
     """
     return dictionary['fitness value']
 
