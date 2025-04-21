@@ -10,7 +10,18 @@ identification = 0
 
 
 def sort_dict_by_fit(dictionary):
-    """Used as a key in 'sort' method applied to a dict with chromosomes and their fitness values."""
+    """Used as a key in 'sort' method applied to a dict with chromosomes and their fitness values.
+
+    Parameters
+    ----------
+    dictionary : dict
+        The dictionary in which we wish to sort members of GA's generation using fitness value.
+
+    Returns
+    -------
+    dict
+        The same as provided, but sorted by fitness value.
+    """
     return dictionary['fitness value']
 
 
