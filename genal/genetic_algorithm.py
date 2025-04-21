@@ -39,8 +39,15 @@ def uniform_gene_generator(ga_args: dict):  # TODO: should generators be inside 
 
 class Chromosome:
     """Basic class representing chromosomes, the most fundamental objects in genetic algorithms.
-    Based on author's experience, both fitness function and value are remembered directly in chromosomes to resolve any
-    problems with sharing memory in parallel programming.
+
+    Apart from genes, in this implementation of the Genetic Algorithm, the Chromosome class also stores the fitness
+    function and value. This allows self-evaluation of each chromosome.
+
+    Attributes:
+        fit_val (float): Fitness value of the chromosome. None by default, stores a float number once the chromosome
+            is evaluated.
+        genome (type[list | dict]): Either list or a dictionary with genes of this chromosome.
+        fit_fun (Callable): Fitness function used for computing fitness value based on chromosome's genes.
     """
     fit_val: float = None
     genome: type[list | dict]
