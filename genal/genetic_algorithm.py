@@ -26,7 +26,17 @@ def sort_dict_by_fit(dictionary: dict):
 
 
 def uniform_gene_generator(ga_args: dict):  # TODO: should generators be inside GA or external functions?
-    """Simple function for generating a sample of given length from the gene_space with a uniform probability."""
+    """Simple function for generating a sample of given length from the gene_space with a uniform probability.
+
+    Parameters:
+        ga_args (dict): This dictionary is stored within the GeneticAlgorithm class and contains info about args to be
+            used by either genome generator, crossover operators or selection operators. For the genome generation,
+            args are stored under key 'genome'. There should be gene space and length of chromosomes (their genome).
+
+    Returns:
+         ndarray: A numpy array containing genes randomised from the gene space. There should be at least two genes
+            in each chromosome, so this function should never return a single int, str, etc.
+    """
     gene_space, length = ga_args.get('genome')
     return np.random.choice(gene_space, length)
 
