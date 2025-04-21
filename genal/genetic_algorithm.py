@@ -9,7 +9,7 @@ from collections.abc import \
 identification = 0
 
 
-def sort_dict_by_fit(dictionary):
+def sort_dict_by_fit(dictionary: dict):
     """Used as a key in 'sort' method applied to a dict with chromosomes and their fitness values.
 
     Parameters
@@ -25,9 +25,9 @@ def sort_dict_by_fit(dictionary):
     return dictionary['fitness value']
 
 
-def uniform_gene_generator(*args):
+def uniform_gene_generator(ga_args: dict):  # TODO: should generators be inside GA or external functions?
     """Simple function for generating a sample of given length from the gene_space with a uniform probability."""
-    gene_space, length = args[0]
+    gene_space, length = ga_args.get('genome')
     return np.random.choice(gene_space, length)
 
 
