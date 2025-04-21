@@ -137,18 +137,21 @@ class Generation:  # TODO: we need constructor to take members, method for chang
     """This class is meant to represent a single (rival) generation in a (parallel) genetic algorithm. It has methods
     for adding members either in constructor or manually and to evaluate the generation as a whole.
 
-    Args:
-        generation_members (list[Member]): chromosomes of the generation with their and parents' IDs
+    Attributes:
+        members (list[Member]): chromosomes of the generation with their and parents' IDs
         num_parents_pairs (int): how many pairs of members can be parents, e.g., 20 pairs means 40 mating chromosomes
         elite_size (int): number of members to be copy-pasted directly into a new generation
         pool_size (int): parameter for the tournament selection operator
+        size (int): number of members in the generation
+        fitness_ranking (list[dict]): dicts in this list have the index of a member in the generation as keys and its
+            fitness value as values.
     """
     members: list[Member]
     num_parents_pairs: int
     elite_size: int
     pool_size: int
-    size: int  # number of members in the generation
-    fitness_ranking: list[dict]  # dicts in this list have the index of a member in the generation and its fitness value
+    size: int
+    fitness_ranking: list[dict]
 
     def __init__(self, generation_members: list[Member], num_parents_pairs: int, elite_size: int, pool_size: int):
         """Constructor for any generation: initial, current or rival."""
