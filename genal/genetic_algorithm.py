@@ -84,18 +84,28 @@ class Chromosome:
         """
         self.genome = new_genes
 
-    def evaluate(self, fitness_function=None):
+    def evaluate(self, fitness_function: Callable=None):
         """Method for applying fitness function to this chromosome (it's genes, to be precise).
+
         If the fitness function was passed on in the constructor of this class, it has to be provided as an argument of
-        this method. Fitness value is remembered in a field of this classed and returned on output. If no fitness
-        function is provided, the assigned fitness value is 0."""
+        this method. Fitness value returned by this method is also remembered in an attribute of this class. If no
+        fitness function is provided, the fitness value assigned by default is 0.
+
+        Parameters:
+            fitness_function (Callable=None): Optional; callable fitness function provided by the User, which computes
+                fitness value based on genome. Could have already been provided in the constructor,
+                thus it is None by default.
+
+        Returns:
+            float: Fitness value as a float number.
+        """
         if self.fit_fun is not None:
             self.fit_val = self.fit_fun(self.genome)
         elif fitness_function is not None:
             self.fit_fun = fitness_function
             self.fit_val = self.fit_fun(self.genome)
         else:
-            self.fit_val = 0
+            self.fit_val = 0.0
 
         return self.fit_val
 
