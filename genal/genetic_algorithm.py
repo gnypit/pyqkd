@@ -116,7 +116,7 @@ class Member(Chromosome):
     """This class is a child of the 'Chromosome' class and is designated to store a unique ID, enabling tracking a
     genealogical tree of chromosomes in a population of a genetic algorithm.
 
-    Parameters:
+    Attributes:
         id (int): A unique identification number of this member in the particular run of a genetic algorithm, created
             based on a global variable. It is meant for backtracking of a genological tree of members.
         parents_id (list): It's a list with IDs of the parents (from previous generations in the GA) of this member
@@ -152,16 +152,31 @@ class Member(Chromosome):
 
 
 class Generation:  # TODO: we need constructor to take members, method for changes caused by mutation, method for evaluation and to return best fit; in the future add diversity measures
-    """This class is meant to represent a single (rival) generation in a (parallel) genetic algorithm. It has methods
-    for adding members either in constructor or manually and to evaluate the generation as a whole.
+    """This class is meant to represent a single generation in a genetic algorithm, i.e. a set of Members.
+
+    Genetic Algorithm evaluates each Generation, selects Members for a crossover, to create Members for a new
+    Generation. In the long run the goal is to create a Generation with Members having very high fitness values.
+    Each Generation is in a way static. This means, that once created, its Members may only be mutated and evaluated.
+    Inside an instance of the GeneticAlgorithm class multiple Generations might be stored at the same time.
+
+    Current Generation: the initial Generation is treated as the current one in the first iteration of the algorithm. Members
+    of the first Generation will sometimes be called 'parents'.
+
+    New / rival Generation: depending on a classical / parallel variant of the algorithm, based on 'parent' Members from
+    the current Generation one (new) or multiple (rival) Generations of 'children' Members are created, from crossovers
+    between selected 'parents'.
+
+    Accepted Generation: this Generation will become the 'current' one in the next iteration of the algorithm. Either
+    a single new Generation is an accepted Generation, or based on a provided metric, the best one from rival
+    Generations is accepted.
 
     Attributes:
-        members (list[Member]): chromosomes of the generation with their and parents' IDs
-        num_parents_pairs (int): how many pairs of members can be parents, e.g., 20 pairs means 40 mating chromosomes
-        elite_size (int): number of members to be copy-pasted directly into a new generation
-        pool_size (int): parameter for the tournament selection operator
-        size (int): number of members in the generation
-        fitness_ranking (list[dict]): dicts in this list have the index of a member in the generation as keys and its
+        members (list[Member]): list of Members; chromosomes of the generation with their and parents' IDs.
+        num_parents_pairs (int): number of pairs of Members can be parents, e.g., 20 pairs means 40 mating chromosomes.
+        elite_size (int): number of Members to be copy-pasted directly into a new Generation.
+        pool_size (int): parameter for the tournament selection operator.  # TODO: redundant, put it into args in the GeneticAlgorithm class
+        size (int): number of Members in the generation.
+        fitness_ranking (list[dict]): dicts in this list have the index of a Member in the Generation as keys and its
             fitness value as values.
     """
     members: list[Member]
@@ -172,7 +187,14 @@ class Generation:  # TODO: we need constructor to take members, method for chang
     fitness_ranking: list[dict]
 
     def __init__(self, generation_members: list[Member], num_parents_pairs: int, elite_size: int, pool_size: int):
-        """Constructor for any generation: initial, current or rival."""
+        """Constructor for any Generation inside the GeneticAlgorithm.
+
+        Parameters:
+            generation_members (list[Member]): list of Members to be put in this Generation.
+            num_parents_pairs (int): number of Members' pairs that can be parents.
+            elite_size (int): number of Members to be copy-pasted directly into a new Generation.
+            pool_size (int): parameter for the tournament selection operator.  # TODO: redundant, put it into args in the GeneticAlgorithm class
+        """
         self.members = generation_members
         self.num_parents_pairs = num_parents_pairs
         self.elite_size = elite_size
@@ -184,7 +206,7 @@ class Generation:  # TODO: we need constructor to take members, method for chang
         self.size = len(generation_members)
         self.fitness_ranking = []
 
-    def mutate_member(self, prob: float):
+    def mutate_member(self, prob: float):  # TODO: implement any mutation operator as the default AND coordinate with the GeneticAlgorithm class on how to implement it exactly
         """Method for applying a basic mutation operator to this generation - it randomly chooses a member to have their
         genome rested with the genome generator based on passed mutation probability `prob`."""
         pass
@@ -192,6 +214,11 @@ class Generation:  # TODO: we need constructor to take members, method for chang
     def evaluate(self, reverse=True):
         """This method uses the fitness function stored in members of the generation to create and then sort the fitness
         ranking by the computed fitness values; 'reverse' means sorting will be performed from max fitness value to min.
+
+        Parameters:
+            reverse (Bool=True, optional): parameter which decided whether the fitness ranking should be sorted in
+                ascending order of fitness values (reverse=False) or in descending order (reverse=True), which is
+                the default.
         """
         for i in range(self.size):
             self.fitness_ranking.append(
