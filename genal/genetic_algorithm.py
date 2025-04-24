@@ -232,22 +232,8 @@ class GeneticAlgorithm:
     """Fundamental class for execution of the genetic algorithm. It implements a simple slave-master construction
     of a parallel genetic algorithm, but computationally it is executed with a single thread/process.
 
-    Args:
-        initial_pop_size (int): size of the population (each generation)
-        number_of_generations (int): how many consecutive accepted generations are supposed to be created and evaluated
-        elite_size (int): number of best members of each generation to be copy-pasted into the new generation
-        args (dict): are arguments to be used in genome_generator & selection/crossover operators
-        fitness_function (Callable): func passed to members of the population; returns a float value
-            based on a member's genome
-        genome_generator (Callable): func which returns genome of a single member
-        selection (list[Callable] | Callable): list of func from selection_operators.py for parent selection
-        crossover (list[Callable] | Callable): list of func from crossover_operators.py for children creation
-        no_parents_pairs (int): optional; is the designated number of parent pairs for future generations,
-            e.g., if the initial population size is 1000 and no_parents_pairs = 200,
-            there will be 2 * 200 = 400 children
-        mutation_prob (int): 0.0 by default; probability of selecting a member of a generation to reset its genome
-            with the genome_generator
-        seed (int | float | str | bytes | bytearray | None = None): optional; parameter 'a' for random.seed
+    Attributes:
+
     """
     pop_size: int
     no_generations: int
@@ -298,7 +284,26 @@ class GeneticAlgorithm:
                  selection: list[Callable] | Callable, crossover: list[Callable] | Callable,
                  pool_size, no_parents_pairs=None, mutation_prob=0.0,
                  seed=None):  # TODO: put pool_size in the args dict for self.selection_args = args.get('selection') below
-        """GeneticAlgorithm class constructor"""
+        """GeneticAlgorithm class constructor.
+
+        Parameters:
+            initial_pop_size (int): size of the population (each Generation)
+            number_of_generations (int): how many consecutive accepted Generations are supposed to be created and
+                evaluated
+            elite_size (int): number of the best Members of each Generation to be copy-pasted into the new Generation
+            args (dict): arguments to be used in genome_generator & selection/crossover operators
+            fitness_function (Callable): func passed to Members of the population and stored as a fit_fun attribute;
+                returns a float value based on a member's genome
+            genome_generator (Callable): func which returns genome of a single Member
+            selection (list[Callable] | Callable): list of func from selection_operators.py for parent selection
+            crossover (list[Callable] | Callable): list of func from crossover_operators.py for children creation
+            no_parents_pairs (int): optional; is the designated number of parent pairs for future Generations,
+                e.g., if the initial population size is 1000 and no_parents_pairs = 200,
+                there will be 2 * 200 = 400 children
+            mutation_prob (int): 0.0 by default; probability of selecting a Member of a Generation to reset its genome
+                with the genome_generator
+            seed (int | float | str | bytes | bytearray | None = None): optional; parameter 'a' for random.seed
+        """
         self.pop_size = initial_pop_size
         self.no_generations = number_of_generations
         self.elite_size = elite_size
