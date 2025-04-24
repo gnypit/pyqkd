@@ -115,18 +115,34 @@ class Chromosome:
 class Member(Chromosome):
     """This class is a child of the 'Chromosome' class and is designated to store a unique ID, enabling tracking a
     genealogical tree of chromosomes in a population of a genetic algorithm.
+
+    Parameters:
+        id (int): A unique identification number of this member in the particular run of a genetic algorithm, created
+            based on a global variable. It is meant for backtracking of a genological tree of members.
+        parents_id (list): It's a list with IDs of the parents (from previous generations in the GA) of this member
     """
     id: int
-    parents_id: list  # it's a list with IDs of the parents
+    parents_id: list
 
     def __init__(self, genome: type[list | dict], identification_number: int, fitness_function=None):
-        """Apart from what 'Chromosome' class constructor needs, here identification number should be passed."""
+        """Apart from what 'Chromosome' class constructor needs, here identification number should be passed.
+
+        Parameters:
+            genome (type[list | dict]): Either a dict with genes as values and names provided by the User as keys,
+                or simply a list of genes.
+            identification_number (int): An ID to be created based on the global variable, for backtracking a
+                genological tree of all members across different generations in a praticular run of the GA.
+            fitness_function (Callable=None): Optional; callable fitness function provided by the User, which computes
+                fitness value based on genome. Can be passed later, thus it is None by default.
+        """
         super().__init__(genome=genome, fitness_function=fitness_function)
         self.id = identification_number
 
     def add_parents_id(self, parents_id: list):
-        """This method is meant for 'genealogical tree' tracking;
-        it assigns to the current member IDs of its parents.
+        """This method is meant for 'genealogical tree' tracking; it assigns to the current member IDs of its parents.
+
+        Parameters:
+            parents_id (list): A list with IDs of members which are parents to this member, inside the GA.
         """
         self.parents_id = parents_id
 
