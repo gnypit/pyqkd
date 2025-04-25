@@ -1,4 +1,6 @@
-"""Author: Jakub Gnyp; contact: gnyp.jakub@gmail.com, LinkedIn: https://www.linkedin.com/in/gnypit/"""
+"""Author: Jakub Gnyp; contact: gnyp.jakub@gmail.com, LinkedIn: https://www.linkedin.com/in/gnypit/
+Script is distributed under the license: https://github.com/gnypit/pyqkd/blob/main/LICENSE
+"""
 import random
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,36 +11,66 @@ from collections.abc import \
 identification = 0
 
 
-def sort_dict_by_fit(dictionary):
-    """Used as a key in 'sort' method applied to a dict with chromosomes and their fitness values."""
+def sort_dict_by_fit(dictionary: None):
+    """Used as a key in 'sort' method applied to a list of dictionaries with chromosomes' indexes in a generation as
+     keys and their fitness values as values. Used to sort dicts in the list by fitness value.
+
+    Parameters:
+        dictionary (None): A None arg, allowing the `sort` method to use this function for key creation to sort
+            dictionaries in the list.
+
+    Returns:
+        None: The same list of dictionaries as provided, but sorted by fitness value inside these dicts.
+    """
     return dictionary['fitness value']
 
 
-def uniform_gene_generator(*args):
-    """Simple function for generating a sample of given length from the gene_space with a uniform probability."""
-    gene_space, length = args[0]
+def uniform_gene_generator(ga_args: dict):  # TODO: should generators be inside GA or external functions?
+    """Simple function for generating a sample of given length from the gene_space with a uniform probability.
+
+    Parameters:
+        ga_args (dict): This dictionary is stored within the GeneticAlgorithm class and contains info about args to be
+            used by either genome generator, crossover operators or selection operators. For the genome generation,
+            args are stored under key 'genome'. There should be gene space and length of chromosomes (their genome).
+
+    Returns:
+         ndarray: A numpy array containing genes randomised from the gene space. There should be at least two genes
+            in each chromosome, so this function should never return a single int, str, etc.
+    """
+    gene_space, length = ga_args.get('genome')
     return np.random.choice(gene_space, length)
 
 
 class Chromosome:
     """Basic class representing chromosomes, the most fundamental objects in genetic algorithms.
-    Based on author's experience, both fitness function and value are remembered directly in chromosomes to resolve any
-    problems with sharing memory in parallel programming.
+
+    Apart from genes, in this implementation of the Genetic Algorithm, the Chromosome class also stores the fitness
+    function and value. This allows self-evaluation of each chromosome.
+
+    Attributes:
+        fit_val (float): Fitness value of the chromosome. None by default, stores a float number once the chromosome
+            is evaluated.
+        genome (type[list | dict]): Either list or a dictionary with genes of this chromosome.
+        fit_fun (Callable): Fitness function used for computing fitness value based on chromosome's genes.
     """
     fit_val: float = None
     genome: type[list | dict]
     fit_fun: Callable
 
-    def __init__(self, genome: type[list | dict], fitness_function=None):
-        """Each chromosome represents a possible solution to a given problem. Parameters characterising these solutions
+    def __init__(self, genome: type[list | dict], fitness_function: Callable=None):
+        """Constructor of the Chromosome class.
+
+        Each chromosome represents a possible solution to a given problem. Parameters characterising these solutions
         are called genes; their set is sometimes referred to as 'genome'. They are supposed to be evaluated by the
         fitness function. Then, based on the fitness (function's) values, they are compared, sorted, selected for
-        crossover, etc.
+        crossover, etc. However, this class is limited to storage of genes, fitness function and value, and to fitness
+        evaluation.
 
-        Here, `genome` is either a dict with genes as values and names provided by the User as keys, or simply a list.
-
-        For computational purposes of parallel programming, the fitness function can be passed to
-        the Chromosome on its initiation/construction.
+        Parameters:
+            genome (type[list | dict]): Either a dict with genes as values and names provided by the User as keys,
+                or simply a list of genes.
+            fitness_function (Callable=None): Optional; callable fitness function provided by the User, which computes
+                fitness value based on genome. Can be passed later, thus it is None by default.
         """
         self.genome = genome
         self.fit_fun = fitness_function  # special variable
@@ -48,23 +80,36 @@ class Chromosome:
         return (f"{type(self).__name__}(genes={self.genome}, fitness function={self.fit_fun}, "
                 f"fitness value={self.fit_val})")
 
-    def change_genes(self, genes):
+    def change_genes(self, new_genes: type[list | dict]):
         """Method meant to be used when mutation occurs, to modify the genes in an already created chromosome.
-        Can be called upon manually."""
-        self.genome = genes
 
-    def evaluate(self, fitness_function=None):
+        Parameters:
+            new_genes (type[list | dict]): New genome to be stored by the chromosome.
+        """
+        self.genome = new_genes
+
+    def evaluate(self, fitness_function: Callable=None):
         """Method for applying fitness function to this chromosome (it's genes, to be precise).
+
         If the fitness function was passed on in the constructor of this class, it has to be provided as an argument of
-        this method. Fitness value is remembered in a field of this classed and returned on output. If no fitness
-        function is provided, the assigned fitness value is 0."""
+        this method. Fitness value returned by this method is also remembered in an attribute of this class. If no
+        fitness function is provided, the fitness value assigned by default is 0.
+
+        Parameters:
+            fitness_function (Callable=None): Optional; callable fitness function provided by the User, which computes
+                fitness value based on genome. Could have already been provided in the constructor,
+                thus it is None by default.
+
+        Returns:
+            float: Fitness value as a float number.
+        """
         if self.fit_fun is not None:
             self.fit_val = self.fit_fun(self.genome)
         elif fitness_function is not None:
             self.fit_fun = fitness_function
             self.fit_val = self.fit_fun(self.genome)
         else:
-            self.fit_val = 0
+            self.fit_val = 0.0
 
         return self.fit_val
 
@@ -72,18 +117,34 @@ class Chromosome:
 class Member(Chromosome):
     """This class is a child of the 'Chromosome' class and is designated to store a unique ID, enabling tracking a
     genealogical tree of chromosomes in a population of a genetic algorithm.
+
+    Attributes:
+        id (int): A unique identification number of this member in the particular run of a genetic algorithm, created
+            based on a global variable. It is meant for backtracking of a genological tree of members.
+        parents_id (list): It's a list with IDs of the parents (from previous generations in the GA) of this member
     """
     id: int
-    parents_id: list  # it's a list with IDs of the parents
+    parents_id: list
 
     def __init__(self, genome: type[list | dict], identification_number: int, fitness_function=None):
-        """Apart from what 'Chromosome' class constructor needs, here identification number should be passed."""
+        """Apart from what 'Chromosome' class constructor needs, here identification number should be passed.
+
+        Parameters:
+            genome (type[list | dict]): Either a dict with genes as values and names provided by the User as keys,
+                or simply a list of genes.
+            identification_number (int): An ID to be created based on the global variable, for backtracking a
+                genological tree of all members across different generations in a praticular run of the GA.
+            fitness_function (Callable=None): Optional; callable fitness function provided by the User, which computes
+                fitness value based on genome. Can be passed later, thus it is None by default.
+        """
         super().__init__(genome=genome, fitness_function=fitness_function)
         self.id = identification_number
 
     def add_parents_id(self, parents_id: list):
-        """This method is meant for 'genealogical tree' tracking;
-        it assigns to the current member IDs of its parents.
+        """This method is meant for 'genealogical tree' tracking; it assigns to the current member IDs of its parents.
+
+        Parameters:
+            parents_id (list): A list with IDs of members which are parents to this member, inside the GA.
         """
         self.parents_id = parents_id
 
@@ -93,24 +154,49 @@ class Member(Chromosome):
 
 
 class Generation:  # TODO: we need constructor to take members, method for changes caused by mutation, method for evaluation and to return best fit; in the future add diversity measures
-    """This class is meant to represent a single (rival) generation in a (parallel) genetic algorithm. It has methods
-    for adding members either in constructor or manually and to evaluate the generation as a whole.
+    """This class is meant to represent a single generation in a genetic algorithm, i.e. a set of Members.
 
-    Args:
-        generation_members (list[Member]): chromosomes of the generation with their and parents' IDs
-        num_parents_pairs (int): how many pairs of members can be parents, e.g., 20 pairs means 40 mating chromosomes
-        elite_size (int): number of members to be copy-pasted directly into a new generation
-        pool_size (int): parameter for the tournament selection operator
+    Genetic Algorithm evaluates each Generation, selects Members for a crossover, to create Members for a new
+    Generation. In the long run the goal is to create a Generation with Members having very high fitness values.
+    Each Generation is in a way static. This means, that once created, its Members may only be mutated and evaluated.
+    Inside an instance of the GeneticAlgorithm class multiple Generations might be stored at the same time.
+
+    Current Generation: the initial Generation is treated as the current one in the first iteration of the algorithm. Members
+    of the first Generation will sometimes be called 'parents'.
+
+    New / rival Generation: depending on a classical / parallel variant of the algorithm, based on 'parent' Members from
+    the current Generation one (new) or multiple (rival) Generations of 'children' Members are created, from crossovers
+    between selected 'parents'.
+
+    Accepted Generation: this Generation will become the 'current' one in the next iteration of the algorithm. Either
+    a single new Generation is an accepted Generation, or based on a provided metric, the best one from rival
+    Generations is accepted.
+
+    Attributes:
+        members (list[Member]): list of Members; chromosomes of the generation with their and parents' IDs.
+        num_parents_pairs (int): number of pairs of Members can be parents, e.g., 20 pairs means 40 mating chromosomes.
+        elite_size (int): number of Members to be copy-pasted directly into a new Generation.
+        pool_size (int): parameter for the tournament selection operator.  # TODO: redundant, put it into args in the GeneticAlgorithm class
+        size (int): number of Members in the generation.
+        fitness_ranking (list[dict]): dicts in this list have the index of a Member in the Generation as keys and its
+            fitness value as values.
     """
     members: list[Member]
     num_parents_pairs: int
     elite_size: int
     pool_size: int
-    size: int  # number of members in the generation
-    fitness_ranking: list[dict]  # dicts in this list have the index of a member in the generation and its fitness value
+    size: int
+    fitness_ranking: list[dict]
 
     def __init__(self, generation_members: list[Member], num_parents_pairs: int, elite_size: int, pool_size: int):
-        """Constructor for any generation: initial, current or rival."""
+        """Constructor for any Generation inside the GeneticAlgorithm.
+
+        Parameters:
+            generation_members (list[Member]): list of Members to be put in this Generation.
+            num_parents_pairs (int): number of Members' pairs that can be parents.
+            elite_size (int): number of Members to be copy-pasted directly into a new Generation.
+            pool_size (int): parameter for the tournament selection operator.  # TODO: redundant, put it into args in the GeneticAlgorithm class
+        """
         self.members = generation_members
         self.num_parents_pairs = num_parents_pairs
         self.elite_size = elite_size
@@ -122,7 +208,7 @@ class Generation:  # TODO: we need constructor to take members, method for chang
         self.size = len(generation_members)
         self.fitness_ranking = []
 
-    def mutate_member(self, prob: float):
+    def mutate_member(self, prob: float):  # TODO: implement any mutation operator as the default AND coordinate with the GeneticAlgorithm class on how to implement it exactly
         """Method for applying a basic mutation operator to this generation - it randomly chooses a member to have their
         genome rested with the genome generator based on passed mutation probability `prob`."""
         pass
@@ -130,6 +216,11 @@ class Generation:  # TODO: we need constructor to take members, method for chang
     def evaluate(self, reverse=True):
         """This method uses the fitness function stored in members of the generation to create and then sort the fitness
         ranking by the computed fitness values; 'reverse' means sorting will be performed from max fitness value to min.
+
+        Parameters:
+            reverse (Bool=True, optional): parameter which decided whether the fitness ranking should be sorted in
+                ascending order of fitness values (reverse=False) or in descending order (reverse=True), which is
+                the default.
         """
         for i in range(self.size):
             self.fitness_ranking.append(
@@ -143,61 +234,80 @@ class GeneticAlgorithm:
     """Fundamental class for execution of the genetic algorithm. It implements a simple slave-master construction
     of a parallel genetic algorithm, but computationally it is executed with a single thread/process.
 
-    Args:
-        initial_pop_size (int): size of the population (each generation)
-        number_of_generations (int): how many consecutive accepted generations are supposed to be created and evaluated
-        elite_size (int): number of best members of each generation to be copy-pasted into the new generation
-        args (dict): are arguments to be used in genome_generator & selection/crossover operators
-        fitness_function (Callable): func passed to members of the population; returns a float value
-            based on a member's genome
-        genome_generator (Callable): func which returns genome of a single member
-        selection (list[Callable] | Callable): list of func from selection_operators.py for parent selection
-        crossover (list[Callable] | Callable): list of func from crossover_operators.py for children creation
-        no_parents_pairs (int): optional; is the designated number of parent pairs for future generations,
-            e.g., if the initial population size is 1000 and no_parents_pairs = 200,
-            there will be 2 * 200 = 400 children
-        mutation_prob (int): 0.0 by default; probability of selecting a member of a generation to reset its genome
+    Attributes:
+        pop_size (int): a constant size of each Generation within the algorithm.
+        no_generations (int): number of iterations of the algorithm, equal to the number of accepted Generations
+        elite_size (int): number of the best Members of the current Generation to be copy-pasted into the new one
+        fit_fun (Callable): function passed to Members of the population and stored as a fit_fun attribute;
+            returns a float value based on a Member's genome and is used to compare Members, which represents a better
+            potential solution to a given problem.
+        genome_gen (Callable): function which returns genome of a single Member, used for initial Generation (first
+            current and accepted one) and for mutation.
+        operators (list[tuple[Callable]]): list of operators (selection and crossover) combinations based on which
+            new, rival Generations of children are to e created from parents in the current Generation in ach iteration.
+        no_parents_pairs (int): the designated number of parent pairs for future Generations, e.g., if the initial
+            population size is 1000 and no_parents_pairs = 200, there will be 2 * 200 = 400 children. By default it is
+            equal to pop_size // 2.
+        mutation_prob (float): 0.0 by default; probability of selecting a Member of a Generation to reset its genome
             with the genome_generator
-        seed (int | float | str | bytes | bytearray | None = None): optional; parameter 'a' for random.seed
-    """
-    pop_size: int
-    no_generations: int
-    elite_size: int
+        current_gen (Generation): Members constituting population inside the Genetic Algorithm in a given iteration. It
+            is the accepted Generation from the previous iteration or the initial Generation
+        rival_gen (dict[int, Generation]): in the Parallel Genetic Algorithm multiple Generations of children may be
+            created based on the current Generation of parents, based on different selection and crossover operators.
+            These Generations are rival to one another, because only one will be accepted as the best and treated as the
+            current Generation in the next iteration. In the rival_gen dictionary each of these rival Generations is
+            stored with its integer id as a key.
+        accepted_gen (list[Generation]): the best of the rival Generations is chosen as the accepted Generation and
+            treated as the current Generation in the next iteration of the algorithm. If there is only one new, 'rival'
+            Generation, then automatically it becomes the accepted Generation.
+        best_fit_history (list[float]): List the best Members' fitness values in each of the accepted Generation.
+        args (dict): dictionary with argument required by the genome generator and all the selection and crossover
+            operators to work.
 
-    args: dict
-    """What the args dict should look like:
-    
+    What the args dict should look like:
     args = {
         'genome': (g1, g2, ...),
         'selection': [(s11, s12, ...), ..., (sN1, sN2, ...)],
         'crossover': [(c11, c12, ...), ..., (cM1, cM2, ...)]
     }
-    
     Where:
-        1) g1, g2, etc., are args for the genome_generator func; 
-        2) s11, s12, etc., are args for the 1st selection operator passed in the selection_operators list of func 
+        1) g1, g2, etc., are args for the genome_generator func;
+        2) s11, s12, etc., are args for the 1st selection operator passed in the selection_operators list of func
             and sN1, sN2, etc., are args of the Nth selection operator;
-        3) c11, c12, etc., are args for the 1st crossover operator passed in the crossover_operators list of func 
-            and cM1, cM2, etc., are args of the Mth crossover operator;
+        3) c11, c12, etc., are args for the 1st crossover operator passed in the crossover_operators list of func
+            and cM1, cM2, etc., are args of the Mth crossover operator.
     """
+    pop_size: int
+    no_generations: int
+    elite_size: int
     fit_fun: Callable
     genome_gen: Callable
-    operators: list  # I usually prefer dicts, but I want to be able to iterate over combinations of operators in here
-
+    operators: list[tuple[Callable]]  # I usually prefer dicts, but I want to be able to iterate over combinations of operators in here
     no_parents_pairs: int
     mutation_prob: float
-
     current_gen: Generation
     rival_gen: dict[int, Generation]
     accepted_gen: list[Generation]
     best_fit_history: list[float]
+    args: dict
       
-    def __zip_crossover_selection(self, selection_operators, crossover_operators):
+    def __zip_crossover_selection(self, selection_operators: list[Callable], crossover_operators: list[Callable]):
         """Creates a list that combines pairs of elements from 'selection_operators' 
         and 'crossover_operators'. For each index 'i', it adds tuples to the 'list_to_operator' list containing
         'selection_operator[i]' and 'crossover_operator[j]' for each index 'j'.
 
-        This way there are tuples for all combinations of operators."""
+        This way there are tuples for all combinations of operators.
+
+        Parameters:
+            selection_operators (list[Callable]): list of functions which are selection operators
+                for the Genetic Algorithm
+            crossover_operators (list[Callable]): list of functions which are crossover operators
+                for the Genetic Algorithm
+
+        Returns:
+            list[tuple[Callable]]: list of (Callable) operators tuples, each representing a combination of selection and
+                crossover method for creating a new Generation.
+        """
         list_to_operator = []
         for i in range(len(selection_operators)):
             for j in range(len(crossover_operators)):
@@ -209,7 +319,26 @@ class GeneticAlgorithm:
                  selection: list[Callable] | Callable, crossover: list[Callable] | Callable,
                  pool_size, no_parents_pairs=None, mutation_prob=0.0,
                  seed=None):  # TODO: put pool_size in the args dict for self.selection_args = args.get('selection') below
-        """GeneticAlgorithm class constructor"""
+        """GeneticAlgorithm class constructor.
+
+        Parameters:
+            initial_pop_size (int): size of the population (each Generation)
+            number_of_generations (int): how many consecutive accepted Generations are supposed to be created and
+                evaluated
+            elite_size (int): number of the best Members of the current Generation to be copy-pasted into the new one
+            args (dict): arguments to be used in genome_generator & selection/crossover operators
+            fitness_function (Callable): func passed to Members of the population and stored as a fit_fun attribute;
+                returns a float value based on a member's genome
+            genome_generator (Callable): func which returns genome of a single Member
+            selection (list[Callable] | Callable): list of func from selection_operators.py for parent selection
+            crossover (list[Callable] | Callable): list of func from crossover_operators.py for children creation
+            no_parents_pairs (int): optional; is the designated number of parent pairs for future Generations,
+                e.g., if the initial population size is 1000 and no_parents_pairs = 200,
+                there will be 2 * 200 = 400 children
+            mutation_prob (int): 0.0 by default; probability of selecting a Member of a Generation to reset its genome
+                with the genome_generator
+            seed (int | float | str | bytes | bytearray | None = None): optional; parameter 'a' for random.seed
+        """
         self.pop_size = initial_pop_size
         self.no_generations = number_of_generations
         self.elite_size = elite_size
@@ -269,9 +398,14 @@ class GeneticAlgorithm:
         self.accepted_gen = [self.current_generation]
         self.best_fit_history = [self.current_generation.fitness_ranking[0].get('fitness value')]
 
-    def best_solution(self):  # we return genome of member with the highest fitness value with it's fit value
-        bf = [self.current_generation.members[self.current_generation.fitness_ranking[0].get('index')].genome,
-              self.current_generation.fitness_ranking[0].get('fitness value')]
+    def best_solution(self):
+        """Returns genome of Member with the highest fitness value with it's fitness value, from the current Generation.
+
+        Returns:
+            tuple[type[list | dict], float]: tuple of the genome list/dict of the best Member and it's float fit. value
+        """
+        bf = (self.current_generation.members[self.current_generation.fitness_ranking[0].get('index')].genome,
+              self.current_generation.fitness_ranking[0].get('fitness value'))
         return bf
 
     def _create_rival_generations(self):  # TODO: Creating new generations, even before fitness evaluation, could be done in parallel with Pool / ProcessPoolExecutor
@@ -348,11 +482,15 @@ class GeneticAlgorithm:
             )
 
     def run(self):
+        """This is the main method for an automated run of the Genetic Algorithm, supposed to be used right after this
+        class' instance initialisation. It creates the initial Generation and then performs the `no_generations`
+        iterations of creating new/rival Generations, choosing the best one and mutation, if necessary."""
         self._create_initial_generation()
         for _ in range(self.no_generations):
             self._create_rival_generations()  # TODO: why are rival generations too short?
             self._choose_best_rival_generation()
             self.mutate()
 
-    def fitness_plot(self):
+    def fitness_plot(self):  # TODO: finish with an optional argument for using plotly or matplotlib
+        """Method for plotting fitness values history of the best Members from each accepted Generation."""
         pass
