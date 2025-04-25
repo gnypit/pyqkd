@@ -233,39 +233,61 @@ class GeneticAlgorithm:
     of a parallel genetic algorithm, but computationally it is executed with a single thread/process.
 
     Attributes:
+        pop_size (int): a constant size of each Generation within the algorithm.
+        no_generations (int): number of iterations of the algorithm, equal to the number of accepted Generations
+        elite_size (int): number of the best Members of the current Generation to be copy-pasted into the new one
+        fit_fun (Callable): function passed to Members of the population and stored as a fit_fun attribute;
+            returns a float value based on a Member's genome and is used to compare Members, which represents a better
+            potential solution to a given problem.
+        genome_gen (Callable): function which returns genome of a single Member, used for initial Generation (first
+            current and accepted one) and for mutation.
+        operators (list[tuple[Callable]]): list of operators (selection and crossover) combinations based on which
+            new, rival Generations of children are to e created from parents in the current Generation in ach iteration.
+        no_parents_pairs (int): the designated number of parent pairs for future Generations, e.g., if the initial
+            population size is 1000 and no_parents_pairs = 200, there will be 2 * 200 = 400 children. By default it is
+            equal to pop_size // 2.
+        mutation_prob (float): 0.0 by default; probability of selecting a Member of a Generation to reset its genome
+            with the genome_generator
+        current_gen (Generation): Members constituting population inside the Genetic Algorithm in a given iteration. It
+            is the accepted Generation from the previous iteration or the initial Generation
+        rival_gen (dict[int, Generation]): in the Parallel Genetic Algorithm multiple Generations of children may be
+            created based on the current Generation of parents, based on different selection and crossover operators.
+            These Generations are rival to one another, because only one will be accepted as the best and treated as the
+            current Generation in the next iteration. In the rival_gen dictionary each of these rival Generations is
+            stored with its integer id as a key.
+        accepted_gen (list[Generation]): the best of the rival Generations is chosen as the accepted Generation and
+            treated as the current Generation in the next iteration of the algorithm. If there is only one new, 'rival'
+            Generation, then automatically it becomes the accepted Generation.
+        best_fit_history (list[float]): List the best Members' fitness values in each of the accepted Generation.
+        args (dict): dictionary with argument required by the genome generator and all the selection and crossover
+            operators to work.
 
-    """
-    pop_size: int
-    no_generations: int
-    elite_size: int
-
-    args: dict
-    """What the args dict should look like:
-    
+    What the args dict should look like:
     args = {
         'genome': (g1, g2, ...),
         'selection': [(s11, s12, ...), ..., (sN1, sN2, ...)],
         'crossover': [(c11, c12, ...), ..., (cM1, cM2, ...)]
     }
-    
     Where:
-        1) g1, g2, etc., are args for the genome_generator func; 
-        2) s11, s12, etc., are args for the 1st selection operator passed in the selection_operators list of func 
+        1) g1, g2, etc., are args for the genome_generator func;
+        2) s11, s12, etc., are args for the 1st selection operator passed in the selection_operators list of func
             and sN1, sN2, etc., are args of the Nth selection operator;
-        3) c11, c12, etc., are args for the 1st crossover operator passed in the crossover_operators list of func 
-            and cM1, cM2, etc., are args of the Mth crossover operator;
+        3) c11, c12, etc., are args for the 1st crossover operator passed in the crossover_operators list of func
+            and cM1, cM2, etc., are args of the Mth crossover operator.
     """
+    pop_size: int
+    no_generations: int
+    elite_size: int
     fit_fun: Callable
     genome_gen: Callable
-    operators: list  # I usually prefer dicts, but I want to be able to iterate over combinations of operators in here
-
+    operators: list[tuple[Callable]]  # I usually prefer dicts, but I want to be able to iterate over combinations of operators in here
     no_parents_pairs: int
     mutation_prob: float
-
     current_gen: Generation
     rival_gen: dict[int, Generation]
     accepted_gen: list[Generation]
     best_fit_history: list[float]
+    args: dict
       
     def __zip_crossover_selection(self, selection_operators, crossover_operators):
         """Creates a list that combines pairs of elements from 'selection_operators' 
@@ -290,7 +312,7 @@ class GeneticAlgorithm:
             initial_pop_size (int): size of the population (each Generation)
             number_of_generations (int): how many consecutive accepted Generations are supposed to be created and
                 evaluated
-            elite_size (int): number of the best Members of each Generation to be copy-pasted into the new Generation
+            elite_size (int): number of the best Members of the current Generation to be copy-pasted into the new one
             args (dict): arguments to be used in genome_generator & selection/crossover operators
             fitness_function (Callable): func passed to Members of the population and stored as a fit_fun attribute;
                 returns a float value based on a member's genome
