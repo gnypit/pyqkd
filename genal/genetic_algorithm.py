@@ -289,12 +289,23 @@ class GeneticAlgorithm:
     best_fit_history: list[float]
     args: dict
       
-    def __zip_crossover_selection(self, selection_operators, crossover_operators):
+    def __zip_crossover_selection(self, selection_operators: list[Callable], crossover_operators: list[Callable]):
         """Creates a list that combines pairs of elements from 'selection_operators' 
         and 'crossover_operators'. For each index 'i', it adds tuples to the 'list_to_operator' list containing
         'selection_operator[i]' and 'crossover_operator[j]' for each index 'j'.
 
-        This way there are tuples for all combinations of operators."""
+        This way there are tuples for all combinations of operators.
+
+        Parameters:
+            selection_operators (list[Callable]): list of functions which are selection operators
+                for the Genetic Algorithm
+            crossover_operators (list[Callable]): list of functions which are crossover operators
+                for the Genetic Algorithm
+
+        Returns:
+            list[tuple[Callable]]: list of (Callable) operators tuples, each representing a combination of selection and
+                crossover method for creating a new Generation.
+        """
         list_to_operator = []
         for i in range(len(selection_operators)):
             for j in range(len(crossover_operators)):
