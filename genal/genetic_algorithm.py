@@ -396,9 +396,14 @@ class GeneticAlgorithm:
         self.accepted_gen = [self.current_generation]
         self.best_fit_history = [self.current_generation.fitness_ranking[0].get('fitness value')]
 
-    def best_solution(self):  # we return genome of member with the highest fitness value with it's fit value
-        bf = [self.current_generation.members[self.current_generation.fitness_ranking[0].get('index')].genome,
-              self.current_generation.fitness_ranking[0].get('fitness value')]
+    def best_solution(self):
+        """Returns genome of Member with the highest fitness value with it's fitness value, from the current Generation.
+
+        Returns:
+            tuple[type[list | dict], float]: tuple of the genome list/dict of the best Member and it's float fit. value
+        """
+        bf = (self.current_generation.members[self.current_generation.fitness_ranking[0].get('index')].genome,
+              self.current_generation.fitness_ranking[0].get('fitness value'))
         return bf
 
     def _create_rival_generations(self):  # TODO: Creating new generations, even before fitness evaluation, could be done in parallel with Pool / ProcessPoolExecutor
