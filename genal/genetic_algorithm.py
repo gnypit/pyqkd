@@ -1,4 +1,6 @@
-"""Author: Jakub Gnyp; contact: gnyp.jakub@gmail.com, LinkedIn: https://www.linkedin.com/in/gnypit/"""
+"""Author: Jakub Gnyp; contact: gnyp.jakub@gmail.com, LinkedIn: https://www.linkedin.com/in/gnypit/
+Script is distributed under the license: https://github.com/gnypit/pyqkd/blob/main/LICENSE
+"""
 import random
 import matplotlib.pyplot as plt
 import numpy as np
