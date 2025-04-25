@@ -480,11 +480,15 @@ class GeneticAlgorithm:
             )
 
     def run(self):
+        """This is the main method for an automated run of the Genetic Algorithm, supposed to be used right after this
+        class' instance initialisation. It creates the initial Generation and then performs the `no_generations`
+        iterations of creating new/rival Generations, choosing the best one and mutation, if necessary."""
         self._create_initial_generation()
         for _ in range(self.no_generations):
             self._create_rival_generations()  # TODO: why are rival generations too short?
             self._choose_best_rival_generation()
             self.mutate()
 
-    def fitness_plot(self):
+    def fitness_plot(self):  # TODO: finish with an optional argument for using plotly or matplotlib
+        """Method for plotting fitness values history of the best Members from each accepted Generation."""
         pass
