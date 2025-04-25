@@ -7,6 +7,7 @@ import numpy as np
 from collections.abc import \
     Callable  # https://stackoverflow.com/questions/37835179/how-can-i-specify-the-function-type-in-my-type-hints
 import multiprocessing
+from multiprocessing.managers import ListProxy, DictProxy
 
 """Global variable to hold IDs of chromosomes for backtracking"""
 identification = 0
@@ -55,7 +56,7 @@ class Chromosome:
         fit_fun (Callable): Fitness function used for computing fitness value based on chromosome's genes.
     """
     fit_val: float = None
-    genome: type[list | dict]  # TODO: should this should use manager.dict from multiprocessing?
+    genome: type[ListProxy | DictProxy]
     fit_fun: Callable
 
     def __init__(self, genome: type[list | dict], fitness_function: Callable=None):
