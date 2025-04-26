@@ -420,46 +420,6 @@ class GeneticAlgorithm:
               self.current_generation.fitness_ranking[0].get('fitness value'))
         return bf
 
-    def _create_rival_generations(self):  # TODO: Creating new generations, even before fitness evaluation, could be done in parallel with Pool / ProcessPoolExecutor
-        """This method takes combinations of selection and crossover operators to create new, potential generations.
-        Each such potential generation is a rival to the others - later only one will be accepted based on provided
-        metrics, e.g. in which of the rival generations is a member with the highest fitness value."""
-        global identification
-
-        rival_id = 0
-        for selection, crossover in self.operators:
-            """We iterate over all combinations of operators, each time creating a new rival generation."""
-            new_members = []
-            parents_in_order = selection(self.current_generation)  # TODO: TypeError: tournament_selection() takes 1 positional argument but 2 were given; we still don't pass the args in a cohesive manner
-            self.rival_gen_pool = {}
-            for index in range(self.no_parents_pairs):
-                """We always take 2 consecutive members from the parents_in_order list and pass them to the crossover
-                operator to get genomes of new members, for the rival generation, to be created."""
-                child1_genome, child2_genome = crossover(
-                    parents_in_order[2 * index],
-                    parents_in_order[2 * index + 1],
-                    self.crossover_args
-                )
-                new_members.append(Member(
-                    genome=child1_genome,
-                    identification_number=identification,
-                    fitness_function=self.fit_fun)
-                )
-                new_members.append(Member(
-                    genome=child2_genome,
-                    identification_number=identification + 1,
-                    fitness_function=self.fit_fun)
-                )
-                identification += 2
-            self.rival_gen_pool[rival_id] = Generation(
-                generation_members=new_members,
-                num_parents_pairs=self.no_parents_pairs,
-                elite_size=self.elite_size,
-                pool_size=self.pool_size  # let's keep it for now for debugging with a single rival generation
-            )
-            self.rival_gen_pool[rival_id].evaluate()
-            rival_id += 1
-
     def _create_rival_generation(self, combination_id: int):
         """Method for creating a single new generation, one of many, with a set of selection and crossover operators
         accessible under the provided id and added to the pool of rival generations with the same id.
