@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from collections.abc import \
     Callable  # https://stackoverflow.com/questions/37835179/how-can-i-specify-the-function-type-in-my-type-hints
+from multiprocessing import Process, Manager
+from multiprocessing.managers import ListProxy, DictProxy
 
 """Global variable to hold IDs of chromosomes for backtracking"""
 identification = 0
@@ -231,8 +233,11 @@ class Generation:  # TODO: we need constructor to take members, method for chang
 
 
 class GeneticAlgorithm:
-    """Fundamental class for execution of the genetic algorithm. It implements a simple slave-master construction
-    of a parallel genetic algorithm, but computationally it is executed with a single thread/process.
+    """Class with a role of a container for the hierarchical parallel genetic algorithm.
+
+    While the fitness evaluation of members from rival Generations is diversified between as many processes operating
+    in parallel on different processor cores, also creating these rival generations (selection and crossover) is
+    performed by parallel processes. Processes creating Generations and processes evaluating fitness are independent.
 
     Attributes:
         pop_size (int): a constant size of each Generation within the algorithm.
@@ -251,15 +256,19 @@ class GeneticAlgorithm:
         mutation_prob (float): 0.0 by default; probability of selecting a Member of a Generation to reset its genome
             with the genome_generator
         current_gen (Generation): Members constituting population inside the Genetic Algorithm in a given iteration. It
-            is the accepted Generation from the previous iteration or the initial Generation
-        rival_gen (dict[int, Generation]): in the Parallel Genetic Algorithm multiple Generations of children may be
+            is the last accepted Generation from the previous iteration or the initial Generation.
+        workers (list[Process]): dynamical list containing processes from the multiprocessing package, meant to operate
+            in parallel and either execute creating new Generations or evaluating them.
+        manager (Manager): Manager ('master') synchronising access of multiple workers to a rival_gen proxy for dict.
+        rival_gen (DictProxy[int, Generation]): in the Parallel Genetic Algorithm multiple children Generations may be
             created based on the current Generation of parents, based on different selection and crossover operators.
             These Generations are rival to one another, because only one will be accepted as the best and treated as the
-            current Generation in the next iteration. In the rival_gen dictionary each of these rival Generations is
-            stored with its integer id as a key.
-        accepted_gen (list[Generation]): the best of the rival Generations is chosen as the accepted Generation and
-            treated as the current Generation in the next iteration of the algorithm. If there is only one new, 'rival'
-            Generation, then automatically it becomes the accepted Generation.
+            current Generation in the next iteration. In the rival_gen DictProxy each of these rival Generations is
+            stored with its integer id as a key and parallel processes (workers) may add Generations to it after
+            acquiring acces through a manager's lock.
+        accepted_gen (list[Generation]): the best of the rival Generations is added to a list of the accepted
+            Generations and treated as the current Generation in the next iteration of the algorithm. If there is only
+            one new, 'rival' Generation, then automatically it is appended to the accepted Generations list+.
         best_fit_history (list[float]): List the best Members' fitness values in each of the accepted Generation.
         args (dict): dictionary with argument required by the genome generator and all the selection and crossover
             operators to work.
@@ -286,8 +295,10 @@ class GeneticAlgorithm:
     no_parents_pairs: int
     mutation_prob: float
     current_gen: Generation
-    rival_gen: dict[int, Generation]
-    accepted_gen: list[Generation]
+    workers: list[Process]
+    manager: Manager
+    rival_gen_pool: DictProxy[int, Generation]
+    accepted_gen_list: list[Generation]
     best_fit_history: list[float]
     args: dict
       
@@ -395,7 +406,7 @@ class GeneticAlgorithm:
             pool_size=self.pool_size
         )
         self.current_generation.evaluate()
-        self.accepted_gen = [self.current_generation]
+        self.accepted_gen_list = [self.current_generation]
         self.best_fit_history = [self.current_generation.fitness_ranking[0].get('fitness value')]
 
     def best_solution(self):
@@ -419,7 +430,7 @@ class GeneticAlgorithm:
             """We iterate over all combinations of operators, each time creating a new rival generation."""
             new_members = []
             parents_in_order = selection(self.current_generation)  # TODO: TypeError: tournament_selection() takes 1 positional argument but 2 were given; we still don't pass the args in a cohesive manner
-            self.rival_gen = {}
+            self.rival_gen_pool = {}
             for index in range(self.no_parents_pairs):
                 """We always take 2 consecutive members from the parents_in_order list and pass them to the crossover
                 operator to get genomes of new members, for the rival generation, to be created."""
@@ -439,23 +450,32 @@ class GeneticAlgorithm:
                     fitness_function=self.fit_fun)
                 )
                 identification += 2
-            self.rival_gen[rival_id] = Generation(
+            self.rival_gen_pool[rival_id] = Generation(
                 generation_members=new_members,
                 num_parents_pairs=self.no_parents_pairs,
                 elite_size=self.elite_size,
                 pool_size=self.pool_size  # let's keep it for now for debugging with a single rival generation
             )
-            self.rival_gen[rival_id].evaluate()
+            self.rival_gen_pool[rival_id].evaluate()
             rival_id += 1
+
+    def _create_rival_generation(self, id: int):
+        """Method for creating a single new generation, one of many, with a set of selection and crossover operators
+        accessible under the provided id and added to the pool of rival generations with the same id.
+
+        Parameters:
+            id (int): Key under which set of operators required for the creation of a new Generation is available in the
+
+        """
 
     def _choose_best_rival_generation(self):
         """This method selects one of the rival generations from the rival_gen dict, based on the highest max fitness
         value, to be accepted as a new current generation."""
         fitness_comparison = {}
-        for id_of_rival, generation in self.rival_gen.items():
+        for id_of_rival, generation in self.rival_gen_pool.items():
             fitness_comparison[id_of_rival] = generation.fitness_ranking[0].get('fitness value')
-        self.current_generation = self.rival_gen.get(max(fitness_comparison, key=fitness_comparison.get))
-        self.accepted_gen.append(self.current_generation)
+        self.current_generation = self.rival_gen_pool.get(max(fitness_comparison, key=fitness_comparison.get))
+        self.accepted_gen_list.append(self.current_generation)
         self.best_fit_history.append(self.current_generation.fitness_ranking[0].get('fitness value'))
 
     def mutate(self):
