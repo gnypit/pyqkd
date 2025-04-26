@@ -202,7 +202,9 @@ class Generation:  # TODO: we need constructor to take members, method for chang
     Generations is accepted.
 
     Attributes:
-        members (list[Member]): list of Members; chromosomes of the generation with their and parents' IDs.
+        members (ListProxy[Member]): list of Members; chromosomes of the generation with their and parents' IDs. Uses
+            ListProxy from the managers module in the multiprocessing package so that the list of Members is stored in
+             shared memory accessible by multiple processes.
         num_parents_pairs (int): number of pairs of Members can be parents, e.g., 20 pairs means 40 mating chromosomes.
         elite_size (int): number of Members to be copy-pasted directly into a new Generation.
         pool_size (int): parameter for the tournament selection operator.  # TODO: redundant, put it into args in the GeneticAlgorithm class
@@ -210,7 +212,7 @@ class Generation:  # TODO: we need constructor to take members, method for chang
         fitness_ranking (list[dict]): dicts in this list have the index of a Member in the Generation as keys and its
             fitness value as values.
     """
-    members: list[Member]
+    members: ListProxy[Member]
     num_parents_pairs: int
     elite_size: int
     pool_size: int
