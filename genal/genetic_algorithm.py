@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from collections.abc import \
     Callable  # https://stackoverflow.com/questions/37835179/how-can-i-specify-the-function-type-in-my-type-hints
-from multiprocessing import Process, Manager
+from multiprocessing import Process, Manager, cpu_count
 from multiprocessing.managers import ListProxy, DictProxy
 
 """Global variable to hold IDs of chromosomes for backtracking"""
@@ -504,6 +504,18 @@ class GeneticAlgorithm:
                 self.genome_generator(self.genome_generator_args)
             )
 
+    def _evaluate_members(self, index_range: list[int]):
+        """This method evaluates Members across multiple rival Generations based on a list of single indexes provided.
+
+        Parameters:
+            index_range (list[int]): list containing single indexes from which ID of the rival Generation and index of
+                Members inside it are computed, so that they can be told to evaluate themselves.
+        """
+        for index in index_range:
+            generation_id = index // len(self.rival_gen_pool)
+            member_index = index - generation_id * len(self.rival_gen_pool)
+            self.rival_gen_pool.get(generation_id).members[member_index].evaluate()
+
     def run(self):
         """This is the main method for an automated run of the Genetic Algorithm, supposed to be used right after this
         class' instance initialisation. It creates the initial Generation and then performs the `no_generations`
@@ -513,17 +525,36 @@ class GeneticAlgorithm:
 
         with self.manager:
             for _ in range(self.no_generations):
-                """Firstly, we create rival generations based on accessible combinations of selection and crossover
+                """Rival generations are created based on accessible combinations of selection and crossover
                 operators with different processes in parallel:"""
                 for combination_id in operator_combinations_ids:
                     new_worker = Process(target=self._create_rival_generation, args=(combination_id,))
                     new_worker.start()
                     self.workers.append(new_worker)
 
-                """Secondly we join the processes:"""
+                """After work done, processes are collected and their list reset for new batch of workers:"""
+                for worker in self.workers:
+                    worker.join()
+                self.workers = []
+
+                """For fitness evaluation as many workers as the CPU allows are created. All members are distributed
+                 between these processes to be evaluated:"""
+                no_workers = cpu_count()
+                no_members = self.pop_size * len(self.rival_gen_pool)
+
+                for step in range(no_workers):
+                    new_worker = Process(
+                        target=self._evaluate_members,
+                        args=(list(range(no_workers * step, no_workers * (step + 1))))
+                    )
+                    new_worker.start()
+                    self.workers.append(new_worker)
+
+                """After evaluation, processes are again joined:"""
                 for worker in self.workers:
                     worker.join()
 
+                """Last stage of each iteration is to choose the next accepted Generation and mutate it:"""
                 self._choose_best_rival_generation()
                 self.mutate()
 
