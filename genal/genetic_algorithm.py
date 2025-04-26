@@ -424,7 +424,7 @@ class GeneticAlgorithm:
               self.current_generation.fitness_ranking[0].get('fitness value'))
         return bf
 
-    def _create_rival_generation(self, combination_id: int):
+    def _create_rival_generation(self, combination_id: int):  # TODO: turn into a static method
         """Method for creating a single new generation, one of many, with a set of selection and crossover operators
         accessible under the provided id and added to the pool of rival generations with the same id.
 
@@ -505,7 +505,7 @@ class GeneticAlgorithm:
                 self.genome_generator(self.genome_generator_args)
             )
 
-    def _evaluate_members(self, index_range: list[int]):
+    def _evaluate_members(self, index_range: list[int]):  # TODO: turn into a static method
         """This method evaluates Members across multiple rival Generations based on a list of single indexes provided.
 
         Parameters:
@@ -530,7 +530,7 @@ class GeneticAlgorithm:
                 operators with different processes in parallel:"""
                 for combination_id in operator_combinations_ids:
                     new_worker = Process(target=self._create_rival_generation, args=(combination_id,))
-                    new_worker.start()  # TODO: TypeError: cannot pickle 'weakref.ReferenceType' object
+                    new_worker.start()  # TODO: TypeError: cannot pickle 'weakref.ReferenceType' object -> it's a problem with 'self' in regular methods args
                     self.workers.append(new_worker)
 
                 """After work done, processes are collected and their list reset for new batch of workers:"""
