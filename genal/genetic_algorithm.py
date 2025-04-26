@@ -460,14 +460,52 @@ class GeneticAlgorithm:
             self.rival_gen_pool[rival_id].evaluate()
             rival_id += 1
 
-    def _create_rival_generation(self, id: int):
+    def _create_rival_generation(self, combination_id: int):
         """Method for creating a single new generation, one of many, with a set of selection and crossover operators
         accessible under the provided id and added to the pool of rival generations with the same id.
 
         Parameters:
-            id (int): Key under which set of operators required for the creation of a new Generation is available in the
+            combination_id (int): Key under which set of operators required for the creation of a new Generation is
+                available in the `operators` attribute of this class.
 
+        Returns:
+            Generation: A new (rival) Generation, created based on selection and crossover operators' combination with
+                the provided ID.
         """
+        global identification
+        selection, crossover = self.operators.get(combination_id)
+
+        new_members = []
+        parents_in_order = selection(self.current_generation)
+
+        for index in range(self.no_parents_pairs):
+            """We always take 2 consecutive members from the parents_in_order list and pass them to the crossover
+            operator to get genomes of new members, for the new generation, to be created."""
+            child1_genome, child2_genome = crossover(
+                parents_in_order[2 * index],
+                parents_in_order[2 * index + 1],
+                self.crossover_args
+            )
+            new_members.append(Member(
+                genome=child1_genome,
+                identification_number=identification,
+                fitness_function=self.fit_fun)
+            )
+            new_members.append(Member(
+                genome=child2_genome,
+                identification_number=identification + 1,
+                fitness_function=self.fit_fun)
+            )
+            identification += 2
+
+        new_generation = Generation(
+            generation_members=new_members,
+            num_parents_pairs=self.no_parents_pairs,
+            elite_size=self.elite_size,
+            pool_size=self.pool_size
+        )
+
+        return new_generation
 
     def _choose_best_rival_generation(self):
         """This method selects one of the rival generations from the rival_gen dict, based on the highest max fitness
