@@ -291,7 +291,7 @@ class GeneticAlgorithm:
     elite_size: int
     fit_fun: Callable
     genome_gen: Callable
-    operators: list[tuple[Callable]]  # I usually prefer dicts, but I want to be able to iterate over combinations of operators in here
+    operators: dict[int, tuple[Callable]]
     no_parents_pairs: int
     mutation_prob: float
     current_gen: Generation
@@ -303,11 +303,11 @@ class GeneticAlgorithm:
     args: dict
       
     def __zip_crossover_selection(self, selection_operators: list[Callable], crossover_operators: list[Callable]):
-        """Creates a list that combines pairs of elements from 'selection_operators' 
-        and 'crossover_operators'. For each index 'i', it adds tuples to the 'list_to_operator' list containing
-        'selection_operator[i]' and 'crossover_operator[j]' for each index 'j'.
-
-        This way there are tuples for all combinations of operators.
+        """Creates a dict that combines pairs of elements from 'selection_operators' and 'crossover_operators' with
+        an ID as key. For each index 'i', it adds tuples to the 'operators_combinations_dict' dict, each tuple
+        containing 'selection_operator[i]' and 'crossover_operator[j]' for each index 'j' with a unique ID. This way
+        there are tuples for all combinations of operators, accessible by workers working in parallel under their IDs
+        as keys.
 
         Parameters:
             selection_operators (list[Callable]): list of functions which are selection operators
@@ -316,14 +316,16 @@ class GeneticAlgorithm:
                 for the Genetic Algorithm
 
         Returns:
-            list[tuple[Callable]]: list of (Callable) operators tuples, each representing a combination of selection and
-                crossover method for creating a new Generation.
+            dict[int, tuple[Callable]]: dict of (Callable) operators tuples, each representing a combination of
+            selection and crossover method for creating a new Generation.
         """
-        list_to_operator = []
+        operators_combinations_dict = {}
+        combination_id = 0
         for i in range(len(selection_operators)):
             for j in range(len(crossover_operators)):
-                list_to_operator.append((selection_operators[i],crossover_operators[j]))
-        return list_to_operator
+                operators_combinations_dict[combination_id] = (selection_operators[i], crossover_operators[j])
+                combination_id += 1
+        return operators_combinations_dict
 
     def __init__(self, initial_pop_size: int, number_of_generations: int, elite_size: int, args: dict,
                  fitness_function: Callable, genome_generator: Callable,
@@ -384,7 +386,6 @@ class GeneticAlgorithm:
             crossover = [crossover]
 
         self.operators = self.__zip_crossover_selection(selection_operators=selection, crossover_operators=crossover)
-        # self.operators = [(sel_op, cross_op) for sel_op in selection for cross_op in crossover]
         self.pool_size = pool_size  # will be redundant after the selection args are properly handled
 
     def _create_initial_generation(self):
