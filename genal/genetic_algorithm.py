@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from collections.abc import \
     Callable  # https://stackoverflow.com/questions/37835179/how-can-i-specify-the-function-type-in-my-type-hints
+from multiprocessing import Manager
+from multiprocessing.managers import ListProxy, DictProxy
 
 """Global variable to hold IDs of chromosomes for backtracking"""
 identification = 0
@@ -50,14 +52,19 @@ class Chromosome:
     Attributes:
         fit_val (float): Fitness value of the chromosome. None by default, stores a float number once the chromosome
             is evaluated.
-        genome (type[list | dict]): Either list or a dictionary with genes of this chromosome.
+        genome (type[list | dict | ListProxy | DictProxy]): Either list or a dictionary with genes of this chromosome in
+            a single-process implementation of the GA. For the multiple-processes implementation either ListProxy or
+            DictProxy.
+        manager (Manager): Manager from the multiprocessing package, necessary for genome storage in a shared memory
+            accessible by multiple processes.
         fit_fun (Callable): Fitness function used for computing fitness value based on chromosome's genes.
     """
     fit_val: float = None
-    genome: type[list | dict]
+    genome: type[list | dict | ListProxy | DictProxy]
+    manager: Manager
     fit_fun: Callable
 
-    def __init__(self, genome: type[list | dict], fitness_function: Callable=None):
+    def __init__(self, genome: type[list | dict], manager: Manager=None, fitness_function: Callable=None):
         """Constructor of the Chromosome class.
 
         Each chromosome represents a possible solution to a given problem. Parameters characterising these solutions
@@ -69,16 +76,29 @@ class Chromosome:
         Parameters:
             genome (type[list | dict]): Either a dict with genes as values and names provided by the User as keys,
                 or simply a list of genes.
+            manager (Manager): optional; Manager() from the multiprocessing package, required for creating the genome
+                attribute of this class in a shared memory between multiple, parallel processes in a manner which allows
+                access to the genome by these processes.
             fitness_function (Callable=None): Optional; callable fitness function provided by the User, which computes
                 fitness value based on genome. Can be passed later, thus it is None by default.
         """
-        self.genome = genome
-        self.fit_fun = fitness_function  # special variable
+        self.manager = manager  # should raise TypeError if it's not Manager() or None
+        if self.manager is None:
+            self.genome = genome
+        else:
+            if type(genome) == list:
+                self.genome = manager.list(genome)
+            elif type(genome) == dict:
+                self.genome = manager.dict(genome)
+            else:
+                raise TypeError(f"Genome passed to the Chromosome class or it's children must be either a list or a "
+                                f"dict, and for multiprocessing implementation a Manager() class must be provided.")
+        self.fit_fun = fitness_function  # special variable, Callable
 
     def __repr__(self) -> str:
         """Default method for self-representing objects of this class."""
         return (f"{type(self).__name__}(genes={self.genome}, fitness function={self.fit_fun}, "
-                f"fitness value={self.fit_val})")
+                f"fitness value={self.fit_val}), manager={self.manager}")
 
     def change_genes(self, new_genes: type[list | dict]):
         """Method meant to be used when mutation occurs, to modify the genes in an already created chromosome.
@@ -86,7 +106,16 @@ class Chromosome:
         Parameters:
             new_genes (type[list | dict]): New genome to be stored by the chromosome.
         """
-        self.genome = new_genes
+        if self.manager is None:
+            self.genome = new_genes
+        else:
+            if type(new_genes) == list:
+                self.genome = self.manager.list(new_genes)
+            elif type(new_genes) == dict:
+                self.genome = self.manager.dict(new_genes)
+            else:
+                raise TypeError(f"Genome passed to the Chromosome class or it's children must be either a list or a "
+                                f"dict, and for multiprocessing implementation a Manager() class must be provided.")
 
     def evaluate(self, fitness_function: Callable=None):
         """Method for applying fitness function to this chromosome (it's genes, to be precise).
