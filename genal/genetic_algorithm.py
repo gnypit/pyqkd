@@ -365,6 +365,9 @@ class GeneticAlgorithm:
         if seed is not None:
             random.seed(a=seed)  # useful for debugging
 
+        self.manager = Manager()
+        self.rival_gen_pool = self.manager.dict()
+
         """If the provided number of parents pairs would require more Members than the current (initial) generation has,
         it'll be limited to the maximum possible number. Also, if no specific number of parent pairs is provided,
         the initial population size is assumed to be a constant throughout the whole algorithm."""
@@ -465,7 +468,8 @@ class GeneticAlgorithm:
             pool_size=self.pool_size
         )
 
-        return new_generation
+        with self.manager.Lock():
+            self.rival_gen_pool[combination_id] = new_generation
 
     def _choose_best_rival_generation(self):
         """This method selects one of the rival generations from the rival_gen dict, based on the highest max fitness
@@ -505,10 +509,23 @@ class GeneticAlgorithm:
         class' instance initialisation. It creates the initial Generation and then performs the `no_generations`
         iterations of creating new/rival Generations, choosing the best one and mutation, if necessary."""
         self._create_initial_generation()
-        for _ in range(self.no_generations):
-            self._create_rival_generations()  # TODO: why are rival generations too short?
-            self._choose_best_rival_generation()
-            self.mutate()
+        operator_combinations_ids = list(self.operators.keys())
+
+        with self.manager:
+            for _ in range(self.no_generations):
+                """Firstly, we create rival generations based on accessible combinations of selection and crossover
+                operators with different processes in parallel:"""
+                for combination_id in operator_combinations_ids:
+                    new_worker = Process(target=self._create_rival_generation, args=(combination_id,))
+                    new_worker.start()
+                    self.workers.append(new_worker)
+
+                """Secondly we join the processes:"""
+                for worker in self.workers:
+                    worker.join()
+
+                self._choose_best_rival_generation()
+                self.mutate()
 
     def fitness_plot(self):  # TODO: finish with an optional argument for using plotly or matplotlib
         """Method for plotting fitness values history of the best Members from each accepted Generation."""
