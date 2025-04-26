@@ -27,7 +27,7 @@ def sort_dict_by_fit(dictionary: None):
     return dictionary['fitness value']
 
 
-def uniform_gene_generator(ga_args: dict):  # TODO: should generators be inside GA or external functions?
+def uniform_gene_generator(ga_args: dict):  # TODO: just take a tuple at the start, genome args will be passed directly, not the whole args dict
     """Simple function for generating a sample of given length from the gene_space with a uniform probability.
 
     Parameters:
@@ -356,9 +356,10 @@ class GeneticAlgorithm:
         self.no_generations = number_of_generations
         self.elite_size = elite_size
 
-        self.genome_generator_args = args.get('genome')
-        self.selection_args = args.get('selection')
-        self.crossover_args = args.get('crossover')
+        # self.genome_generator_args = args.get('genome')
+        self.args = args
+        self.selection_args = args.get('selection')  # TODO: we should stick to using self.args
+        self.crossover_args = args.get('crossover')  # TODO: we should stick to using self.args
 
         self.fit_fun = fitness_function
         self.mutation_prob = mutation_prob
@@ -396,7 +397,7 @@ class GeneticAlgorithm:
         global identification
         first_members = []
         for _ in range(self.pop_size):
-            genes = self.genome_generator(self.genome_generator_args)
+            genes = self.genome_generator(self.args)
             first_members.append(Member(
                 genome=genes,
                 identification_number=identification,
@@ -529,7 +530,7 @@ class GeneticAlgorithm:
                 operators with different processes in parallel:"""
                 for combination_id in operator_combinations_ids:
                     new_worker = Process(target=self._create_rival_generation, args=(combination_id,))
-                    new_worker.start()
+                    new_worker.start()  # TODO: TypeError: cannot pickle 'weakref.ReferenceType' object
                     self.workers.append(new_worker)
 
                 """After work done, processes are collected and their list reset for new batch of workers:"""
