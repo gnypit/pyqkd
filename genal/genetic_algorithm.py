@@ -567,7 +567,7 @@ class GeneticAlgorithm:
                         target=self._evaluate_members,
                         args=(list(range(no_workers * step, no_workers * (step + 1))))
                     )
-                    new_worker.start()
+                    new_worker.start()  # There's progress, we managed to get here!!!
                     self.workers.append(new_worker)
 
                 """After evaluation, processes are again joined:"""
