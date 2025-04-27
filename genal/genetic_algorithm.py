@@ -233,9 +233,22 @@ class Generation:  # TODO: we need constructor to take members, method for chang
 
 
 def _create_rival_generation(id: int, selection: Callable, crossover: Callable, crossover_args: tuple,
-                             parent_generation: Generation, fitness_function: Callable, generation_pool: DictProxy):  # TODO: update docstring after a successful test
-    """Method for creating a single new generation, one of many, with a set of selection and crossover operators
-    accessible under the provided id and added to the pool of rival generations with the same id.
+                             parent_generation: Generation, fitness_function: Callable, generation_pool: DictProxy):
+    """Method for creating a single new Generation of children based on the parent Generation with selected operators.
+
+    Parameters:
+        id (int): An integer ID mathing the key under which a selection and crossover operators combination is stored in
+            the operators attribute of the GeneticAlgorithm class.
+        selection (Callable): Selection operator, a function returning an ordered list of parents to mate.
+        crossover (Callable): Crossover operator, a function returning two (children) Members based on two provided
+            (parent) Members.
+        crossover_args (tuple): All arguments that are required by the crossover operator. Could be None.
+        parent_generation (Generation): Any Generation containing Members who will be treated as parents to Members
+            in the Generation created by this function.
+        fitness_function (Callable): Fitness function for Members evaluation, that is supposed to be passed to each
+            Member in the new Generation.
+        generation_pool (DictProxy): A dictionary in shared memory in which all new Generations are supposed to be
+            stored under the same kay as the selection and crossover operators combination.
     """
     global identification
     # selection, crossover = self.operators.get(combination_id)
