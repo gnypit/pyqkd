@@ -562,12 +562,15 @@ class GeneticAlgorithm:
                 """For fitness evaluation as many workers as the CPU allows are created. All members are distributed
                  between these processes to be evaluated:"""
                 no_workers = cpu_count()
-                no_members = self.pop_size * len(self.rival_gen_pool)
+                # no_members = self.pop_size * len(self.rival_gen_pool)
 
                 for step in range(no_workers):
                     new_worker = Process(
-                        target=self._evaluate_members,
-                        args=(list(range(no_workers * step, no_workers * (step + 1))))
+                        target=_evaluate_members,
+                        args=(
+                            self.rival_gen_pool,
+                            list(range(no_workers * step, no_workers * (step + 1)))
+                        )
                     )
                     new_worker.start()  # There's progress, we managed to get here!!!
                     self.workers.append(new_worker)
