@@ -110,6 +110,7 @@ class Chromosome:
         Returns:
             float: Fitness value as a float number.
         """
+        print(f"I'm using the evaluate method.")
         if self.fit_fun is not None:
             self.fit_val = self.fit_fun(self.genome)
         elif fitness_function is not None:
@@ -131,7 +132,7 @@ class Member(Chromosome):
         parents_id (list): It's a list with IDs of the parents (from previous generations in the GA) of this member
     """
     id: int
-    parents_id: list
+    parents_id: list = []
 
     def __init__(self, genome: type[list | dict], identification_number: int, fitness_function=None):
         """Apart from what 'Chromosome' class constructor needs, here identification number should be passed.
@@ -308,10 +309,11 @@ def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: 
 
         member_to_evaluate = generation_pool.get(int(generation_id)).members[int(member_index)]
         print(f"I have member={member_to_evaluate} with fitness function {member_to_evaluate.fit_fun}")
-        member_to_evaluate.evaluate()
 
-        print(f"Member number {member_index} from generation {generation_id} has fitness value"
-              f"{generation_pool.get(int(generation_id)).members[int(member_index)].fit_val}")
+        fitness_value = member_to_evaluate.evaluate()  # TODO: why doesn't it change the fit val?
+        print(f"Member number {member_index} from generation {generation_id} has fitness value = {fitness_value}")
+        print(f"Member number {member_index} from generation {generation_id} has fitness value = "
+              f"{member_to_evaluate.fit_val}")
 
 
 class GeneticAlgorithm:
@@ -543,6 +545,7 @@ class GeneticAlgorithm:
         """This is the main method for an automated run of the Genetic Algorithm, supposed to be used right after this
         class' instance initialisation. It creates the initial Generation and then performs the `no_generations`
         iterations of creating new/rival Generations, choosing the best one and mutation, if necessary."""
+        print(f"\nCreating initial population\n")
         self._create_initial_generation()
         operator_combinations_ids = list(self.operators.keys())
 
@@ -550,6 +553,7 @@ class GeneticAlgorithm:
             for _ in range(self.no_generations):
                 """Rival generations are created based on accessible combinations of selection and crossover
                 operators with different processes in parallel:"""
+                print(f"\nCreating rival generations\n")
                 for combination_id in operator_combinations_ids:
                     new_worker = Process(
                         target=_create_rival_generation,
@@ -579,6 +583,7 @@ class GeneticAlgorithm:
 
                 """For fitness evaluation as many workers as the CPU allows are created. All members are distributed
                  between these processes to be evaluated:"""
+                print(f"\nEvaluating fitness of the rival generations\n")
                 no_workers = cpu_count()
                 print(f"We have {no_workers} workers.")
                 no_members = self.pop_size * len(self.rival_gen_pool)

@@ -24,7 +24,7 @@ def fitness_function_pygad(genetic_algorithm_instance, chromosome, chromosome_id
     return fitness_value
 
 
-def fitness_function(chromosome):
+def fitness_function_pyqkd(chromosome):
     x = chromosome[0]
     y = chromosome[1]
     z = chromosome[2]
@@ -39,6 +39,7 @@ def fitness_function(chromosome):
 
 if __name__ == '__main__':
     """Firstly, solving problem with pygad:"""
+    """
     ga_instance = pygad.GA(
         gene_space=np.linspace(start=0, stop=1, num=100000),
         num_generations=70,
@@ -62,6 +63,7 @@ if __name__ == '__main__':
     print(f"It took {generations_number} generations to find an optimal solution.")
 
     #  ga_instance.plot_fitness()
+    """
 
     """Secondly, approach with our GeneticAlgorithm:"""
     new_ga_instance = genetic_algorithm.GeneticAlgorithm(
@@ -73,7 +75,7 @@ if __name__ == '__main__':
             'selection': 4,  # pool size for the tournament selection operator
             'crossover': None  # for single point crossover operator
         },
-        fitness_function=fitness_function,
+        fitness_function=fitness_function_pyqkd,
         genome_generator=genetic_algorithm.uniform_gene_generator,
         selection=selection_operators.tournament_selection,
         crossover=crossover_operators.single_point_crossover,
