@@ -351,7 +351,7 @@ class GeneticAlgorithm:
     no_parents_pairs: int
     mutation_prob: float
     current_gen: Generation
-    workers: list[Process]
+    workers: list[Process] = []
     manager: Manager
     rival_gen_pool: DictProxy[int, Generation]
     accepted_gen_list: list[Generation]
@@ -550,7 +550,7 @@ class GeneticAlgorithm:
                         )
                     )
                     new_worker.start()
-                    self.workers.append(new_worker)  # TODO: AttributeError: 'GeneticAlgorithm' object has no attribute 'workers'
+                    self.workers.append(new_worker)
 
                 """After work done, processes are collected and their list reset for new batch of workers:"""
                 for worker in self.workers:
