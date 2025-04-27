@@ -546,8 +546,7 @@ class GeneticAlgorithm:
                             self.args.get('crossover'),  # crossover_args
                             self.current_generation,  # parent_generation
                             self.fit_fun,  # fitness_function
-                            self.pool_size,  # (redundant) pool size for tournament selection
-                            self.rival_gen_pool
+                            self.rival_gen_pool  # generation_pool
                         )
                     )
                     new_worker.start()
