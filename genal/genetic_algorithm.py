@@ -557,6 +557,12 @@ class GeneticAlgorithm:
                 """After work done, processes are collected and their list reset for new batch of workers:"""
                 for worker in self.workers:
                     worker.join()
+
+                """Just for testing:"""
+                new_members = self.rival_gen_pool.get(0).members
+                for member in new_members:
+                    print(member.genome)
+
                 self.workers = []
 
                 """For fitness evaluation as many workers as the CPU allows are created. All members are distributed
