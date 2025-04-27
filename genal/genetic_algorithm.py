@@ -532,8 +532,20 @@ class GeneticAlgorithm:
                 """Rival generations are created based on accessible combinations of selection and crossover
                 operators with different processes in parallel:"""
                 for combination_id in operator_combinations_ids:
-                    new_worker = Process(target=self._create_rival_generation, args=(combination_id,))
-                    new_worker.start()  # TODO: TypeError: cannot pickle 'weakref.ReferenceType' object -> it's a problem with 'self' in regular methods args
+                    new_worker = Process(
+                        target=self._create_rival_generation,
+                        args=(
+                            combination_id,  # id
+                            self.operators.get(combination_id)[0],  # selection
+                            self.operators.get(combination_id)[1],  # crossover
+                            self.args.get('crossover'),  # crossover_args
+                            self.current_generation,  # parent_generation
+                            self.fit_fun,  # fitness_function
+                            self.manager,  # manager
+                            self.pool_size  # (redundant) pool size for tournament selection
+                        )
+                    )
+                    new_worker.start()
                     self.workers.append(new_worker)
 
                 """After work done, processes are collected and their list reset for new batch of workers:"""
