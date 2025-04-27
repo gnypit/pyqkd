@@ -299,7 +299,7 @@ def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: 
     for index in index_range:
         generation_id = index // len(generation_pool)
         member_index = index - generation_id * len(generation_pool)
-        generation_pool.get(generation_id).members[member_index].evaluate()
+        generation_pool.get(generation_id).members[member_index].evaluate()  # TODO: AttributeError: 'NoneType' object has no attribute 'members'
 
 
 class GeneticAlgorithm:
@@ -566,13 +566,13 @@ class GeneticAlgorithm:
 
                 for step in range(no_workers):
                     new_worker = Process(
-                        target=_evaluate_members,
+                        target=_evaluate_members,  # now there's a problem with the function, not with multiprocessing
                         args=(
                             self.rival_gen_pool,
                             list(range(no_workers * step, no_workers * (step + 1)))
                         )
                     )
-                    new_worker.start()  # There's progress, we managed to get here!!!
+                    new_worker.start()
                     self.workers.append(new_worker)
 
                 """After evaluation, processes are again joined:"""
