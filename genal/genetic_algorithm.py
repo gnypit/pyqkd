@@ -550,7 +550,7 @@ class GeneticAlgorithm:
                         )
                     )
                     new_worker.start()
-                    self.workers.append(new_worker)
+                    self.workers.append(new_worker)  # TODO: AttributeError: 'GeneticAlgorithm' object has no attribute 'workers'
 
                 """After work done, processes are collected and their list reset for new batch of workers:"""
                 for worker in self.workers:
