@@ -287,6 +287,20 @@ def _create_rival_generation(id: int, selection: Callable, crossover: Callable, 
     key, so no additional lock is required."""
     generation_pool[id] = new_generation
 
+def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: list[int]):
+    """This function evaluates Members across multiple rival Generations.
+
+    Parameters:
+        generation_pool (DictProxy[int, Generation]): a dictionary in shared memory containing rival Generation created
+            inside the `GeneticAlgorithm` class, with Members up for evaluation.
+        index_range (list[int]): list containing single indexes from which ID of a Generation from the generation_pool
+            and indexes of Members inside it are computed, so that they (Members) can be told to evaluate themselves.
+    """
+    for index in index_range:
+        generation_id = index // len(generation_pool)
+        member_index = index - generation_id * len(generation_pool)
+        generation_pool.get(generation_id).members[member_index].evaluate()
+
 
 class GeneticAlgorithm:
     """Class with a role of a container for the hierarchical parallel genetic algorithm.
@@ -512,18 +526,6 @@ class GeneticAlgorithm:
             self.current_generation.members[index].change_genes(
                 self.genome_generator(self.genome_generator_args)
             )
-
-    def _evaluate_members(self, index_range: list[int]):  # TODO: turn into a static method
-        """This method evaluates Members across multiple rival Generations based on a list of single indexes provided.
-
-        Parameters:
-            index_range (list[int]): list containing single indexes from which ID of the rival Generation and index of
-                Members inside it are computed, so that they can be told to evaluate themselves.
-        """
-        for index in index_range:
-            generation_id = index // len(self.rival_gen_pool)
-            member_index = index - generation_id * len(self.rival_gen_pool)
-            self.rival_gen_pool.get(generation_id).members[member_index].evaluate()
 
     def run(self):
         """This is the main method for an automated run of the Genetic Algorithm, supposed to be used right after this
