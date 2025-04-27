@@ -315,6 +315,8 @@ def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: 
         print(f"Member number {member_index} from generation {generation_id} has fitness value = "
               f"{member_to_evaluate.fit_val}")
 
+        generation_pool[int(generation_id)].members[int(member_index)] = member_to_evaluate  # reassigning an evaluated member to the list inside DictProxy
+
 
 class GeneticAlgorithm:
     """Class with a role of a container for the hierarchical parallel genetic algorithm.
@@ -612,6 +614,11 @@ class GeneticAlgorithm:
                 """After evaluation, processes are again joined:"""
                 for worker in self.workers:
                     worker.join()
+
+                """Just for testing:"""
+                new_members = self.rival_gen_pool.get(0).members
+                for member in new_members:
+                    print(member.fit_val)
 
                 """Last stage of each iteration is to choose the next accepted Generation and mutate it:"""
                 self._choose_best_rival_generation()
