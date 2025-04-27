@@ -305,8 +305,11 @@ def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: 
     for index in index_range:
         generation_id = np.floor(index / population_size)
         member_index = index - generation_id * population_size
-        print(f"Evaluating member number {member_index} from generation {generation_id}")
-        generation_pool.get(int(generation_id)).members[int(member_index)].evaluate()
+
+        member_to_evaluate = generation_pool.get(int(generation_id)).members[int(member_index)]
+        print(f"I have member={member_to_evaluate} with fitness function {member_to_evaluate.fit_fun}")
+        member_to_evaluate.evaluate()
+
         print(f"Member number {member_index} from generation {generation_id} has fitness value"
               f"{generation_pool.get(int(generation_id)).members[int(member_index)].fit_val}")
 
