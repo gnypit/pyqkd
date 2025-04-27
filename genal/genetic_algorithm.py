@@ -232,6 +232,49 @@ class Generation:  # TODO: we need constructor to take members, method for chang
         self.fitness_ranking.sort(key=sort_dict_by_fit, reverse=reverse)
 
 
+def _create_rival_generation(id: int, selection: Callable, crossover: Callable, crossover_args: tuple,
+                             parent_generation: Generation, fitness_function: Callable, manager: Manager,
+                             generation_pool: DictProxy):  # TODO: update docstring after a successful test
+    """Method for creating a single new generation, one of many, with a set of selection and crossover operators
+    accessible under the provided id and added to the pool of rival generations with the same id.
+    """
+    global identification
+    # selection, crossover = self.operators.get(combination_id)
+
+    new_members = []
+    parents_in_order = selection(parent_generation)
+
+    for index in range(parent_generation.num_parents_pairs):
+        """We always take 2 consecutive members from the parents_in_order list and pass them to the crossover
+        operator to get genomes of new members, for the new generation, to be created."""
+        child1_genome, child2_genome = crossover(
+            parents_in_order[2 * index],
+            parents_in_order[2 * index + 1],
+            crossover_args
+        )
+        new_members.append(Member(
+            genome=child1_genome,
+            identification_number=identification,
+            fitness_function=fitness_function)
+        )
+        new_members.append(Member(
+            genome=child2_genome,
+            identification_number=identification + 1,
+            fitness_function=fitness_function)
+        )
+        identification += 2
+
+    new_generation = Generation(
+        generation_members=new_members,
+        num_parents_pairs=parent_generation.num_parents_pairs,
+        elite_size=parent_generation.elite_size,  # TODO: allow change sin the elite size
+        pool_size=parent_generation.pool_size  # TODO: redundant, we should focus on selection_args
+    )
+
+    with manager.Lock():
+        generation_pool[id] = new_generation
+
+
 class GeneticAlgorithm:
     """Class with a role of a container for the hierarchical parallel genetic algorithm.
 
@@ -424,57 +467,6 @@ class GeneticAlgorithm:
               self.current_generation.fitness_ranking[0].get('fitness value'))
         return bf
 
-    @staticmethod
-    def _create_rival_generation(id: int, selection: Callable, crossover: Callable, crossover_args: tuple,
-                                 parent_generation: Generation, fitness_function: Callable, manager: Manager(),
-                                 generation_pool: DictProxy):  # TODO: update docstring after a successful test
-        """Method for creating a single new generation, one of many, with a set of selection and crossover operators
-        accessible under the provided id and added to the pool of rival generations with the same id.
-
-        Parameters:
-            combination_id (int): Key under which set of operators required for the creation of a new Generation is
-                available in the `operators` attribute of this class.
-
-        Returns:
-            Generation: A new (rival) Generation, created based on selection and crossover operators' combination with
-                the provided ID.
-        """
-        global identification
-        # selection, crossover = self.operators.get(combination_id)
-
-        new_members = []
-        parents_in_order = selection(parent_generation)
-
-        for index in range(parent_generation.num_parents_pairs):
-            """We always take 2 consecutive members from the parents_in_order list and pass them to the crossover
-            operator to get genomes of new members, for the new generation, to be created."""
-            child1_genome, child2_genome = crossover(
-                parents_in_order[2 * index],
-                parents_in_order[2 * index + 1],
-                crossover_args
-            )
-            new_members.append(Member(
-                genome=child1_genome,
-                identification_number=identification,
-                fitness_function=fitness_function)
-            )
-            new_members.append(Member(
-                genome=child2_genome,
-                identification_number=identification + 1,
-                fitness_function=fitness_function)
-            )
-            identification += 2
-
-        new_generation = Generation(
-            generation_members=new_members,
-            num_parents_pairs=parent_generation.num_parents_pairs,
-            elite_size=parent_generation.elite_size,  # TODO: allow change sin the elite size
-            pool_size=parent_generation.pool_size  # TODO: redundant, we should focus on selection_args
-        )
-
-        with manager.Lock():
-            generation_pool[id] = new_generation
-
     def _choose_best_rival_generation(self):
         """This method selects one of the rival generations from the rival_gen dict, based on the highest max fitness
         value, to be accepted as a new current generation."""
@@ -533,7 +525,7 @@ class GeneticAlgorithm:
                 operators with different processes in parallel:"""
                 for combination_id in operator_combinations_ids:
                     new_worker = Process(
-                        target=self._create_rival_generation,
+                        target=_create_rival_generation,
                         args=(
                             combination_id,  # id
                             self.operators.get(combination_id)[0],  # selection
