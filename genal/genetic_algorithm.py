@@ -292,7 +292,7 @@ def _create_rival_generation(id: int, selection: Callable, crossover: Callable, 
     key, so no additional lock is required."""
     generation_pool[id] = new_generation
 
-def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: list[int]):
+def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: list[int], population_size: int):
     """This function evaluates Members across multiple rival Generations.
 
     Parameters:
@@ -300,11 +300,15 @@ def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: 
             inside the `GeneticAlgorithm` class, with Members up for evaluation.
         index_range (list[int]): list containing single indexes from which ID of a Generation from the generation_pool
             and indexes of Members inside it are computed, so that they (Members) can be told to evaluate themselves.
+        population_size (int): Number of Members in each Generation from the generation_pool.
     """
     for index in index_range:
-        generation_id = index // len(generation_pool)
-        member_index = index - generation_id * len(generation_pool)
-        generation_pool.get(generation_id).members[member_index].evaluate()  # TODO: AttributeError: 'NoneType' object has no attribute 'members'
+        generation_id = np.floor(index / population_size)
+        member_index = index - generation_id * population_size
+        print(f"Evaluating member number {member_index} from generation {generation_id}")
+        generation_pool.get(int(generation_id)).members[int(member_index)].evaluate()
+        print(f"Member number {member_index} from generation {generation_id} has fitness value"
+              f"{generation_pool.get(int(generation_id)).members[int(member_index)].fit_val}")
 
 
 class GeneticAlgorithm:
@@ -577,15 +581,11 @@ class GeneticAlgorithm:
                 no_members = self.pop_size * len(self.rival_gen_pool)
                 print(f"We have {no_members} members to evaluate.")
 
-                members_per_worker = no_members // no_workers
+                members_per_worker = no_members / no_workers
                 if members_per_worker <= 1:
                     no_workers = no_members
 
-                indexes_batches = {}
-                split = split_indexes(num_members=no_members, num_workers=no_workers)
-
-                for i, chunk in enumerate(split):
-                    indexes_batches[i] = chunk
+                indexes_batches = split_indexes(num_members=no_members, num_workers=no_workers)
 
                 for index in range(no_workers):
                     indexes_of_members_to_evaluate = indexes_batches[index]
@@ -594,7 +594,8 @@ class GeneticAlgorithm:
                         target=_evaluate_members,  # now there's a problem with the function, not with multiprocessing
                         args=(
                             self.rival_gen_pool,
-                            indexes_of_members_to_evaluate
+                            indexes_of_members_to_evaluate,
+                            self.pop_size
                         )
                     )
                     new_worker.start()
