@@ -513,7 +513,7 @@ class GeneticAlgorithm:
         value, to be accepted as a new current generation."""
         fitness_comparison = {}
         for id_of_rival, generation in self.rival_gen_pool.items():
-            fitness_comparison[id_of_rival] = generation.fitness_ranking[0].get('fitness value')
+            fitness_comparison[id_of_rival] = generation.fitness_ranking[0].get('fitness value')  # TODO: IndexError: list index out of range
         self.current_generation = self.rival_gen_pool.get(max(fitness_comparison, key=fitness_comparison.get))
         self.accepted_gen_list.append(self.current_generation)
         self.best_fit_history.append(self.current_generation.fitness_ranking[0].get('fitness value'))
