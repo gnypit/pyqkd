@@ -233,8 +233,7 @@ class Generation:  # TODO: we need constructor to take members, method for chang
 
 
 def _create_rival_generation(id: int, selection: Callable, crossover: Callable, crossover_args: tuple,
-                             parent_generation: Generation, fitness_function: Callable, manager: Manager,
-                             generation_pool: DictProxy):  # TODO: update docstring after a successful test
+                             parent_generation: Generation, fitness_function: Callable, generation_pool: DictProxy):  # TODO: update docstring after a successful test
     """Method for creating a single new generation, one of many, with a set of selection and crossover operators
     accessible under the provided id and added to the pool of rival generations with the same id.
     """
@@ -271,8 +270,9 @@ def _create_rival_generation(id: int, selection: Callable, crossover: Callable, 
         pool_size=parent_generation.pool_size  # TODO: redundant, we should focus on selection_args
     )
 
-    with manager.Lock():
-        generation_pool[id] = new_generation
+    """Generation pool is created as a DictProxy and each process (worker) will add it's Generation under a different 
+    key, so no additional lock is required."""
+    generation_pool[id] = new_generation
 
 
 class GeneticAlgorithm:
@@ -533,8 +533,8 @@ class GeneticAlgorithm:
                             self.args.get('crossover'),  # crossover_args
                             self.current_generation,  # parent_generation
                             self.fit_fun,  # fitness_function
-                            self.manager,  # manager
-                            self.pool_size  # (redundant) pool size for tournament selection
+                            self.pool_size,  # (redundant) pool size for tournament selection
+                            self.rival_gen_pool
                         )
                     )
                     new_worker.start()
