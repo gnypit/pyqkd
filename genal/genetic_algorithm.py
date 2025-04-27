@@ -13,6 +13,11 @@ from multiprocessing.managers import ListProxy, DictProxy
 identification = 0
 
 
+def split_indexes(num_members, num_workers):
+    indexes = list(range(num_members))
+    return [indexes[i::num_workers] for i in range(num_workers)]
+
+
 def sort_dict_by_fit(dictionary: None):
     """Used as a key in 'sort' method applied to a list of dictionaries with chromosomes' indexes in a generation as
      keys and their fitness values as values. Used to sort dicts in the list by fitness value.
@@ -568,14 +573,28 @@ class GeneticAlgorithm:
                 """For fitness evaluation as many workers as the CPU allows are created. All members are distributed
                  between these processes to be evaluated:"""
                 no_workers = cpu_count()
-                # no_members = self.pop_size * len(self.rival_gen_pool)
+                print(f"We have {no_workers} workers.")
+                no_members = self.pop_size * len(self.rival_gen_pool)
+                print(f"We have {no_members} members to evaluate.")
 
-                for step in range(no_workers):
+                members_per_worker = no_members // no_workers
+                if members_per_worker <= 1:
+                    no_workers = no_members
+
+                indexes_batches = {}
+                split = split_indexes(num_members=no_members, num_workers=no_workers)
+
+                for i, chunk in enumerate(split):
+                    indexes_batches[i] = chunk
+
+                for index in range(no_workers):
+                    indexes_of_members_to_evaluate = indexes_batches[index]
+                    print(f"For step={index} we have indexes={indexes_of_members_to_evaluate}")
                     new_worker = Process(
                         target=_evaluate_members,  # now there's a problem with the function, not with multiprocessing
                         args=(
                             self.rival_gen_pool,
-                            list(range(no_workers * step, no_workers * (step + 1)))
+                            indexes_of_members_to_evaluate
                         )
                     )
                     new_worker.start()
