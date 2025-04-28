@@ -304,18 +304,22 @@ def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: 
         population_size (int): Number of Members in each Generation from the generation_pool.
     """
     for index in index_range:
-        generation_id = np.floor(index / population_size)
-        member_index = index - generation_id * population_size
+        generation_id = int(np.floor(index / population_size))  # make int from numpy's float 64 ID
+        member_index = int(index - generation_id * population_size)  # make int from numpy's float 64 ID
 
-        member_to_evaluate = generation_pool.get(int(generation_id)).members[int(member_index)]
+        """Fetch the WHOLE Generation, because the `.members` attr. is "nested" and can only be copied, 
+        not USED in SHARED MEMORY"""
+        generation = generation_pool[generation_id]
+        member_to_evaluate = generation.members[member_index]
         print(f"I have member={member_to_evaluate} with fitness function {member_to_evaluate.fit_fun}")
 
-        fitness_value = member_to_evaluate.evaluate()  # TODO: why doesn't it change the fit val?
+        fitness_value = member_to_evaluate.evaluate()
         print(f"Member number {member_index} from generation {generation_id} has fitness value = {fitness_value}")
         print(f"Member number {member_index} from generation {generation_id} has fitness value = "
               f"{member_to_evaluate.fit_val}")
 
-        generation_pool[int(generation_id)].members[int(member_index)] = member_to_evaluate  # reassigning an evaluated member to the list inside DictProxy
+        generation.members[member_index] = member_to_evaluate  # <-- Modify the member
+        generation_pool[generation_id] = generation  # <-- Save back the whole Generation!!!
 
 
 class GeneticAlgorithm:
