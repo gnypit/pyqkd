@@ -67,7 +67,7 @@ if __name__ == '__main__':
 
     """Secondly, approach with our GeneticAlgorithm:"""
     new_ga_instance = genetic_algorithm.GeneticAlgorithm(
-        initial_pop_size=10,
+        initial_pop_size=12,
         number_of_generations=5,
         elite_size=0,
         args={
@@ -80,7 +80,7 @@ if __name__ == '__main__':
         selection=selection_operators.tournament_selection,
         crossover=crossover_operators.single_point_crossover,
         pool_size=4,  # we could find a better value for this
-        no_parents_pairs=10,  # has to be even for now
+        no_parents_pairs=6,  # has to be even for now
         mutation_prob=float(1 / 6)
     )
     new_ga_instance.run()
