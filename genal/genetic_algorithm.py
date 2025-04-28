@@ -319,6 +319,9 @@ def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: 
               f"{member_to_evaluate.fit_val}")
 
         generation.members[member_index] = member_to_evaluate  # <-- Modify the member
+        generation.fitness_ranking.append(
+                {'index': index, 'fitness value': fitness_value}
+            )
         generation_pool[generation_id] = generation  # <-- Save back the whole Generation!!!
 
 
