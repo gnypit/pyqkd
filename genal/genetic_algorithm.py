@@ -315,12 +315,12 @@ def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: 
         not USED in SHARED MEMORY"""
         generation = generation_pool[generation_id]
         member_to_evaluate = generation.members[member_index]
-        print(f"I have member={member_to_evaluate} with fitness function {member_to_evaluate.fit_fun}")
+        # print(f"I have member={member_to_evaluate} with fitness function {member_to_evaluate.fit_fun}")
 
         fitness_value = member_to_evaluate.evaluate()
-        print(f"Member number {member_index} from generation {generation_id} has fitness value = {fitness_value}")
-        print(f"Member number {member_index} from generation {generation_id} has fitness value = "
-              f"{member_to_evaluate.fit_val}")
+        # print(f"Member number {member_index} from generation {generation_id} has fitness value = {fitness_value}")
+        # print(f"Member number {member_index} from generation {generation_id} has fitness value = "
+        #      f"{member_to_evaluate.fit_val}")
 
         generation.members[member_index] = member_to_evaluate  # <-- Modify the member
         generation.fitness_ranking.append(
@@ -558,12 +558,14 @@ class GeneticAlgorithm:
         """This is the main method for an automated run of the Genetic Algorithm, supposed to be used right after this
         class' instance initialisation. It creates the initial Generation and then performs the `no_generations`
         iterations of creating new/rival Generations, choosing the best one and mutation, if necessary."""
-        print(f"\nCreating initial population\n")
+        print(f"Creating the initial population.")
         self._create_initial_generation()
 
         # For testing:
+        """
         for member in self.current_generation.members:
             print(member.fit_val)
+        """
 
         operator_combinations_ids = list(self.operators.keys())
 
@@ -603,11 +605,8 @@ class GeneticAlgorithm:
 
                 """For fitness evaluation as many workers as the CPU allows are created. All members are distributed
                  between these processes to be evaluated:"""
-                print(f"\nEvaluating fitness of the rival generations\n")
                 no_workers = cpu_count()
-                print(f"We have {no_workers} workers.")
                 no_members = self.pop_size * len(self.rival_gen_pool)
-                print(f"We have {no_members} members to evaluate.")
 
                 members_per_worker = no_members / no_workers
                 if members_per_worker <= 1:
@@ -615,9 +614,12 @@ class GeneticAlgorithm:
 
                 indexes_batches = split_indexes(num_members=no_members, num_workers=no_workers)
 
+                print(f"\nEvaluating fitness of the rival generations. We have {no_workers} workers and {no_members} "
+                      f"members to evaluate. Batches of Members' indexes passed to workers are {indexes_batches}.\n")
+
                 for index in range(no_workers):
                     indexes_of_members_to_evaluate = indexes_batches[index]
-                    print(f"For step={index} we have indexes={indexes_of_members_to_evaluate}")
+                    # print(f"For step={index} we have indexes={indexes_of_members_to_evaluate}")
                     new_worker = Process(
                         target=_evaluate_members,  # now there's a problem with the function, not with multiprocessing
                         args=(
