@@ -2,6 +2,7 @@
 Script is distributed under the license: https://github.com/gnypit/pyqkd/blob/main/LICENSE
 """
 import random
+from os import getpid
 import matplotlib.pyplot as plt
 import numpy as np
 from collections.abc import \
@@ -259,6 +260,8 @@ def _create_rival_generation(id: int, selection: Callable, crossover: Callable, 
     """
     global identification
     # selection, crossover = self.operators.get(combination_id)
+
+    print(f"Process {getpid()}: Creating a new rival Generation")
 
     new_members = []
     parents_in_order = selection(parent_generation)
