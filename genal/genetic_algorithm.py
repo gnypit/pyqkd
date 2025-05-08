@@ -136,7 +136,7 @@ class Member(Chromosome):
     id: int
     parents_id: list = []
 
-    def __init__(self, genome: type[list | dict], identification_number: int, fitness_function=None):
+    def __init__(self, genome: type[list | dict], identification_number: int, fitness_function: Callable=None):
         """Apart from what 'Chromosome' class constructor needs, here identification number should be passed.
 
         Parameters:
@@ -649,6 +649,7 @@ class GeneticAlgorithm:
                     for i, member in enumerate(generation.members):
                         if member.fit_val is None:
                             print(f"Skipping member {i} in Generation {gen_id} due to None fitness!")
+                            print(member)
                             continue  # <-- skip if fitness is None
                         generation.fitness_ranking.append({'index': i, 'fitness value': member.fit_val})
                     if generation.fitness_ranking:
