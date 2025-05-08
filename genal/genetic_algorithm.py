@@ -264,7 +264,12 @@ def _create_rival_generation(id: int, selection: Callable, crossover: Callable, 
     print(f"Process {getpid()}: Creating a new rival Generation")
 
     new_members = []
-    parents_in_order = selection(parent_generation)
+    try:
+        parents_in_order = selection(parent_generation)
+    except TypeError:
+        for member in parent_generation.members:
+            print(f"In parent Generation Member = {member} has fitness function {member.fit_fun}")
+        exit()
 
     for index in range(parent_generation.num_parents_pairs):
         """We always take 2 consecutive members from the parents_in_order list and pass them to the crossover
@@ -662,7 +667,7 @@ class GeneticAlgorithm:
 
                 """Last stage of each iteration is to choose the next accepted Generation and mutate it:"""
                 self._choose_best_rival_generation()
-                self.mutate()
+                # self.mutate()  # mutation in here introduces Members with their fitness not evaluated! TODO: make sure mutation is applied to each rival generation after children are created and before fitness is evaluated
 
     def fitness_plot(self):  # TODO: finish with an optional argument for using plotly or matplotlib
         """Method for plotting fitness values history of the best Members from each accepted Generation."""
