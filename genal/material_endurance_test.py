@@ -73,7 +73,7 @@ if __name__ == '__main__':
         args={
             'genome': (np.linspace(start=0, stop=1, num=100000), 6),  # six genes
             'selection': 4,  # pool size for the tournament selection operator
-            'crossover': None  # for single point crossover operator
+            'crossover': None  # for a single point crossover operator
         },
         fitness_function=fitness_function_pyqkd,
         genome_generator=genetic_algorithm.uniform_gene_generator,
