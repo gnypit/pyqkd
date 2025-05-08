@@ -24,7 +24,7 @@ def tournament_selection(parent_generation: Generation):
         tournament_members = random.sample(parent_generation.members, parent_generation.pool_size)
 
         for member in tournament_members:
-            print(f"Member {member.id}: fitness_function={member.fit_fun}")
+            # print(f"Member {member.id}: fitness_function={member.fit_fun}")
             if not callable(member.fit_fun):
                 print(f"WARNING: Fitness function passed to Member {member.id} is not Callable.")
 
