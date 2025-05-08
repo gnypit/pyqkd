@@ -424,7 +424,7 @@ class GeneticAlgorithm:
     def __init__(self, initial_pop_size: int, number_of_generations: int, elite_size: int, args: dict,
                  fitness_function: Callable, genome_generator: Callable,
                  selection: list[Callable] | Callable, crossover: list[Callable] | Callable,
-                 pool_size, no_parents_pairs=None, mutation_prob=0.0,
+                 pool_size, no_parents_pairs=None, mutation_prob: float=0.0,
                  seed=None):  # TODO: put pool_size in the args dict for self.selection_args = args.get('selection') below
         """GeneticAlgorithm class constructor.
 
