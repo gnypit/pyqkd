@@ -294,7 +294,7 @@ def _create_rival_generation(id: int, selection: Callable, crossover: Callable, 
     new_generation = Generation(
         generation_members=new_members,
         num_parents_pairs=parent_generation.num_parents_pairs,
-        elite_size=parent_generation.elite_size,  # TODO: allow change sin the elite size
+        elite_size=parent_generation.elite_size,  # TODO: allow changes in the elite size
         pool_size=parent_generation.pool_size  # TODO: redundant, we should focus on selection_args
     )
 
