@@ -111,13 +111,18 @@ class Chromosome:
         """
         try:
             if self.fit_fun is not None:
-                self.fit_val = self.fit_fun(self.genome)
+                result = self.fit_fun(self.genome)
             elif fitness_function is not None:
                 self.fit_fun = fitness_function
-                self.fit_val = self.fit_fun(self.genome)
+                result = self.fit_fun(self.genome)
             else:
                 print(f"Warning: no fitness function available for {self}")
-                self.fit_val = 0.0
+                result = 0.0
+
+            if result is None:
+                print(f"⚠️ Warning: fitness function returned None for genome: {self.genome}")
+
+            self.fit_val = result
         except Exception as e:
             print(f"Error evaluating member {self}: {e}")
             self.fit_val = 0.0
