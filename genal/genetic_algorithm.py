@@ -121,6 +121,7 @@ class Chromosome:
 
             if result is None:
                 print(f"⚠️ Warning: fitness function returned None for genome: {self.genome}")
+                print(f"It should have been {self.fit_fun(self.genome)}")
 
             self.fit_val = result
         except Exception as e:
@@ -271,9 +272,10 @@ def _create_rival_generation(id: int, selection: Callable, crossover: Callable, 
     new_members = []
     try:
         parents_in_order = selection(parent_generation)  # TODO: either add more useful debugging tools inside selection or instead of passing a Generation to the selection operator, inject the operator into the algorithm as a Callable attribute and then debug
-    except TypeError:
+    except TypeError as e:
         for member in parent_generation.members:
-            print(f"In parent Generation Member = {member} has fitness function {member.fit_fun}")
+            print(f"In parent Generation Member = {member} has fitness function {member.fit_fun}. While applying the "
+                  f"selection operator, the following error occurred: {e}")
         exit()
 
     for index in range(parent_generation.num_parents_pairs):
