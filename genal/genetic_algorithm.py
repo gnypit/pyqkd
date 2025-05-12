@@ -664,6 +664,7 @@ class GeneticAlgorithm:
                         if member.fit_val is None:
                             print(f"Skipping member {i} with fit fun. {member.fit_fun} in Generation {gen_id} due to "
                                   f"None fitness!")
+                            print(f"When computing fitness manually we get {member.evaluate()}!")
                             print(member)
                             continue  # <-- skip if fitness is None
                         generation.fitness_ranking.append({'index': i, 'fitness value': member.fit_val})
