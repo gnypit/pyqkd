@@ -329,10 +329,8 @@ def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: 
         generation_id = int(np.floor(index / population_size))  # make int from numpy's float 64 ID
         member_index = int(index - generation_id * population_size)  # make int from numpy's float 64 ID
 
-        """Fetch the WHOLE Generation, because the `.members` attr. is "nested" and can only be copied, 
-        not USED in SHARED MEMORY"""
-        generation = generation_pool[generation_id]
-        member_to_evaluate = generation.members[member_index]
+        """Fetch Member from the members att. of given Generation in shared memory"""
+        member_to_evaluate = generation_pool[generation_id].members[member_index]
         # print(f"I have member={member_to_evaluate} with fitness function {member_to_evaluate.fit_fun}")
 
         fitness_value = member_to_evaluate.evaluate()
@@ -340,11 +338,10 @@ def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: 
         # print(f"Member number {member_index} from generation {generation_id} has fitness value = "
         #      f"{member_to_evaluate.fit_val}")
 
-        generation.members[member_index] = member_to_evaluate  # <-- Modify the member
-        generation.fitness_ranking.append(
-                {'index': member_index, 'fitness value': fitness_value}
+        generation_pool[generation_id].members[member_index] = member_to_evaluate  # <-- Modify the member
+        generation_pool[generation_id].fitness_ranking.append(
+                {'index': member_index, 'fitness value': fitness_value}  # TODO: does the fitness ranking have to be in the shared memory too?
             )
-        generation_pool[generation_id] = generation  # <-- Save back the whole Generation!!!
 
 
 class GeneticAlgorithm:
