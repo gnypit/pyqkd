@@ -189,7 +189,8 @@ class Generation:  # TODO: we need constructor to take members, method for chang
     Generations is accepted.
 
     Attributes:
-        members (list[Member]): list of Members; chromosomes of the generation with their and parents' IDs.
+        members (ListProxy[Member]): list of Members in shared memory; chromosomes of the generation with their and
+            parents' IDs.
         num_parents_pairs (int): number of pairs of Members can be parents, e.g., 20 pairs means 40 mating chromosomes.
         elite_size (int): number of Members to be copy-pasted directly into a new Generation.
         pool_size (int): parameter for the tournament selection operator.  # TODO: redundant, put it into args in the GeneticAlgorithm class
@@ -197,18 +198,18 @@ class Generation:  # TODO: we need constructor to take members, method for chang
         fitness_ranking (list[dict]): dicts in this list have the index of a Member in the Generation as keys and its
             fitness value as values.
     """
-    members: list[Member]
+    members: ListProxy[Member]
     num_parents_pairs: int
     elite_size: int
     pool_size: int
     size: int
     fitness_ranking: list[dict]
 
-    def __init__(self, generation_members: list[Member], num_parents_pairs: int, elite_size: int, pool_size: int):
+    def __init__(self, generation_members: ListProxy[Member], num_parents_pairs: int, elite_size: int, pool_size: int):
         """Constructor for any Generation inside the GeneticAlgorithm.
 
         Parameters:
-            generation_members (list[Member]): list of Members to be put in this Generation.
+            generation_members (ListProxy[Member]): list of Members in shared memory to be put in this Generation.
             num_parents_pairs (int): number of Members' pairs that can be parents.
             elite_size (int): number of Members to be copy-pasted directly into a new Generation.
             pool_size (int): parameter for the tournament selection operator.  # TODO: redundant, put it into args in the GeneticAlgorithm class
