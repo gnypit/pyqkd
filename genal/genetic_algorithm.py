@@ -59,7 +59,7 @@ class Chromosome:
         genome (type[list | dict]): Either list or a dictionary with genes of this chromosome.
         fit_fun (Callable): Fitness function used for computing fitness value based on chromosome's genes.
     """
-    fit_val: float = None
+    fit_val: float = None  # TODO: maybe it should be stored in shared memory too?
     genome: type[list | dict]
     fit_fun: Callable
 
