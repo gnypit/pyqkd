@@ -59,7 +59,7 @@ class Chromosome:
         genome (type[list | dict]): Either list or a dictionary with genes of this chromosome.
         fit_fun (Callable): Fitness function used for computing fitness value based on chromosome's genes.
     """
-    fit_val: float = None
+    fit_val: float = None  # TODO: maybe it should be stored in shared memory too?
     genome: type[list | dict]
     fit_fun: Callable
 
@@ -603,7 +603,7 @@ class GeneticAlgorithm:
                             self.current_generation,  # parent_generation
                             self.fit_fun,  # fitness_function
                             self.rival_gen_pool,  # generation_pool
-                            manager  # ga_manager
+                            manager  # ga_manager TODO: perhaps instead of the manager being passed down, a structure for new members should be passed, and actual rival generations (based on children returned by processes) should be created in the main process?
                         )
                     )
                     new_worker.start()
