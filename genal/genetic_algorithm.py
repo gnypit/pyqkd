@@ -248,7 +248,8 @@ class Generation:  # TODO: we need constructor to take members, method for chang
 
 
 def _create_rival_generation(id: int, selection: Callable, crossover: Callable, crossover_args: tuple,
-                             parent_generation: Generation, fitness_function: Callable, generation_pool: DictProxy):
+                             parent_generation: Generation, fitness_function: Callable, generation_pool: DictProxy,
+                             ga_manager: Manager):
     """Method for creating a single new Generation of children based on the parent Generation with selected operators.
 
     Parameters:
@@ -264,6 +265,8 @@ def _create_rival_generation(id: int, selection: Callable, crossover: Callable, 
             Member in the new Generation.
         generation_pool (DictProxy): A dictionary in shared memory in which all new Generations are supposed to be
             stored under the same kay as the selection and crossover operators combination.
+        ga_manager (Manager): Manager of the GeneticAlgorithm class calling this function; used for creating a ListProxy
+            of new Members in the shared memory.
     """
     global identification
     # selection, crossover = self.operators.get(combination_id)
@@ -299,8 +302,10 @@ def _create_rival_generation(id: int, selection: Callable, crossover: Callable, 
         )
         identification += 2
 
+    shared_new_members = ga_manager.list(new_members)
+
     new_generation = Generation(
-        generation_members=new_members,
+        generation_members=shared_new_members,
         num_parents_pairs=parent_generation.num_parents_pairs,
         elite_size=parent_generation.elite_size,  # TODO: allow changes in the elite size
         pool_size=parent_generation.pool_size  # TODO: redundant, we should focus on selection_args
@@ -585,7 +590,7 @@ class GeneticAlgorithm:
 
         operator_combinations_ids = list(self.operators.keys())
 
-        with self.manager:
+        with self.manager as manager:
             for _ in range(self.no_generations):
                 """Rival generations are created based on accessible combinations of selection and crossover
                 operators with different processes in parallel:"""
@@ -600,7 +605,8 @@ class GeneticAlgorithm:
                             self.args.get('crossover'),  # crossover_args
                             self.current_generation,  # parent_generation
                             self.fit_fun,  # fitness_function
-                            self.rival_gen_pool  # generation_pool
+                            self.rival_gen_pool,  # generation_pool
+                            manager  # ga_manager
                         )
                     )
                     new_worker.start()
