@@ -506,6 +506,7 @@ class GeneticAlgorithm:
         """Creating the first - initial - generation in this population."""
         global identification
         first_members = []
+
         for _ in range(self.pop_size):
             genes = self.genome_generator(self.args)
             first_members.append(Member(
@@ -514,8 +515,10 @@ class GeneticAlgorithm:
                 fitness_function=self.fit_fun)
             )
             identification += 1
+
+        shared_first_members = self.manager.list(first_members)
         self.current_generation = Generation(
-            generation_members=first_members,
+            generation_members=shared_first_members,
             num_parents_pairs=self.no_parents_pairs,
             elite_size=self.elite_size,
             pool_size=self.pool_size
