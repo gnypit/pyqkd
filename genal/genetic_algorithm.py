@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from collections.abc import \
     Callable  # https://stackoverflow.com/questions/37835179/how-can-i-specify-the-function-type-in-my-type-hints
-from multiprocessing import Process, Manager, cpu_count
+from multiprocessing import Process, Manager, cpu_count, Value
+from ctypes import c_double
 from multiprocessing.managers import ListProxy, DictProxy
 
 """Global variable to hold IDs of chromosomes for backtracking"""
@@ -59,7 +60,7 @@ class Chromosome:
         genome (type[list | dict]): Either list or a dictionary with genes of this chromosome.
         fit_fun (Callable): Fitness function used for computing fitness value based on chromosome's genes.
     """
-    fit_val: float = None  # TODO: maybe it should be stored in shared memory too?
+    fit_val: Value(c_double) = None
     genome: type[list | dict]
     fit_fun: Callable
 
