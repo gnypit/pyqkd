@@ -1,7 +1,6 @@
 from numpy import sum
 from multiprocessing.sharedctypes import Value, Array
 from multiprocessing import Process, Manager, Lock
-from multiprocessing.managers import BaseManager
 from ctypes import c_double
 
 class SimpleChromosome:
@@ -27,13 +26,16 @@ class SharedChromosome:
 class ManagerChromosome:
     genes: list
     fit_val: Value(c_double) = None
+    lock = Lock
 
-    def __init__(self, genes):
+    def __init__(self, genes, manager):
         self.genes = genes
-        self.fit_val = Value('d', 0.0)
+        self.fit_val = manager.Value('d', 0.0)
+        self.lock = manager.Lock()
 
     def evaluate(self):
-        self.fit_val = float(sum(self.genes))
+        with self.lock:
+            self.fit_val.value = float(sum(self.genes))
 
 
 def evaluate_simple(chromosome: SimpleChromosome):
@@ -47,11 +49,6 @@ def evaluate_shared(chromosome: SharedChromosome):
 def evaluate_manager(chromosome: ManagerChromosome):
     chromosome.evaluate()
     print(f"Inside the process {chromosome.fit_val}")
-
-class ChromosomeManager(BaseManager):
-    pass
-
-ChromosomeManager.register('Chromosome', SimpleChromosome)
 
 if __name__ == '__main__':
     simple = SimpleChromosome(genes=[1, 2, 3, 4])
@@ -70,17 +67,9 @@ if __name__ == '__main__':
     print(f"Outside the process {shared.fit_val}")
 
     with Manager() as m:
-        m_chrom = ManagerChromosome(genes=[1, 2, 3, 4])
+        m_chrom = ManagerChromosome(genes=[1, 2, 3, 4], manager=m)
         p = Process(target=evaluate_manager, args=(m_chrom,))
         p.start()
         p.join()
 
-        print(f"Outside the process {m_chrom.fit_val}")
-
-    with ChromosomeManager() as cm:
-        cm_chrom = cm.Chromosome(genes=[1, 2, 3, 4])
-        p = Process(target=evaluate_simple, args=(cm_chrom,))
-        p.start()
-        p.join()
-
-        print(f"Outside the process {cm_chrom.fit_val}")
+        print(f"Outside the process {m_chrom.fit_val.value}")
