@@ -22,6 +22,12 @@ def tournament_selection(parent_generation: Generation):
     for _ in range(parent_generation.num_parents_pairs * 2):
         # Randomly select a subset of members for the tournament
         tournament_members = random.sample(parent_generation.members, parent_generation.pool_size)
+
+        for member in tournament_members:
+            # print(f"Member {member.id}: fitness_function={member.fit_fun}")
+            if not callable(member.fit_fun):
+                print(f"WARNING: Fitness function passed to Member {member.id} is not Callable.")
+
         # Identify the member with the highest fitness value in the tournament
         best_member = max(tournament_members, key=lambda mem: mem.fit_val)
         # Add the best member from this tournament to the list of selected candidates
