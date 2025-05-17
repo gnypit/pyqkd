@@ -26,16 +26,13 @@ class SharedChromosome:
 class ManagerChromosome:
     genes: list
     fit_val: Value(c_double) = None
-    lock = Lock
 
     def __init__(self, genes, manager):
         self.genes = genes
         self.fit_val = manager.Value('d', 0.0)
-        self.lock = manager.Lock()
 
     def evaluate(self):
-        with self.lock:
-            self.fit_val.value = float(sum(self.genes))
+        self.fit_val.value = float(sum(self.genes))
 
 
 def evaluate_simple(chromosome: SimpleChromosome):
