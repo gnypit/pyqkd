@@ -60,10 +60,10 @@ class Chromosome:
         fit_fun (Callable): Fitness function used for computing fitness value based on chromosome's genes.
     """
     fit_val: float = None
-    genome: type[list | dict]
+    genome: type[list | dict | ListProxy | DictProxy]
     fit_fun: Callable
 
-    def __init__(self, genome: type[list | dict], fitness_function: Callable=None):
+    def __init__(self, genome: type[list | dict | ListProxy | DictProxy], fitness_function: Callable=None):
         """Constructor of the Chromosome class.
 
         Each chromosome represents a possible solution to a given problem. Parameters characterising these solutions
@@ -86,11 +86,11 @@ class Chromosome:
         return (f"{type(self).__name__}(genes={self.genome}, fitness function={self.fit_fun}, "
                 f"fitness value={self.fit_val})")
 
-    def change_genes(self, new_genes: type[list | dict]):
+    def change_genes(self, new_genes: type[list | dict | ListProxy | DictProxy]):
         """Method meant to be used when mutation occurs, to modify the genes in an already created chromosome.
 
         Parameters:
-            new_genes (type[list | dict]): New genome to be stored by the chromosome.
+            new_genes (type[list | dict | ListProxy | DictProxy]): New genome to be stored by the chromosome.
         """
         self.genome = new_genes
 
