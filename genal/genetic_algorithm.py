@@ -142,11 +142,12 @@ class Member(Chromosome):
     id: int
     parents_id: list = []
 
-    def __init__(self, genome: type[list | dict], identification_number: int, fitness_function: Callable=None):
+    def __init__(self, genome: type[list | dict | ListProxy | DictProxy], identification_number: int,
+                 fitness_function: Callable=None):
         """Apart from what 'Chromosome' class constructor needs, here identification number should be passed.
 
         Parameters:
-            genome (type[list | dict]): Either a dict with genes as values and names provided by the User as keys,
+            genome (type[list | dict | ListProxy | DictProxy]): Either a dict with genes as values and names provided by the User as keys,
                 or simply a list of genes.
             identification_number (int): An ID to be created based on the global variable, for backtracking a
                 genological tree of all members across different generations in a praticular run of the GA.
