@@ -56,7 +56,7 @@ class Chromosome:
     Attributes:
         fit_val (float): Fitness value of the chromosome. None by default, stores a float number once the chromosome
             is evaluated.
-        genome (type[list | dict]): Either list or a dictionary with genes of this chromosome.
+        genome (type[ListProxy | DictProxy]): Either list or a dict, in shared memory, with genes of this chromosome.
         fit_fun (Callable): Fitness function used for computing fitness value based on chromosome's genes.
     """
     fit_val: float = None
@@ -217,7 +217,7 @@ class Generation:  # TODO: we need constructor to take members, method for chang
         fitness_ranking (list[dict]): dicts in this list have the index of a Member in the Generation as keys and its
             fitness value as values.
     """
-    members: list[Member]
+    members: ListProxy[Member]
     num_parents_pairs: int
     elite_size: int
     pool_size: int
@@ -228,7 +228,7 @@ class Generation:  # TODO: we need constructor to take members, method for chang
         """Constructor for any Generation inside the GeneticAlgorithm.
 
         Parameters:
-            generation_members (list[Member]): list of Members to be put in this Generation.
+            generation_members (ListProxy[Member]): list of Members, in shared memory, to be put in this Generation.
             num_parents_pairs (int): number of Members' pairs that can be parents.
             elite_size (int): number of Members to be copy-pasted directly into a new Generation.
             pool_size (int): parameter for the tournament selection operator.  # TODO: redundant, put it into args in the GeneticAlgorithm class
