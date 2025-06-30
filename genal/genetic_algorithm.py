@@ -72,14 +72,13 @@ class Chromosome:
         crossover, etc. However, this class is limited to storage of genes, fitness function and value, and to fitness
         evaluation.
 
-        Manager is only passed on for creating proxies for list/dict, it is not saved in Chromosome directly - it will
-        be saved in outer scope.
-
         Parameters:
             genome (type[list | dict]): Either a dict with genes as values and names provided by the User as keys,
                 or simply a list of genes.
             fitness_function (Callable=None): Optional; callable fitness function provided by the User, which computes
                 fitness value based on genome. Can be passed later, thus it is None by default.
+            manager (Manager): Manager from multiprocessing is only passed on for creating proxies for list/dict, it is
+                not saved in Chromosome directly - it will be saved in outer scope.
         """
         if type(genome) == list:
             self.genome = manager.list(genome)
@@ -102,6 +101,8 @@ class Chromosome:
 
         Parameters:
             new_genes (type[list | dict]): New genome to be stored by the chromosome.
+            manager (Manager): Manager from multiprocessing is only passed on for creating proxies for list/dict, it is
+                not saved in Chromosome directly - it will be saved in outer scope.
         """
         if type(new_genes) == list:
             self.genome = manager.list(new_genes)
