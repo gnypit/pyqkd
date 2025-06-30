@@ -85,7 +85,7 @@ class Chromosome:
         elif type(genome) == dict:
             self.genome = manager.dict(genome)
         else:
-            raise TypeError
+            raise TypeError  # TODO: why is this error actually raised with the current code from the material_endurance_test.py ?
         self.fit_fun = fitness_function  # special variable
 
     def __repr__(self) -> str:
