@@ -394,13 +394,13 @@ class GeneticAlgorithm:
         workers (list[Process]): dynamical list containing processes from the multiprocessing package, meant to operate
             in parallel and either execute creating new Generations or evaluating them.
         manager (Manager): Manager ('master') synchronising access of multiple workers to a rival_gen proxy for dict.
-        rival_gen (DictProxy[int, Generation]): in the Parallel Genetic Algorithm multiple children Generations may be
-            created based on the current Generation of parents, based on different selection and crossover operators.
+        rival_gen_pool (DictProxy[int, Generation]): in the Parallel Genetic Algorithm multiple children Generations may
+            be created based on the current Generation of parents, based on different selection and crossover operators.
             These Generations are rival to one another, because only one will be accepted as the best and treated as the
             current Generation in the next iteration. In the rival_gen DictProxy each of these rival Generations is
             stored with its integer id as a key and parallel processes (workers) may add Generations to it after
             acquiring acces through a manager's lock.
-        accepted_gen (list[Generation]): the best of the rival Generations is added to a list of the accepted
+        accepted_gen_list (list[Generation]): the best of the rival Generations is added to a list of the accepted
             Generations and treated as the current Generation in the next iteration of the algorithm. If there is only
             one new, 'rival' Generation, then automatically it is appended to the accepted Generations list+.
         best_fit_history (list[float]): List the best Members' fitness values in each of the accepted Generation.
@@ -534,11 +534,13 @@ class GeneticAlgorithm:
             genes = self.genome_generator(self.args)
             first_members.append(Member(
                 genome=genes,
+                manager=self.manager,
                 identification_number=identification,
                 fitness_function=self.fit_fun)
             )
             identification += 1
         self.current_generation = Generation(
+            manager=self.manager,
             generation_members=first_members,
             num_parents_pairs=self.no_parents_pairs,
             elite_size=self.elite_size,
