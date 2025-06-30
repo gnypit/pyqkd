@@ -72,6 +72,9 @@ class Chromosome:
         crossover, etc. However, this class is limited to storage of genes, fitness function and value, and to fitness
         evaluation.
 
+        Manager is only passed on for creating proxies for list/dict, it is not saved in Chromosome directly - it will
+        be saved in outer scope.
+
         Parameters:
             genome (type[list | dict]): Either a dict with genes as values and names provided by the User as keys,
                 or simply a list of genes.
@@ -91,13 +94,21 @@ class Chromosome:
         return (f"{type(self).__name__}(genes={self.genome}, fitness function={self.fit_fun}, "
                 f"fitness value={self.fit_val})")
 
-    def change_genes(self, new_genes: type[list | dict]):
+    def change_genes(self, new_genes: type[list | dict], manager: Manager):
         """Method meant to be used when mutation occurs, to modify the genes in an already created chromosome.
+
+        Manager is only passed on for creating proxies for list/dict, it is not saved in Chromosome directly - it will
+        be saved in outer scope.
 
         Parameters:
             new_genes (type[list | dict]): New genome to be stored by the chromosome.
         """
-        self.genome = new_genes
+        if type(new_genes) == list:
+            self.genome = manager.list(new_genes)
+        elif type(new_genes) == dict:
+            self.genome = manager.dict(new_genes)
+        else:
+            raise TypeError
 
     def evaluate(self, fitness_function: Callable=None):
         """Method for applying fitness function to this chromosome (it's genes, to be precise).
