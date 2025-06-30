@@ -75,10 +75,10 @@ class Chromosome:
         Parameters:
             genome (type[list | dict]): Either a dict with genes as values and names provided by the User as keys,
                 or simply a list of genes.
-            fitness_function (Callable=None): Optional; callable fitness function provided by the User, which computes
-                fitness value based on genome. Can be passed later, thus it is None by default.
             manager (Manager): Manager from multiprocessing is only passed on for creating proxies for list/dict, it is
                 not saved in Chromosome directly - it will be saved in outer scope.
+            fitness_function (Callable=None): Optional; callable fitness function provided by the User, which computes
+                fitness value based on genome. Can be passed later, thus it is None by default.
         """
         if type(genome) == list:
             self.genome = manager.list(genome)
@@ -159,7 +159,8 @@ class Member(Chromosome):
     id: int
     parents_id: list = []
 
-    def __init__(self, genome: type[list | dict], identification_number: int, fitness_function: Callable=None):
+    def __init__(self, genome: type[list | dict], manager: Manager, identification_number: int,
+                 fitness_function: Callable=None):
         """Apart from what 'Chromosome' class constructor needs, here identification number should be passed.
 
         Parameters:
@@ -167,10 +168,12 @@ class Member(Chromosome):
                 or simply a list of genes.
             identification_number (int): An ID to be created based on the global variable, for backtracking a
                 genological tree of all members across different generations in a particular run of the GA.
+            manager (Manager): Manager from multiprocessing is only passed on for creating proxies for list/dict, it is
+                not saved in Chromosome directly - it will be saved in outer scope.
             fitness_function (Callable=None): Optional; callable fitness function provided by the User, which computes
                 fitness value based on genome. Can be passed later, thus it is None by default.
         """
-        super().__init__(genome=genome, fitness_function=fitness_function)
+        super().__init__(genome=genome, manager=manager, fitness_function=fitness_function)
         self.id = identification_number
 
     def add_parents_id(self, parents_id: list):
