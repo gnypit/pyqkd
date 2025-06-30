@@ -60,10 +60,10 @@ class Chromosome:
         fit_fun (Callable): Fitness function used for computing fitness value based on chromosome's genes.
     """
     fit_val: float = None
-    genome: type[list | dict]
+    genome: type[ListProxy | DictProxy]
     fit_fun: Callable
 
-    def __init__(self, genome: type[list | dict], fitness_function: Callable=None):
+    def __init__(self, genome: type[list | dict], manager: Manager, fitness_function: Callable=None):
         """Constructor of the Chromosome class.
 
         Each chromosome represents a possible solution to a given problem. Parameters characterising these solutions
@@ -78,7 +78,12 @@ class Chromosome:
             fitness_function (Callable=None): Optional; callable fitness function provided by the User, which computes
                 fitness value based on genome. Can be passed later, thus it is None by default.
         """
-        self.genome = genome
+        if type(genome) == list:
+            self.genome = manager.list(genome)
+        elif type(genome) == dict:
+            self.genome = manager.dict(genome)
+        else:
+            raise TypeError
         self.fit_fun = fitness_function  # special variable
 
     def __repr__(self) -> str:
