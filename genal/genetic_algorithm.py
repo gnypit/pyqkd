@@ -590,7 +590,8 @@ class GeneticAlgorithm:
         """For new (mutated) genome creation I use the generator passed to the superclass in it's initialisation:"""
         for index in indexes:
             self.current_generation.members[index].change_genes(
-                self.genome_generator(self.args)
+                self.genome_generator(self.args),
+                self.manager
             )
 
     def run(self):
