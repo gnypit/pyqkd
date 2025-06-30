@@ -166,7 +166,7 @@ class Member(Chromosome):
             genome (type[list | dict]): Either a dict with genes as values and names provided by the User as keys,
                 or simply a list of genes.
             identification_number (int): An ID to be created based on the global variable, for backtracking a
-                genological tree of all members across different generations in a praticular run of the GA.
+                genological tree of all members across different generations in a particular run of the GA.
             fitness_function (Callable=None): Optional; callable fitness function provided by the User, which computes
                 fitness value based on genome. Can be passed later, thus it is None by default.
         """
