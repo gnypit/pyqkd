@@ -224,7 +224,8 @@ class Generation:  # TODO: we need constructor to take members, method for chang
     size: int
     fitness_ranking: list[dict]
 
-    def __init__(self, generation_members: list[Member], num_parents_pairs: int, elite_size: int, pool_size: int):
+    def __init__(self, manager: Manager, generation_members: list[Member], num_parents_pairs: int, elite_size: int,
+                 pool_size: int):
         """Constructor for any Generation inside the GeneticAlgorithm.
 
         Parameters:
@@ -233,7 +234,7 @@ class Generation:  # TODO: we need constructor to take members, method for chang
             elite_size (int): number of Members to be copy-pasted directly into a new Generation.
             pool_size (int): parameter for the tournament selection operator.  # TODO: redundant, put it into args in the GeneticAlgorithm class
         """
-        self.members = generation_members
+        self.members = manager.list(generation_members)
         self.num_parents_pairs = num_parents_pairs
         self.elite_size = elite_size
         if 0 < pool_size <= self.num_parents_pairs:
