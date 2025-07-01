@@ -21,7 +21,7 @@ def tournament_selection(parent_generation: Generation):
     # Initialize a list to store the best candidates from each tournament
     for _ in range(parent_generation.num_parents_pairs * 2):
         # Randomly select a subset of members for the tournament
-        tournament_members = random.sample(parent_generation.members, parent_generation.pool_size)
+        tournament_members = random.sample(list(parent_generation.members), parent_generation.pool_size)  # We must apply list() on the ListProxy object
 
         for member in tournament_members:
             # print(f"Member {member.id}: fitness_function={member.fit_fun}")
