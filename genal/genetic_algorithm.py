@@ -566,7 +566,7 @@ class GeneticAlgorithm:
         fitness_comparison = {}
         for id_of_rival, generation in self.rival_gen_pool.items():
             fitness_comparison[id_of_rival] = generation.fitness_ranking[0].get('fitness value')
-        self.current_generation = self.rival_gen_pool.get(max(fitness_comparison, key=fitness_comparison.get))  # TODO: resolve ValueError: max() iterable argument is empty
+        self.current_generation = self.rival_gen_pool.get(max(fitness_comparison, key=fitness_comparison.get))  # TODO: resolve ValueError: max() iterable argument is empty - why is it now after the manager and shared memory implementation???
         self.accepted_gen_list.append(self.current_generation)
         self.best_fit_history.append(self.current_generation.fitness_ranking[0].get('fitness value'))
 
