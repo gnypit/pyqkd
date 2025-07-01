@@ -609,7 +609,7 @@ class GeneticAlgorithm:
 
         operator_combinations_ids = list(self.operators.keys())
 
-        with self.manager:
+        with self.manager as ga_manager:
             for _ in range(self.no_generations):
                 """Rival generations are created based on accessible combinations of selection and crossover
                 operators with different processes in parallel:"""
@@ -617,7 +617,7 @@ class GeneticAlgorithm:
                 for combination_id in operator_combinations_ids:
                     new_worker = Process(
                         target=_create_rival_generation(
-                            self.manager,
+                            ga_manager,
                             combination_id,  # id
                             self.operators.get(combination_id)[0],  # selection
                             self.operators.get(combination_id)[1],  # crossover
