@@ -617,7 +617,7 @@ class GeneticAlgorithm:
             for _ in range(self.no_generations):
                 """Rival generations are created based on accessible combinations of selection and crossover
                 operators with different processes in parallel:"""
-                print(f"\nCreating rival generations\n")
+                print(f"Creating rival generations")
                 for combination_id in operator_combinations_ids:
                     new_worker = Process(
                         target=_create_rival_generation(
@@ -658,8 +658,7 @@ class GeneticAlgorithm:
 
                 indexes_batches = split_indexes(num_members=no_members, num_workers=no_workers)
 
-                print(f"\nEvaluating fitness of the rival generations. We have {no_workers} workers and {no_members} "
-                      f"members to evaluate. Batches of Members' indexes passed to workers are {indexes_batches}.\n")
+                print(f"Evaluating fitness of the rival generations. It is iteration number {_}")
 
                 for index in range(no_workers):
                     indexes_of_members_to_evaluate = indexes_batches[index]
