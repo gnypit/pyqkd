@@ -29,7 +29,8 @@ def tournament_selection(parent_generation: Generation):
                 print(f"WARNING: Fitness function passed to Member {member.id} is not Callable.")
 
         # Identify the member with the highest fitness value in the tournament
-        best_member = max(tournament_members, key=lambda mem: mem.fit_val)
+        best_member = max(tournament_members, key=lambda mem: mem.fit_val)  # genome is correctly a ListProxy, but the fitness value is None
+        # TODO TypeError: 'NoneType' object does not support the context manager protocol
         # Add the best member from this tournament to the list of selected candidates
         parents.append(best_member)
 
