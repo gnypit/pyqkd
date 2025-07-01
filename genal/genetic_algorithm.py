@@ -261,7 +261,7 @@ class Generation:  # TODO: we need constructor to take members, method for chang
         """
         for i in range(self.size):
             self.fitness_ranking.append(
-                {'index': i, 'fitness value': self.members[i].evaluate()}
+                {'index': i, 'fitness value': self.members[i].evaluate()}  # TODO: in here fitness ranking is built correctly, fitness value is calculated, but it is not saved in the Member/Chromosome!!!
             )
 
         self.fitness_ranking.sort(key=sort_dict_by_fit, reverse=reverse)
