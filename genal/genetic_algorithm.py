@@ -618,6 +618,7 @@ class GeneticAlgorithm:
                     new_worker = Process(
                         target=_create_rival_generation,  # TODO: TypeError: _create_rival_generation() missing 1 required positional argument: 'generation_pool'
                         args=(
+                            self.manager,
                             combination_id,  # id
                             self.operators.get(combination_id)[0],  # selection
                             self.operators.get(combination_id)[1],  # crossover
