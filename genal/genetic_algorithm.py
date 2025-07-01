@@ -44,7 +44,7 @@ def uniform_gene_generator(ga_args: dict):  # TODO: just take a tuple at the sta
             in each chromosome, so this function should never return a single int, str, etc.
     """
     gene_space, length = ga_args.get('genome')
-    return np.random.choice(gene_space, length)
+    return list(np.random.choice(gene_space, length))
 
 
 class Chromosome:
@@ -85,7 +85,7 @@ class Chromosome:
         elif type(genome) == dict:
             self.genome = manager.dict(genome)
         else:
-            raise TypeError  # TODO: why is this error actually raised with the current code from the material_endurance_test.py ?
+            raise TypeError
         self.fit_fun = fitness_function  # special variable
 
     def __repr__(self) -> str:
@@ -566,7 +566,7 @@ class GeneticAlgorithm:
         fitness_comparison = {}
         for id_of_rival, generation in self.rival_gen_pool.items():
             fitness_comparison[id_of_rival] = generation.fitness_ranking[0].get('fitness value')
-        self.current_generation = self.rival_gen_pool.get(max(fitness_comparison, key=fitness_comparison.get))
+        self.current_generation = self.rival_gen_pool.get(max(fitness_comparison, key=fitness_comparison.get))  # TODO: resolve ValueError: max() iterable argument is empty
         self.accepted_gen_list.append(self.current_generation)
         self.best_fit_history.append(self.current_generation.fitness_ranking[0].get('fitness value'))
 
