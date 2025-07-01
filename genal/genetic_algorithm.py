@@ -144,7 +144,7 @@ class Chromosome:
         except Exception as e:
             print(f"Error evaluating member {self}: {e}")
             self.fit_val = 0.0
-        return self.fit_val
+        # return self.fit_val
 
 
 class Member(Chromosome):
@@ -259,10 +259,13 @@ class Generation:  # TODO: we need constructor to take members, method for chang
                 ascending order of fitness values (reverse=False) or in descending order (reverse=True), which is
                 the default.
         """
+        members_to_evaluate = list(self.members)
         for i in range(self.size):
+            members_to_evaluate[i].evaluate()
             self.fitness_ranking.append(
-                {'index': i, 'fitness value': self.members[i].evaluate()}  # TODO: in here fitness ranking is built correctly, fitness value is calculated, but it is not saved in the Member/Chromosome!!!
+                {'index': i, 'fitness value': members_to_evaluate[i].fit_val}  # TODO: in here fitness ranking is built correctly, fitness value is calculated, but it is not saved in the Member/Chromosome!!!
             )
+            self.members[i] = members_to_evaluate[i]
 
         self.fitness_ranking.sort(key=sort_dict_by_fit, reverse=reverse)
 
@@ -354,7 +357,8 @@ def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: 
         member_to_evaluate = generation.members[member_index]
         # print(f"I have member={member_to_evaluate} with fitness function {member_to_evaluate.fit_fun}")
 
-        fitness_value = member_to_evaluate.evaluate()
+        member_to_evaluate.evaluate()
+        fitness_value = member_to_evaluate.fit_val
         # print(f"Member number {member_index} from generation {generation_id} has fitness value = {fitness_value}")
         # print(f"Member number {member_index} from generation {generation_id} has fitness value = "
         #      f"{member_to_evaluate.fit_val}")
@@ -692,7 +696,7 @@ class GeneticAlgorithm:
                         if member.fit_val is None:
                             print(f"Skipping member {i} with fit fun. {member.fit_fun} in Generation {gen_id} due to "
                                   f"None fitness!")
-                            print(f"When computing fitness manually we get {member.evaluate()}!")
+                            # print(f"When computing fitness manually we get {member.evaluate()}!")
                             print(member)
                             continue  # <-- skip if fitness is None
                         generation.fitness_ranking.append({'index': i, 'fitness value': member.fit_val})
