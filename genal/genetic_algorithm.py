@@ -506,6 +506,9 @@ class GeneticAlgorithm:
 
         self.manager = Manager()
         self.rival_gen_pool = self.manager.dict()
+        self.accepted_gen_list = self.manager.list()
+        self.best_fit_history = self.manager.list()
+        self._best_solution = self.manager.dict()  # new dict for best solutions
 
         """If the provided number of parents pairs would require more Members than the current (initial) generation has,
         it'll be limited to the maximum possible number. Also, if no specific number of parent pairs is provided,
