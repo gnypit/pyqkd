@@ -617,104 +617,117 @@ class GeneticAlgorithm:
         for member in self.current_generation.members:
             print(member.fit_val)
         """
-
         operator_combinations_ids = list(self.operators.keys())
 
-        with self.manager as ga_manager:
-            for _ in range(self.no_generations):
-                """Rival generations are created based on accessible combinations of selection and crossover
-                operators with different processes in parallel:"""
-                print(f"Creating rival generations")
-                for combination_id in operator_combinations_ids:
-                    new_worker = Process(
-                        target=_create_rival_generation(
-                            ga_manager,
-                            combination_id,  # id
-                            self.operators.get(combination_id)[0],  # selection
-                            self.operators.get(combination_id)[1],  # crossover
-                            self.args.get('crossover'),  # crossover_args
-                            self.current_generation,  # parent_generation
-                            self.fit_fun,  # fitness_function
-                            self.rival_gen_pool  # generation_pool
+        try:
+            with self.manager as ga_manager:
+                for _ in range(self.no_generations):
+                    """Rival generations are created based on accessible combinations of selection and crossover
+                    operators with different processes in parallel:"""
+                    print(f"Creating rival generations")
+                    for combination_id in operator_combinations_ids:
+                        new_worker = Process(
+                            target=_create_rival_generation(
+                                ga_manager,
+                                combination_id,  # id
+                                self.operators.get(combination_id)[0],  # selection
+                                self.operators.get(combination_id)[1],  # crossover
+                                self.args.get('crossover'),  # crossover_args
+                                self.current_generation,  # parent_generation
+                                self.fit_fun,  # fitness_function
+                                self.rival_gen_pool  # generation_pool
+                            )
                         )
-                    )
-                    new_worker.start()
-                    self.workers.append(new_worker)
+                        new_worker.start()
+                        self.workers.append(new_worker)
 
-                """After work done, processes are collected and their list reset for new batch of workers:"""
+                    """After work done, processes are collected and their list reset for new batch of workers:"""
+                    for worker in self.workers:
+                        worker.join()
+
+                    """
+                    #Just for testing:
+                    new_members = self.rival_gen_pool.get(0).members
+                    for member in new_members:
+                        print(member.genome)
+                    """
+
+                    self.workers = []
+
+                    """For fitness evaluation as many workers as the CPU allows are created. All members are distributed
+                     between these processes to be evaluated:"""
+                    no_workers = cpu_count()
+                    no_members = self.pop_size * len(self.rival_gen_pool)
+
+                    members_per_worker = no_members / no_workers
+                    if members_per_worker <= 1:
+                        no_workers = int(no_members)
+
+                    indexes_batches = split_indexes(num_members=no_members, num_workers=no_workers)
+
+                    print(f"Evaluating fitness of the rival generations. It is iteration number {_}")
+
+                    for index in range(no_workers):
+                        indexes_of_members_to_evaluate = indexes_batches[index]
+                        # print(f"For step={index} we have indexes={indexes_of_members_to_evaluate}")
+                        new_worker = Process(
+                            target=_evaluate_members,  # now there's a problem with the function, not with multiprocessing
+                            args=(
+                                self.rival_gen_pool,
+                                indexes_of_members_to_evaluate,
+                                self.pop_size
+                            )
+                        )
+                        new_worker.start()
+                        self.workers.append(new_worker)
+
+                    """After evaluation, processes are again joined:"""
+                    for worker in self.workers:
+                        worker.join()
+
+                    """
+                    # Just for testing:
+                    new_members = self.rival_gen_pool.get(0).members
+                    for member in new_members:
+                        print(member.fit_val)
+                    """
+
+                    """Reset workers"""
+                    self.workers = []
+
+                    """Rebuild fitness ranking for each Generation"""
+                    for gen_id, generation in self.rival_gen_pool.items():
+                        generation.fitness_ranking = []
+                        for i, member in enumerate(generation.members):
+                            if member.fit_val is None:
+                                print(f"Skipping member {i} with fit fun. {member.fit_fun} in Generation {gen_id} due to "
+                                      f"None fitness!")
+                                # print(f"When computing fitness manually we get {member.evaluate()}!")
+                                print(member)
+                                continue  # <-- skip if fitness is None
+                            generation.fitness_ranking.append({'index': i, 'fitness value': member.fit_val})
+                        if generation.fitness_ranking:
+                            generation.fitness_ranking.sort(key=sort_dict_by_fit, reverse=True)
+                        else:
+                            print(f"Warning: Generation {gen_id} has no valid members to rank!")
+                        self.rival_gen_pool[gen_id] = generation  # reassign updated generation
+
+                    """Last stage of each iteration is to choose the next accepted Generation, save current best solution 
+                    and mutate Members:"""
+                    self._choose_best_rival_generation()
+                    # self.mutate()  # mutation in here introduces Members with their fitness not evaluated! TODO: make sure mutation is applied to each rival generation after children are created and before fitness is evaluated
+                    best_member = list(self.accepted_gen_list[-1].members)[index_of_best_member]
+                    self._best_solution['genome'] = list(best_member.genome)
+                    self._best_solution['fit_val'] = best_member.fit_val
+        except BrokenPipeError as e:
+            print(f"Got {e} on iteration")
+        finally:
+            # Close workers
+            if hasattr(self, 'workers'):
                 for worker in self.workers:
+                    worker.terminate()
                     worker.join()
 
-                """
-                #Just for testing:
-                new_members = self.rival_gen_pool.get(0).members
-                for member in new_members:
-                    print(member.genome)
-                """
-
-                self.workers = []
-
-                """For fitness evaluation as many workers as the CPU allows are created. All members are distributed
-                 between these processes to be evaluated:"""
-                no_workers = cpu_count()
-                no_members = self.pop_size * len(self.rival_gen_pool)
-
-                members_per_worker = no_members / no_workers
-                if members_per_worker <= 1:
-                    no_workers = int(no_members)
-
-                indexes_batches = split_indexes(num_members=no_members, num_workers=no_workers)
-
-                print(f"Evaluating fitness of the rival generations. It is iteration number {_}")
-
-                for index in range(no_workers):
-                    indexes_of_members_to_evaluate = indexes_batches[index]
-                    # print(f"For step={index} we have indexes={indexes_of_members_to_evaluate}")
-                    new_worker = Process(
-                        target=_evaluate_members,  # now there's a problem with the function, not with multiprocessing
-                        args=(
-                            self.rival_gen_pool,
-                            indexes_of_members_to_evaluate,
-                            self.pop_size
-                        )
-                    )
-                    new_worker.start()
-                    self.workers.append(new_worker)
-
-                """After evaluation, processes are again joined:"""
-                for worker in self.workers:
-                    worker.join()
-
-                """
-                # Just for testing:
-                new_members = self.rival_gen_pool.get(0).members
-                for member in new_members:
-                    print(member.fit_val)
-                """
-
-                """Reset workers"""
-                self.workers = []
-
-                """Rebuild fitness ranking for each Generation"""
-                for gen_id, generation in self.rival_gen_pool.items():
-                    generation.fitness_ranking = []
-                    for i, member in enumerate(generation.members):
-                        if member.fit_val is None:
-                            print(f"Skipping member {i} with fit fun. {member.fit_fun} in Generation {gen_id} due to "
-                                  f"None fitness!")
-                            # print(f"When computing fitness manually we get {member.evaluate()}!")
-                            print(member)
-                            continue  # <-- skip if fitness is None
-                        generation.fitness_ranking.append({'index': i, 'fitness value': member.fit_val})
-                    if generation.fitness_ranking:
-                        generation.fitness_ranking.sort(key=sort_dict_by_fit, reverse=True)
-                    else:
-                        print(f"Warning: Generation {gen_id} has no valid members to rank!")
-                    self.rival_gen_pool[gen_id] = generation  # reassign updated generation
-
-                """Last stage of each iteration is to choose the next accepted Generation and mutate it:"""
-                self._choose_best_rival_generation()
-                # self.mutate()  # mutation in here introduces Members with their fitness not evaluated! TODO: make sure mutation is applied to each rival generation after children are created and before fitness is evaluated
 
     def fitness_plot(self):  # TODO: finish with an optional argument for using plotly or matplotlib
         """Method for plotting fitness values history of the best Members from each accepted Generation."""
