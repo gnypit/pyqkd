@@ -85,4 +85,6 @@ if __name__ == '__main__':
     )
     new_ga_instance.run()
 
-    print(f"Our code returned {new_ga_instance.best_solution()}")  # TODO BrokenPipeError: [WinError 232] Trwa zamykanie potoku
+    best_result = new_ga_instance.best_solution()
+
+    print(f"Our code returned {best_result}")  # TODO BrokenPipeError: [WinError 232] Trwa zamykanie potoku

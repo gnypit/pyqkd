@@ -560,8 +560,8 @@ class GeneticAlgorithm:
         Returns:
             tuple[type[list | dict], float]: tuple of the genome list/dict of the best Member and it's float fit. value
         """
-        index_of_best_member = self.current_generation.fitness_ranking[0].get('index')
-        best_member = list(self.current_generation.members)[index_of_best_member]  # TODO BrokenPipeError: [WinError 232] Trwa zamykanie potoku
+        index_of_best_member = self.accepted_gen_list[-1].fitness_ranking[0].get('index')
+        best_member = list(self.accepted_gen_list[-1].members)[index_of_best_member]  # TODO BrokenPipeError: [WinError 232] Trwa zamykanie potoku
         best_genome = list(best_member.genome)
         best_fit_val = best_member.fit_val
 
