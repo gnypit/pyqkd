@@ -611,12 +611,6 @@ class GeneticAlgorithm:
         iterations of creating new/rival Generations, choosing the best one and mutation, if necessary."""
         print(f"Creating the initial population.")
         self._create_initial_generation()
-
-        # For testing:
-        """
-        for member in self.current_generation.members:
-            print(member.fit_val)
-        """
         operator_combinations_ids = list(self.operators.keys())
 
         try:
@@ -644,13 +638,6 @@ class GeneticAlgorithm:
                     """After work done, processes are collected and their list reset for new batch of workers:"""
                     for worker in self.workers:
                         worker.join()
-
-                    """
-                    #Just for testing:
-                    new_members = self.rival_gen_pool.get(0).members
-                    for member in new_members:
-                        print(member.genome)
-                    """
 
                     self.workers = []
 
