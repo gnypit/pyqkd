@@ -9,7 +9,7 @@ import numpy as np
 from collections.abc import \
     Callable  # https://stackoverflow.com/questions/37835179/how-can-i-specify-the-function-type-in-my-type-hints
 from multiprocessing import Process, Manager, cpu_count
-from multiprocessing.managers import ListProxy, DictProxy
+from multiprocessing.managers import ListProxy, DictProxy, BaseManager
 
 """Global variable to hold IDs of chromosomes for backtracking"""
 identification = 0
@@ -189,6 +189,10 @@ class Member(Chromosome):
     def __repr__(self) -> str:
         """Default method for self-representing objects of this class."""
         return f"{type(self).__name__}(genes={self.genome}, id={self.id}, parents_id={self.parents_id})"
+
+
+class ParallelGaManager(BaseManager):
+    pass
 
 
 class Generation:  # TODO: we need constructor to take members, method for changes caused by mutation, method for evaluation and to return best fit; in the future add diversity measures
