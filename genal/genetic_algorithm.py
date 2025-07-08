@@ -215,7 +215,8 @@ class Generation:  # TODO: we need constructor to take members, method for chang
     Generations is accepted.
 
     Attributes:
-        members (list[Member]): list of Members; chromosomes of the generation with their and parents' IDs.
+        members (ListProxy[Member]): list of Members in shared memory; chromosomes of the generation with their and
+            parents' IDs.
         num_parents_pairs (int): number of pairs of Members can be parents, e.g., 20 pairs means 40 mating chromosomes.
         elite_size (int): number of Members to be copy-pasted directly into a new Generation.
         pool_size (int): parameter for the tournament selection operator.  # TODO: redundant, put it into args in the GeneticAlgorithm class
@@ -294,6 +295,8 @@ def _create_rival_generation(manager: Manager, id: int, selection: Callable, cro
             Member in the new Generation.
         generation_pool (DictProxy): A dictionary in shared memory in which all new Generations are supposed to be
             stored under the same kay as the selection and crossover operators combination.
+        ga_manager (Manager): Manager of the GeneticAlgorithm class calling this function; used for creating a ListProxy
+            of new Members in the shared memory.
     """
     global identification
     # selection, crossover = self.operators.get(combination_id)
@@ -331,6 +334,8 @@ def _create_rival_generation(manager: Manager, id: int, selection: Callable, cro
         )
         identification += 2
 
+    shared_new_members = ga_manager.list(new_members)
+
     new_generation = Generation(
         manager=manager,
         generation_members=new_members,
@@ -357,10 +362,8 @@ def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: 
         generation_id = int(np.floor(index / population_size))  # make int from numpy's float 64 ID
         member_index = int(index - generation_id * population_size)  # make int from numpy's float 64 ID
 
-        """Fetch the WHOLE Generation, because the `.members` attr. is "nested" and can only be copied, 
-        not USED in SHARED MEMORY"""
-        generation = generation_pool[generation_id]
-        member_to_evaluate = generation.members[member_index]
+        """Fetch Member from the members att. of given Generation in shared memory"""
+        member_to_evaluate = generation_pool[generation_id].members[member_index]
         # print(f"I have member={member_to_evaluate} with fitness function {member_to_evaluate.fit_fun}")
 
         member_to_evaluate.evaluate()
@@ -369,11 +372,10 @@ def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: 
         # print(f"Member number {member_index} from generation {generation_id} has fitness value = "
         #      f"{member_to_evaluate.fit_val}")
 
-        generation.members[member_index] = member_to_evaluate  # <-- Modify the member
-        generation.fitness_ranking.append(
-                {'index': member_index, 'fitness value': fitness_value}
+        generation_pool[generation_id].members[member_index] = member_to_evaluate  # <-- Modify the member
+        generation_pool[generation_id].fitness_ranking.append(
+                {'index': member_index, 'fitness value': fitness_value}  # TODO: does the fitness ranking have to be in the shared memory too?
             )
-        generation_pool[generation_id] = generation  # <-- Save back the whole Generation!!!
 
 
 class GeneticAlgorithm:
@@ -540,6 +542,7 @@ class GeneticAlgorithm:
         """Creating the first - initial - generation in this population."""
         global identification
         first_members = []
+
         for _ in range(self.pop_size):
             genes = self.genome_generator(self.args)
             first_members.append(Member(
@@ -549,6 +552,8 @@ class GeneticAlgorithm:
                 fitness_function=self.fit_fun)
             )
             identification += 1
+
+        shared_first_members = self.manager.list(first_members)
         self.current_generation = Generation(
             manager=self.manager,
             generation_members=first_members,
@@ -640,7 +645,8 @@ class GeneticAlgorithm:
                             self.args.get('crossover'),  # crossover_args
                             self.current_generation,  # parent_generation
                             self.fit_fun,  # fitness_function
-                            self.rival_gen_pool  # generation_pool
+                            self.rival_gen_pool,  # generation_pool
+                            manager  # ga_manager TODO: perhaps instead of the manager being passed down, a structure for new members should be passed, and actual rival generations (based on children returned by processes) should be created in the main process?
                         )
                     )
                     new_worker.start()
