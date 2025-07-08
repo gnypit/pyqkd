@@ -62,10 +62,10 @@ class Chromosome:
         fit_fun (Callable): Fitness function used for computing fitness value based on chromosome's genes.
     """
     fit_val: float = None
-    genome: type[ListProxy | DictProxy]
+    genome: type[list | dict]
     fit_fun: Callable
 
-    def __init__(self, genome: type[list | dict], manager: Manager, fitness_function: Callable=None):
+    def __init__(self, genome: type[list | dict], fitness_function: Callable=None):
         """Constructor of the Chromosome class.
 
         Each chromosome represents a possible solution to a given problem. Parameters characterising these solutions
@@ -77,17 +77,10 @@ class Chromosome:
         Parameters:
             genome (type[list | dict]): Either a dict with genes as values and names provided by the User as keys,
                 or simply a list of genes.
-            manager (Manager): Manager from multiprocessing is only passed on for creating proxies for list/dict, it is
-                not saved in Chromosome directly - it will be saved in outer scope.
             fitness_function (Callable=None): Optional; callable fitness function provided by the User, which computes
                 fitness value based on genome. Can be passed later, thus it is None by default.
         """
-        if type(genome) == list:
-            self.genome = manager.list(genome)
-        elif type(genome) == dict:
-            self.genome = manager.dict(genome)
-        else:
-            raise TypeError
+        self.genome = genome
         self.fit_fun = fitness_function  # special variable
 
     def __repr__(self) -> str:
