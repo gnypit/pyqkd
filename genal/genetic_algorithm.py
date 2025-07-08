@@ -1,6 +1,7 @@
 """Author: Jakub Gnyp; contact: gnyp.jakub@gmail.com, LinkedIn: https://www.linkedin.com/in/gnypit/
 Script is distributed under the license: https://github.com/gnypit/pyqkd/blob/main/LICENSE
 """
+import pickle
 import random
 from os import getpid
 import matplotlib.pyplot as plt
@@ -12,6 +13,7 @@ from multiprocessing.managers import ListProxy, DictProxy
 
 """Global variable to hold IDs of chromosomes for backtracking"""
 identification = 0
+# TODO: Make manager a global variable
 
 
 def split_indexes(num_members, num_workers):
@@ -619,6 +621,7 @@ class GeneticAlgorithm:
                 operators with different processes in parallel:"""
                 print(f"Creating rival generations")
                 for combination_id in operator_combinations_ids:
+                    pickle.dumps(ga_manager)  # this will reproduce the same error
                     new_worker = Process(
                         target=_create_rival_generation,
                         args=(
