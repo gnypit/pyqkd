@@ -621,7 +621,8 @@ class GeneticAlgorithm:
                     print(f"Creating rival generations")
                     for combination_id in operator_combinations_ids:
                         new_worker = Process(
-                            target=_create_rival_generation(
+                            target=_create_rival_generation,
+                            args=(
                                 ga_manager,
                                 combination_id,  # id
                                 self.operators.get(combination_id)[0],  # selection
@@ -708,8 +709,7 @@ class GeneticAlgorithm:
                     self._best_solution['fit_val'] = best_member.fit_val
         except BrokenPipeError as e:
             print(f"Got {e} on iteration")
-        finally:
-            # Close workers
+        finally:  # Close workers
             if hasattr(self, 'workers'):
                 for worker in self.workers:
                     worker.terminate()
