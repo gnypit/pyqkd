@@ -262,12 +262,11 @@ class Generation:  # TODO: we need constructor to take members, method for chang
         self.fitness_ranking.sort(key=sort_dict_by_fit, reverse=reverse)
 
 
-def _create_rival_generation(manager: Manager, id: int, selection: Callable, crossover: Callable, crossover_args: tuple,
+def _create_rival_generation(id: int, selection: Callable, crossover: Callable, crossover_args: tuple,
                              parent_generation: Generation, fitness_function: Callable, generation_pool: DictProxy):
     """Method for creating a single new Generation of children based on the parent Generation with selected operators.
 
     Parameters:
-        manager (Manager): Manager from the outer scope for handling shared memory.
         id (int): An integer ID mathing the key under which a selection and crossover operators combination is stored in
             the operators attribute of the GeneticAlgorithm class.
         selection (Callable): Selection operator, a function returning an ordered list of parents to mate.
@@ -280,8 +279,6 @@ def _create_rival_generation(manager: Manager, id: int, selection: Callable, cro
             Member in the new Generation.
         generation_pool (DictProxy): A dictionary in shared memory in which all new Generations are supposed to be
             stored under the same kay as the selection and crossover operators combination.
-        ga_manager (Manager): Manager of the GeneticAlgorithm class calling this function; used for creating a ListProxy
-            of new Members in the shared memory.
     """
     global identification
     # selection, crossover = self.operators.get(combination_id)
@@ -307,22 +304,19 @@ def _create_rival_generation(manager: Manager, id: int, selection: Callable, cro
         )
         new_members.append(Member(
             genome=child1_genome,
-            manager=manager,
             identification_number=identification,
             fitness_function=fitness_function)
         )
         new_members.append(Member(
             genome=child2_genome,
-            manager=manager,
             identification_number=identification + 1,
             fitness_function=fitness_function)
         )
         identification += 2
 
-    shared_new_members = ga_manager.list(new_members)
+    # shared_new_members = ga_manager.list(new_members)
 
     new_generation = Generation(
-        manager=manager,
         generation_members=new_members,
         num_parents_pairs=parent_generation.num_parents_pairs,
         elite_size=parent_generation.elite_size,  # TODO: allow changes in the elite size
