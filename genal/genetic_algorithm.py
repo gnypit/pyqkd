@@ -508,9 +508,6 @@ class GeneticAlgorithm:
 
         self.manager = Manager()
         self.rival_gen_pool = self.manager.dict()
-        self.accepted_gen_list = self.manager.list()
-        self.best_fit_history = self.manager.list()
-        self._best_solution = self.manager.dict()  # new dict for best solutions
 
         """If the provided number of parents pairs would require more Members than the current (initial) generation has,
         it'll be limited to the maximum possible number. Also, if no specific number of parent pairs is provided,
@@ -613,6 +610,13 @@ class GeneticAlgorithm:
         iterations of creating new/rival Generations, choosing the best one and mutation, if necessary."""
         print(f"Creating the initial population.")
         self._create_initial_generation()
+
+        # For testing:
+        """
+        for member in self.current_generation.members:
+            print(member.fit_val)
+        """
+
         operator_combinations_ids = list(self.operators.keys())
 
         with self.manager as ga_manager:
@@ -641,6 +645,13 @@ class GeneticAlgorithm:
                 """After work done, processes are collected and their list reset for new batch of workers:"""
                 for worker in self.workers:
                     worker.join()
+
+                """
+                #Just for testing:
+                new_members = self.rival_gen_pool.get(0).members
+                for member in new_members:
+                    print(member.genome)
+                """
 
                 self.workers = []
 
