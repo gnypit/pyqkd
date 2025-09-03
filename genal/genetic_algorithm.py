@@ -510,7 +510,8 @@ class GeneticAlgorithm:
         if seed is not None:
             random.seed(a=seed)  # useful for debugging
 
-        self.manager = Manager()
+        self.manager = ParallelGaManager()
+        self.manager.start()
         self.rival_gen_pool = self.manager.dict()
 
         """If the provided number of parents pairs would require more Members than the current (initial) generation has,
