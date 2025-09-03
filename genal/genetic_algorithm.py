@@ -9,11 +9,26 @@ import numpy as np
 from collections.abc import \
     Callable  # https://stackoverflow.com/questions/37835179/how-can-i-specify-the-function-type-in-my-type-hints
 from multiprocessing import Process, Manager, cpu_count
-from multiprocessing.managers import ListProxy, DictProxy, BaseManager
+from multiprocessing.managers import ListProxy, DictProxy, BaseManager, SyncManager
+from abc import ABC, abstractmethod
 
 """Global variable to hold IDs of chromosomes for backtracking"""
 identification = 0
-# TODO: Make manager a global variable
+
+
+class ParallelGaManager(SyncManager):
+    """Custom manager with which classes needed in shared memory can be registered.
+
+    Usually custom managers are created with the BaseManager, but in this code both methods creating 'traditional'
+    data structures like dictionaries and custom classes are needed. In the shared memory, there will be DictProxy
+    objects with lists of Chromosomes, which need to be modified in-place. Thus, this custom manager inherits
+    SyncManager with its methods - new classes will be registered with it to create a single manager for all uses in
+    the parallel GA.
+
+    You can read more about SyncManagers here:
+    https://docs.python.org/3/library/multiprocessing.html#multiprocessing.managers.SyncManager
+    """
+    pass
 
 
 def split_indexes(num_members, num_workers):
@@ -33,7 +48,8 @@ def sort_dict_by_fit(dictionary: dict) -> float:
     return dictionary['fitness value']
 
 
-def uniform_gene_generator(ga_args: dict):  # TODO: just take a tuple at the start, genome args will be passed directly, not the whole args dict
+def uniform_gene_generator(
+        ga_args: dict):  # TODO: just take a tuple at the start, genome args will be passed directly, not the whole args dict
     """Simple function for generating a sample of given length from the gene_space with a uniform probability.
 
     Parameters:
@@ -49,8 +65,20 @@ def uniform_gene_generator(ga_args: dict):  # TODO: just take a tuple at the sta
     return list(np.random.choice(gene_space, length))
 
 
-class Chromosome:
-    """Basic class representing chromosomes, the most fundamental objects in genetic algorithms.
+class ChromosomeInterface(ABC):
+    """Abstract class representing chromosomes, the most fundamental objects in genetic algorithms."""
+
+    @abstractmethod
+    def evaluate(self, fitness_function: Callable = None):
+        pass
+
+    @abstractmethod
+    def change_genes(self, new_genes: type[list | dict]):
+        pass
+
+
+class Chromosome(ChromosomeInterface):
+    """Simple implementation of chromosomes, the most fundamental objects in genetic algorithms.
 
     Apart from genes, in this implementation of the Genetic Algorithm, the Chromosome class also stores the fitness
     function and value. This allows self-evaluation of each chromosome.
@@ -62,10 +90,10 @@ class Chromosome:
         fit_fun (Callable): Fitness function used for computing fitness value based on chromosome's genes.
     """
     fit_val: float = None
-    genome: type[ListProxy | DictProxy]
+    genome: type[list | dict]
     fit_fun: Callable
 
-    def __init__(self, genome: type[list | dict], manager: Manager, fitness_function: Callable=None):
+    def __init__(self, genome: type[list | dict], fitness_function: Callable = None):
         """Constructor of the Chromosome class.
 
         Each chromosome represents a possible solution to a given problem. Parameters characterising these solutions
@@ -77,17 +105,10 @@ class Chromosome:
         Parameters:
             genome (type[list | dict]): Either a dict with genes as values and names provided by the User as keys,
                 or simply a list of genes.
-            manager (Manager): Manager from multiprocessing is only passed on for creating proxies for list/dict, it is
-                not saved in Chromosome directly - it will be saved in outer scope.
             fitness_function (Callable=None): Optional; callable fitness function provided by the User, which computes
                 fitness value based on genome. Can be passed later, thus it is None by default.
         """
-        if type(genome) == list:
-            self.genome = manager.list(genome)
-        elif type(genome) == dict:
-            self.genome = manager.dict(genome)
-        else:
-            raise TypeError
+        self.genome = genome
         self.fit_fun = fitness_function  # special variable
 
     def __repr__(self) -> str:
@@ -95,25 +116,7 @@ class Chromosome:
         return (f"{type(self).__name__}(genes={self.genome}, fitness function={self.fit_fun}, "
                 f"fitness value={self.fit_val})")
 
-    def change_genes(self, new_genes: type[list | dict], manager: Manager):
-        """Method meant to be used when mutation occurs, to modify the genes in an already created chromosome.
-
-        Manager is only passed on for creating proxies for list/dict, it is not saved in Chromosome directly - it will
-        be saved in outer scope.
-
-        Parameters:
-            new_genes (type[list | dict]): New genome to be stored by the chromosome.
-            manager (Manager): Manager from multiprocessing is only passed on for creating proxies for list/dict, it is
-                not saved in Chromosome directly - it will be saved in outer scope.
-        """
-        if type(new_genes) == list:
-            self.genome = manager.list(new_genes)
-        elif type(new_genes) == dict:
-            self.genome = manager.dict(new_genes)
-        else:
-            raise TypeError
-
-    def evaluate(self, fitness_function: Callable=None):
+    def evaluate(self, fitness_function: Callable = None):
         """Method for applying fitness function to this chromosome (it's genes, to be precise).
 
         If the fitness function was passed on in the constructor of this class, it has to be provided as an argument of
@@ -148,6 +151,17 @@ class Chromosome:
             self.fit_val = 0.0
         # return self.fit_val
 
+    def change_genes(self, new_genes: type[list | dict]):
+        """Method meant to be used when mutation occurs, to modify the genes in an already created chromosome.
+
+        Manager is only passed on for creating proxies for list/dict, it is not saved in Chromosome directly - it will
+        be saved in outer scope.
+
+        Parameters:
+            new_genes (type[list | dict]): New genome to be stored by the chromosome.
+        """
+        self.genome = new_genes
+
 
 class Member(Chromosome):
     """This class is a child of the 'Chromosome' class and is designated to store a unique ID, enabling tracking a
@@ -155,27 +169,24 @@ class Member(Chromosome):
 
     Attributes:
         id (int): A unique identification number of this member in the particular run of a genetic algorithm, created
-            based on a global variable. It is meant for backtracking of a genological tree of members.
+            based on a global variable. It is meant for backtracking of members' genealogical tree.
         parents_id (list): It's a list with IDs of the parents (from previous generations in the GA) of this member
     """
     id: int
     parents_id: list = []
 
-    def __init__(self, genome: type[list | dict], manager: Manager, identification_number: int,
-                 fitness_function: Callable=None):
+    def __init__(self, genome: type[list | dict], identification_number: int, fitness_function: Callable = None):
         """Apart from what 'Chromosome' class constructor needs, here identification number should be passed.
 
         Parameters:
             genome (type[list | dict]): Either a dict with genes as values and names provided by the User as keys,
                 or simply a list of genes.
             identification_number (int): An ID to be created based on the global variable, for backtracking a
-                genological tree of all members across different generations in a particular run of the GA.
-            manager (Manager): Manager from multiprocessing is only passed on for creating proxies for list/dict, it is
-                not saved in Chromosome directly - it will be saved in outer scope.
+                genealogical tree of all members across different generations in a particular run of the GA.
             fitness_function (Callable=None): Optional; callable fitness function provided by the User, which computes
                 fitness value based on genome. Can be passed later, thus it is None by default.
         """
-        super().__init__(genome=genome, manager=manager, fitness_function=fitness_function)
+        super().__init__(genome=genome, fitness_function=fitness_function)
         self.id = identification_number
 
     def add_parents_id(self, parents_id: list):
@@ -191,11 +202,10 @@ class Member(Chromosome):
         return f"{type(self).__name__}(genes={self.genome}, id={self.id}, parents_id={self.parents_id})"
 
 
-class ParallelGaManager(BaseManager):
-    pass
+ParallelGaManager.register('Member', Member)
 
 
-class Generation:  # TODO: we need constructor to take members, method for changes caused by mutation, method for evaluation and to return best fit; in the future add diversity measures
+class Generation:  # TODO: add diversity measures
     """This class is meant to represent a single generation in a genetic algorithm, i.e. a set of Members.
 
     Genetic Algorithm evaluates each Generation, selects Members for a crossover, to create Members for a new
@@ -216,7 +226,7 @@ class Generation:  # TODO: we need constructor to take members, method for chang
 
     Attributes:
         members (ListProxy[Member]): list of Members in shared memory; chromosomes of the generation with their and
-            parents' IDs.
+            parents' IDs. Has to be accessible form multiple processes evaluating the Members in parallel.
         num_parents_pairs (int): number of pairs of Members can be parents, e.g., 20 pairs means 40 mating chromosomes.
         elite_size (int): number of Members to be copy-pasted directly into a new Generation.
         pool_size (int): parameter for the tournament selection operator.  # TODO: redundant, put it into args in the GeneticAlgorithm class
@@ -224,15 +234,15 @@ class Generation:  # TODO: we need constructor to take members, method for chang
         fitness_ranking (list[dict]): dicts in this list have the index of a Member in the Generation as keys and its
             fitness value as values.
     """
-    members: ListProxy[Member]
+    members: ListProxy[Member]  # this needs to be accessible from multiple processes running in parallel
     num_parents_pairs: int
     elite_size: int
     pool_size: int
     size: int
     fitness_ranking: list[dict]
 
-    def __init__(self, manager: Manager, generation_members: list[Member], num_parents_pairs: int, elite_size: int,
-                 pool_size: int):
+    def __init__(self, manager: ParallelGaManager, generation_members: list[Member], num_parents_pairs: int,
+                 elite_size: int, pool_size: int):
         """Constructor for any Generation inside the GeneticAlgorithm.
 
         Parameters:
@@ -270,19 +280,19 @@ class Generation:  # TODO: we need constructor to take members, method for chang
         for i in range(self.size):
             members_to_evaluate[i].evaluate()
             self.fitness_ranking.append(
-                {'index': i, 'fitness value': members_to_evaluate[i].fit_val}  # TODO: in here fitness ranking is built correctly, fitness value is calculated, but it is not saved in the Member/Chromosome!!!
+                {'index': i, 'fitness value': members_to_evaluate[i].fit_val}
+                # TODO: in here fitness ranking is built correctly, fitness value is calculated, but it is not saved in the Member/Chromosome!!!
             )
             self.members[i] = members_to_evaluate[i]
 
         self.fitness_ranking.sort(key=sort_dict_by_fit, reverse=reverse)
 
 
-def _create_rival_generation(manager: Manager, id: int, selection: Callable, crossover: Callable, crossover_args: tuple,
+def _create_rival_generation(id: int, selection: Callable, crossover: Callable, crossover_args: tuple,
                              parent_generation: Generation, fitness_function: Callable, generation_pool: DictProxy):
     """Method for creating a single new Generation of children based on the parent Generation with selected operators.
 
     Parameters:
-        manager (Manager): Manager from the outer scope for handling shared memory.
         id (int): An integer ID mathing the key under which a selection and crossover operators combination is stored in
             the operators attribute of the GeneticAlgorithm class.
         selection (Callable): Selection operator, a function returning an ordered list of parents to mate.
@@ -295,8 +305,6 @@ def _create_rival_generation(manager: Manager, id: int, selection: Callable, cro
             Member in the new Generation.
         generation_pool (DictProxy): A dictionary in shared memory in which all new Generations are supposed to be
             stored under the same kay as the selection and crossover operators combination.
-        ga_manager (Manager): Manager of the GeneticAlgorithm class calling this function; used for creating a ListProxy
-            of new Members in the shared memory.
     """
     global identification
     # selection, crossover = self.operators.get(combination_id)
@@ -305,7 +313,8 @@ def _create_rival_generation(manager: Manager, id: int, selection: Callable, cro
 
     new_members = []
     try:
-        parents_in_order = selection(parent_generation)  # TODO: either add more useful debugging tools inside selection or instead of passing a Generation to the selection operator, inject the operator into the algorithm as a Callable attribute and then debug
+        parents_in_order = selection(
+            parent_generation)  # TODO: either add more useful debugging tools inside selection or instead of passing a Generation to the selection operator, inject the operator into the algorithm as a Callable attribute and then debug
     except TypeError as e:
         for member in parent_generation.members:
             print(f"In parent Generation Member = {member} has fitness function {member.fit_fun}. While applying the "
@@ -322,22 +331,19 @@ def _create_rival_generation(manager: Manager, id: int, selection: Callable, cro
         )
         new_members.append(Member(
             genome=child1_genome,
-            manager=manager,
             identification_number=identification,
             fitness_function=fitness_function)
         )
         new_members.append(Member(
             genome=child2_genome,
-            manager=manager,
             identification_number=identification + 1,
             fitness_function=fitness_function)
         )
         identification += 2
 
-    shared_new_members = ga_manager.list(new_members)
+    # shared_new_members = ga_manager.list(new_members)
 
     new_generation = Generation(
-        manager=manager,
         generation_members=new_members,
         num_parents_pairs=parent_generation.num_parents_pairs,
         elite_size=parent_generation.elite_size,  # TODO: allow changes in the elite size
@@ -347,6 +353,7 @@ def _create_rival_generation(manager: Manager, id: int, selection: Callable, cro
     """Generation pool is created as a DictProxy and each process (worker) will add it's Generation under a different 
     key, so no additional lock is required."""
     generation_pool[id] = new_generation
+
 
 def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: list[int], population_size: int):
     """This function evaluates Members across multiple rival Generations.
@@ -374,8 +381,9 @@ def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: 
 
         generation_pool[generation_id].members[member_index] = member_to_evaluate  # <-- Modify the member
         generation_pool[generation_id].fitness_ranking.append(
-                {'index': member_index, 'fitness value': fitness_value}  # TODO: does the fitness ranking have to be in the shared memory too?
-            )
+            {'index': member_index, 'fitness value': fitness_value}
+            # TODO: does the fitness ranking have to be in the shared memory too?
+        )
 
 
 class GeneticAlgorithm:
@@ -447,7 +455,7 @@ class GeneticAlgorithm:
     accepted_gen_list: list[Generation]
     best_fit_history: list[float]
     args: dict
-      
+
     def __zip_crossover_selection(self, selection_operators: list[Callable], crossover_operators: list[Callable]):
         """Creates a dict that combines pairs of elements from 'selection_operators' and 'crossover_operators' with
         an ID as key. For each index 'i', it adds tuples to the 'operators_combinations_dict' dict, each tuple
@@ -476,7 +484,7 @@ class GeneticAlgorithm:
     def __init__(self, initial_pop_size: int, number_of_generations: int, elite_size: int, args: dict,
                  fitness_function: Callable, genome_generator: Callable,
                  selection: list[Callable] | Callable, crossover: list[Callable] | Callable,
-                 pool_size, no_parents_pairs=None, mutation_prob: float=0.0,
+                 pool_size, no_parents_pairs=None, mutation_prob: float = 0.0,
                  seed=None):  # TODO: put pool_size in the args dict for self.selection_args = args.get('selection') below
         """GeneticAlgorithm class constructor.
 
@@ -512,7 +520,8 @@ class GeneticAlgorithm:
         if seed is not None:
             random.seed(a=seed)  # useful for debugging
 
-        self.manager = Manager()
+        self.manager = ParallelGaManager()
+        self.manager.start()
         self.rival_gen_pool = self.manager.dict()
 
         """If the provided number of parents pairs would require more Members than the current (initial) generation has,
@@ -547,13 +556,12 @@ class GeneticAlgorithm:
             genes = self.genome_generator(self.args)
             first_members.append(Member(
                 genome=genes,
-                manager=self.manager,
                 identification_number=identification,
                 fitness_function=self.fit_fun)
             )
             identification += 1
 
-        shared_first_members = self.manager.list(first_members)
+        shared_first_members = self.manager.list(first_members)  # TODO: is this redundant?
         self.current_generation = Generation(
             manager=self.manager,
             generation_members=first_members,
@@ -572,7 +580,8 @@ class GeneticAlgorithm:
             tuple[type[list | dict], float]: tuple of the genome list/dict of the best Member and it's float fit. value
         """
         index_of_best_member = self.current_generation.fitness_ranking[0].get('index')
-        best_member = list(self.current_generation.members)[index_of_best_member]  # TODO BrokenPipeError: [WinError 232] Trwa zamykanie potoku
+        best_member = list(self.current_generation.members)[
+            index_of_best_member]  # TODO BrokenPipeError: [WinError 232] Trwa zamykanie potoku
         best_genome = list(best_member.genome)
         best_fit_val = best_member.fit_val
 
@@ -585,7 +594,8 @@ class GeneticAlgorithm:
         fitness_comparison = {}
         for id_of_rival, generation in self.rival_gen_pool.items():
             fitness_comparison[id_of_rival] = generation.fitness_ranking[0].get('fitness value')
-        self.current_generation = self.rival_gen_pool.get(max(fitness_comparison, key=fitness_comparison.get))  # TODO: resolve ValueError: max() iterable argument is empty - why is it now after the manager and shared memory implementation???
+        self.current_generation = self.rival_gen_pool.get(max(fitness_comparison,
+                                                              key=fitness_comparison.get))  # TODO: resolve ValueError: max() iterable argument is empty - why is it now after the manager and shared memory implementation???
         self.accepted_gen_list.append(self.current_generation)
         self.best_fit_history.append(self.current_generation.fitness_ranking[0].get('fitness value'))
 
@@ -608,10 +618,7 @@ class GeneticAlgorithm:
 
         """For new (mutated) genome creation I use the generator passed to the superclass in it's initialisation:"""
         for index in indexes:
-            self.current_generation.members[index].change_genes(
-                self.genome_generator(self.args),
-                self.manager
-            )
+            self.current_generation.members[index].change_genes(self.genome_generator(self.args),)
 
     def run(self):
         """This is the main method for an automated run of the Genetic Algorithm, supposed to be used right after this
@@ -634,19 +641,17 @@ class GeneticAlgorithm:
                 operators with different processes in parallel:"""
                 print(f"Creating rival generations")
                 for combination_id in operator_combinations_ids:
-                    pickle.dumps(ga_manager)  # this will reproduce the same error
+                    #  pickle.dumps(ga_manager)  # this will reproduce the same error
                     new_worker = Process(
                         target=_create_rival_generation,
                         args=(
-                            ga_manager,
                             combination_id,  # id
                             self.operators.get(combination_id)[0],  # selection
                             self.operators.get(combination_id)[1],  # crossover
                             self.args.get('crossover'),  # crossover_args
                             self.current_generation,  # parent_generation
                             self.fit_fun,  # fitness_function
-                            self.rival_gen_pool,  # generation_pool
-                            manager  # ga_manager TODO: perhaps instead of the manager being passed down, a structure for new members should be passed, and actual rival generations (based on children returned by processes) should be created in the main process?
+                            self.rival_gen_pool  # generation_pool
                         )
                     )
                     new_worker.start()
