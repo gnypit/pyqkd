@@ -645,9 +645,7 @@ class GeneticAlgorithm:
                             self.args.get('crossover'),  # crossover_args
                             self.current_generation,  # parent_generation
                             self.fit_fun,  # fitness_function
-                            self.rival_gen_pool,  # generation_pool
-                            manager
-                        # ga_manager TODO: perhaps instead of the manager being passed down, a structure for new members should be passed, and actual rival generations (based on children returned by processes) should be created in the main process?
+                            self.rival_gen_pool  # generation_pool
                         )
                     )
                     new_worker.start()
