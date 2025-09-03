@@ -546,7 +546,6 @@ class GeneticAlgorithm:
             genes = self.genome_generator(self.args)
             first_members.append(Member(
                 genome=genes,
-                manager=self.manager,
                 identification_number=identification,
                 fitness_function=self.fit_fun)
             )
