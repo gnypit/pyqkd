@@ -10,10 +10,10 @@ from collections.abc import \
     Callable  # https://stackoverflow.com/questions/37835179/how-can-i-specify-the-function-type-in-my-type-hints
 from multiprocessing import Process, Manager, cpu_count
 from multiprocessing.managers import ListProxy, DictProxy, BaseManager
+from abc import ABC, abstractmethod
 
 """Global variable to hold IDs of chromosomes for backtracking"""
 identification = 0
-# TODO: Make manager a global variable
 
 
 def split_indexes(num_members, num_workers):
@@ -49,8 +49,20 @@ def uniform_gene_generator(ga_args: dict):  # TODO: just take a tuple at the sta
     return list(np.random.choice(gene_space, length))
 
 
-class Chromosome:
-    """Basic class representing chromosomes, the most fundamental objects in genetic algorithms.
+class ChromosomeInterface(ABC):
+    """Abstract class representing chromosomes, the most fundamental objects in genetic algorithms."""
+
+    @abstractmethod
+    def evaluate(self, fitness_function: Callable=None):
+        pass
+
+    @abstractmethod
+    def change_genes(self, new_genes: type[list | dict]):
+        pass
+
+
+class Chromosome(ChromosomeInterface):
+    """Simple implementation of chromosomes, the most fundamental objects in genetic algorithms.
 
     Apart from genes, in this implementation of the Genetic Algorithm, the Chromosome class also stores the fitness
     function and value. This allows self-evaluation of each chromosome.
@@ -88,19 +100,6 @@ class Chromosome:
         return (f"{type(self).__name__}(genes={self.genome}, fitness function={self.fit_fun}, "
                 f"fitness value={self.fit_val})")
 
-    def change_genes(self, new_genes: type[list | dict]):
-        """Method meant to be used when mutation occurs, to modify the genes in an already created chromosome.
-
-        Manager is only passed on for creating proxies for list/dict, it is not saved in Chromosome directly - it will
-        be saved in outer scope.
-
-        Parameters:
-            new_genes (type[list | dict]): New genome to be stored by the chromosome.
-            manager (Manager): Manager from multiprocessing is only passed on for creating proxies for list/dict, it is
-                not saved in Chromosome directly - it will be saved in outer scope.
-        """
-        self.genome = new_genes
-
     def evaluate(self, fitness_function: Callable=None):
         """Method for applying fitness function to this chromosome (it's genes, to be precise).
 
@@ -135,6 +134,17 @@ class Chromosome:
             print(f"Error evaluating member {self}: {e}")
             self.fit_val = 0.0
         # return self.fit_val
+
+    def change_genes(self, new_genes: type[list | dict]):
+        """Method meant to be used when mutation occurs, to modify the genes in an already created chromosome.
+
+        Manager is only passed on for creating proxies for list/dict, it is not saved in Chromosome directly - it will
+        be saved in outer scope.
+
+        Parameters:
+            new_genes (type[list | dict]): New genome to be stored by the chromosome.
+        """
+        self.genome = new_genes
 
 
 class Member(Chromosome):
