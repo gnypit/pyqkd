@@ -16,7 +16,7 @@ from abc import ABC, abstractmethod
 identification = 0
 
 
-class GenAlManager(BaseManager):
+class ParallelGaManager(BaseManager):
     pass
 
 
@@ -191,8 +191,7 @@ class Member(Chromosome):
         return f"{type(self).__name__}(genes={self.genome}, id={self.id}, parents_id={self.parents_id})"
 
 
-class ParallelGaManager(BaseManager):
-    pass
+ParallelGaManager.register('Member', Member)
 
 
 class Generation:  # TODO: we need constructor to take members, method for changes caused by mutation, method for evaluation and to return best fit; in the future add diversity measures
