@@ -619,10 +619,7 @@ class GeneticAlgorithm:
 
         """For new (mutated) genome creation I use the generator passed to the superclass in it's initialisation:"""
         for index in indexes:
-            self.current_generation.members[index].change_genes(
-                self.genome_generator(self.args),
-                self.manager
-            )
+            self.current_generation.members[index].change_genes(self.genome_generator(self.args),)
 
     def run(self):
         """This is the main method for an automated run of the Genetic Algorithm, supposed to be used right after this
@@ -649,7 +646,6 @@ class GeneticAlgorithm:
                     new_worker = Process(
                         target=_create_rival_generation,
                         args=(
-                            ga_manager,
                             combination_id,  # id
                             self.operators.get(combination_id)[0],  # selection
                             self.operators.get(combination_id)[1],  # crossover
@@ -659,7 +655,7 @@ class GeneticAlgorithm:
                             self.rival_gen_pool  # generation_pool
                         )
                     )
-                    new_worker.start()  # TODO TypeError: cannot pickle 'weakref.ReferenceType' object
+                    new_worker.start()
                     self.workers.append(new_worker)
 
                 """After work done, processes are collected and their list reset for new batch of workers:"""
