@@ -194,7 +194,7 @@ class Member(Chromosome):
 ParallelGaManager.register('Member', Member)
 
 
-class Generation:  # TODO: we need constructor to take members, method for changes caused by mutation, method for evaluation and to return best fit; in the future add diversity measures
+class Generation:  # TODO: add diversity measures
     """This class is meant to represent a single generation in a genetic algorithm, i.e. a set of Members.
 
     Genetic Algorithm evaluates each Generation, selects Members for a crossover, to create Members for a new
