@@ -551,7 +551,7 @@ class GeneticAlgorithm:
             )
             identification += 1
 
-        shared_first_members = self.manager.list(first_members)
+        shared_first_members = self.manager.list(first_members)  # TODO: is this redundant?
         self.current_generation = Generation(
             manager=self.manager,
             generation_members=first_members,
