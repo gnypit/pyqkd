@@ -9,14 +9,25 @@ import numpy as np
 from collections.abc import \
     Callable  # https://stackoverflow.com/questions/37835179/how-can-i-specify-the-function-type-in-my-type-hints
 from multiprocessing import Process, Manager, cpu_count
-from multiprocessing.managers import ListProxy, DictProxy, BaseManager
+from multiprocessing.managers import ListProxy, DictProxy, BaseManager, SyncManager
 from abc import ABC, abstractmethod
 
 """Global variable to hold IDs of chromosomes for backtracking"""
 identification = 0
 
 
-class ParallelGaManager(BaseManager):
+class ParallelGaManager(SyncManager):
+    """Custom manager with which classes needed in shared memory can be registered.
+
+    Usually custom managers are created with the BaseManager, but in this code both methods creating 'traditional'
+    data structures like dictionaries and custom classes are needed. In the shared memory, there will be DictProxy
+    objects with lists of Chromosomes, which need to be modified in-place. Thus, this custom manager inherits
+    SyncManager with its methods - new classes will be registered with it to create a single manager for all uses in
+    the parallel GA.
+
+    You can read more about SyncManagers here:
+    https://docs.python.org/3/library/multiprocessing.html#multiprocessing.managers.SyncManager
+    """
     pass
 
 
@@ -634,7 +645,7 @@ class GeneticAlgorithm:
                 operators with different processes in parallel:"""
                 print(f"Creating rival generations")
                 for combination_id in operator_combinations_ids:
-                    pickle.dumps(ga_manager)  # this will reproduce the same error
+                    #  pickle.dumps(ga_manager)  # this will reproduce the same error
                     new_worker = Process(
                         target=_create_rival_generation,
                         args=(
@@ -648,7 +659,7 @@ class GeneticAlgorithm:
                             self.rival_gen_pool  # generation_pool
                         )
                     )
-                    new_worker.start()
+                    new_worker.start()  # TODO TypeError: cannot pickle 'weakref.ReferenceType' object
                     self.workers.append(new_worker)
 
                 """After work done, processes are collected and their list reset for new batch of workers:"""
