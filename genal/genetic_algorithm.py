@@ -16,6 +16,10 @@ from abc import ABC, abstractmethod
 identification = 0
 
 
+class GenAlManager(BaseManager):
+    pass
+
+
 def split_indexes(num_members, num_workers):
     indexes = list(range(num_members))
     return [indexes[i::num_workers] for i in range(num_workers)]
@@ -33,7 +37,8 @@ def sort_dict_by_fit(dictionary: dict) -> float:
     return dictionary['fitness value']
 
 
-def uniform_gene_generator(ga_args: dict):  # TODO: just take a tuple at the start, genome args will be passed directly, not the whole args dict
+def uniform_gene_generator(
+        ga_args: dict):  # TODO: just take a tuple at the start, genome args will be passed directly, not the whole args dict
     """Simple function for generating a sample of given length from the gene_space with a uniform probability.
 
     Parameters:
@@ -53,7 +58,7 @@ class ChromosomeInterface(ABC):
     """Abstract class representing chromosomes, the most fundamental objects in genetic algorithms."""
 
     @abstractmethod
-    def evaluate(self, fitness_function: Callable=None):
+    def evaluate(self, fitness_function: Callable = None):
         pass
 
     @abstractmethod
@@ -77,7 +82,7 @@ class Chromosome(ChromosomeInterface):
     genome: type[list | dict]
     fit_fun: Callable
 
-    def __init__(self, genome: type[list | dict], fitness_function: Callable=None):
+    def __init__(self, genome: type[list | dict], fitness_function: Callable = None):
         """Constructor of the Chromosome class.
 
         Each chromosome represents a possible solution to a given problem. Parameters characterising these solutions
@@ -100,7 +105,7 @@ class Chromosome(ChromosomeInterface):
         return (f"{type(self).__name__}(genes={self.genome}, fitness function={self.fit_fun}, "
                 f"fitness value={self.fit_val})")
 
-    def evaluate(self, fitness_function: Callable=None):
+    def evaluate(self, fitness_function: Callable = None):
         """Method for applying fitness function to this chromosome (it's genes, to be precise).
 
         If the fitness function was passed on in the constructor of this class, it has to be provided as an argument of
@@ -159,7 +164,7 @@ class Member(Chromosome):
     id: int
     parents_id: list = []
 
-    def __init__(self, genome: type[list | dict], identification_number: int, fitness_function: Callable=None):
+    def __init__(self, genome: type[list | dict], identification_number: int, fitness_function: Callable = None):
         """Apart from what 'Chromosome' class constructor needs, here identification number should be passed.
 
         Parameters:
@@ -247,7 +252,8 @@ class Generation:  # TODO: we need constructor to take members, method for chang
         self.size = len(generation_members)
         self.fitness_ranking = []
 
-    def mutate_member(self, prob: float):  # TODO: implement any mutation operator as the default AND coordinate with the GeneticAlgorithm class on how to implement it exactly
+    def mutate_member(self,
+                      prob: float):  # TODO: implement any mutation operator as the default AND coordinate with the GeneticAlgorithm class on how to implement it exactly
         """Method for applying a basic mutation operator to this generation - it randomly chooses a member to have their
         genome rested with the genome generator based on passed mutation probability `prob`."""
         pass
@@ -265,7 +271,8 @@ class Generation:  # TODO: we need constructor to take members, method for chang
         for i in range(self.size):
             members_to_evaluate[i].evaluate()
             self.fitness_ranking.append(
-                {'index': i, 'fitness value': members_to_evaluate[i].fit_val}  # TODO: in here fitness ranking is built correctly, fitness value is calculated, but it is not saved in the Member/Chromosome!!!
+                {'index': i, 'fitness value': members_to_evaluate[i].fit_val}
+                # TODO: in here fitness ranking is built correctly, fitness value is calculated, but it is not saved in the Member/Chromosome!!!
             )
             self.members[i] = members_to_evaluate[i]
 
@@ -297,7 +304,8 @@ def _create_rival_generation(id: int, selection: Callable, crossover: Callable, 
 
     new_members = []
     try:
-        parents_in_order = selection(parent_generation)  # TODO: either add more useful debugging tools inside selection or instead of passing a Generation to the selection operator, inject the operator into the algorithm as a Callable attribute and then debug
+        parents_in_order = selection(
+            parent_generation)  # TODO: either add more useful debugging tools inside selection or instead of passing a Generation to the selection operator, inject the operator into the algorithm as a Callable attribute and then debug
     except TypeError as e:
         for member in parent_generation.members:
             print(f"In parent Generation Member = {member} has fitness function {member.fit_fun}. While applying the "
@@ -337,6 +345,7 @@ def _create_rival_generation(id: int, selection: Callable, crossover: Callable, 
     key, so no additional lock is required."""
     generation_pool[id] = new_generation
 
+
 def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: list[int], population_size: int):
     """This function evaluates Members across multiple rival Generations.
 
@@ -363,8 +372,9 @@ def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: 
 
         generation_pool[generation_id].members[member_index] = member_to_evaluate  # <-- Modify the member
         generation_pool[generation_id].fitness_ranking.append(
-                {'index': member_index, 'fitness value': fitness_value}  # TODO: does the fitness ranking have to be in the shared memory too?
-            )
+            {'index': member_index, 'fitness value': fitness_value}
+            # TODO: does the fitness ranking have to be in the shared memory too?
+        )
 
 
 class GeneticAlgorithm:
@@ -436,7 +446,7 @@ class GeneticAlgorithm:
     accepted_gen_list: list[Generation]
     best_fit_history: list[float]
     args: dict
-      
+
     def __zip_crossover_selection(self, selection_operators: list[Callable], crossover_operators: list[Callable]):
         """Creates a dict that combines pairs of elements from 'selection_operators' and 'crossover_operators' with
         an ID as key. For each index 'i', it adds tuples to the 'operators_combinations_dict' dict, each tuple
@@ -465,7 +475,7 @@ class GeneticAlgorithm:
     def __init__(self, initial_pop_size: int, number_of_generations: int, elite_size: int, args: dict,
                  fitness_function: Callable, genome_generator: Callable,
                  selection: list[Callable] | Callable, crossover: list[Callable] | Callable,
-                 pool_size, no_parents_pairs=None, mutation_prob: float=0.0,
+                 pool_size, no_parents_pairs=None, mutation_prob: float = 0.0,
                  seed=None):  # TODO: put pool_size in the args dict for self.selection_args = args.get('selection') below
         """GeneticAlgorithm class constructor.
 
@@ -561,7 +571,8 @@ class GeneticAlgorithm:
             tuple[type[list | dict], float]: tuple of the genome list/dict of the best Member and it's float fit. value
         """
         index_of_best_member = self.current_generation.fitness_ranking[0].get('index')
-        best_member = list(self.current_generation.members)[index_of_best_member]  # TODO BrokenPipeError: [WinError 232] Trwa zamykanie potoku
+        best_member = list(self.current_generation.members)[
+            index_of_best_member]  # TODO BrokenPipeError: [WinError 232] Trwa zamykanie potoku
         best_genome = list(best_member.genome)
         best_fit_val = best_member.fit_val
 
@@ -574,7 +585,8 @@ class GeneticAlgorithm:
         fitness_comparison = {}
         for id_of_rival, generation in self.rival_gen_pool.items():
             fitness_comparison[id_of_rival] = generation.fitness_ranking[0].get('fitness value')
-        self.current_generation = self.rival_gen_pool.get(max(fitness_comparison, key=fitness_comparison.get))  # TODO: resolve ValueError: max() iterable argument is empty - why is it now after the manager and shared memory implementation???
+        self.current_generation = self.rival_gen_pool.get(max(fitness_comparison,
+                                                              key=fitness_comparison.get))  # TODO: resolve ValueError: max() iterable argument is empty - why is it now after the manager and shared memory implementation???
         self.accepted_gen_list.append(self.current_generation)
         self.best_fit_history.append(self.current_generation.fitness_ranking[0].get('fitness value'))
 
@@ -635,7 +647,8 @@ class GeneticAlgorithm:
                             self.current_generation,  # parent_generation
                             self.fit_fun,  # fitness_function
                             self.rival_gen_pool,  # generation_pool
-                            manager  # ga_manager TODO: perhaps instead of the manager being passed down, a structure for new members should be passed, and actual rival generations (based on children returned by processes) should be created in the main process?
+                            manager
+                        # ga_manager TODO: perhaps instead of the manager being passed down, a structure for new members should be passed, and actual rival generations (based on children returned by processes) should be created in the main process?
                         )
                     )
                     new_worker.start()
