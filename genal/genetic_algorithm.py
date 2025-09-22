@@ -642,7 +642,7 @@ class GeneticAlgorithm:
                 print(f"Creating rival generations")
                 for combination_id in operator_combinations_ids:
                     #  pickle.dumps(ga_manager)  # this will reproduce the same error
-                    new_worker = Process(
+                    new_worker = Process(  # TODO: right now this does not produce any rival generations!!!
                         target=_create_rival_generation,
                         args=(
                             combination_id,  # id
