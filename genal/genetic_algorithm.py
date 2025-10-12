@@ -131,6 +131,7 @@ class Chromosome(ChromosomeInterface):
         Returns:
             float: Fitness value as a float number.
         """
+        print("Using evaluate")
         try:
             if self.fit_fun is not None:
                 result = self.fit_fun(self.genome)
@@ -161,6 +162,9 @@ class Chromosome(ChromosomeInterface):
             new_genes (type[list | dict]): New genome to be stored by the chromosome.
         """
         self.genome = new_genes
+
+
+ParallelGaManager.register('Chromosome', Chromosome)
 
 
 class Member(Chromosome):
@@ -450,7 +454,7 @@ class GeneticAlgorithm:
     mutation_prob: float
     current_gen: Generation
     workers: list[Process] = []
-    manager: Manager
+    manager: ParallelGaManager
     rival_gen_pool: DictProxy[int, Generation]
     accepted_gen_list: list[Generation]
     best_fit_history: list[float]
@@ -554,14 +558,16 @@ class GeneticAlgorithm:
 
         for _ in range(self.pop_size):
             genes = self.genome_generator(self.args)
-            first_members.append(Member(
+            new_member = self.manager.Member(
                 genome=genes,
                 identification_number=identification,
-                fitness_function=self.fit_fun)
+                fitness_function=self.fit_fun
             )
+            print(new_member)
+            first_members.append(new_member)
             identification += 1
 
-        shared_first_members = self.manager.list(first_members)  # TODO: is this redundant?
+        # shared_first_members = self.manager.list(first_members)  # TODO: is this redundant?
         self.current_generation = Generation(
             manager=self.manager,
             generation_members=first_members,
@@ -594,8 +600,7 @@ class GeneticAlgorithm:
         fitness_comparison = {}
         for id_of_rival, generation in self.rival_gen_pool.items():
             fitness_comparison[id_of_rival] = generation.fitness_ranking[0].get('fitness value')
-        self.current_generation = self.rival_gen_pool.get(max(fitness_comparison,
-                                                              key=fitness_comparison.get))  # TODO: resolve ValueError: max() iterable argument is empty - why is it now after the manager and shared memory implementation???
+        self.current_generation = self.rival_gen_pool.get(max(fitness_comparison, key=fitness_comparison.get))  # TODO: resolve ValueError: max() iterable argument is empty - why is it now after the manager and shared memory implementation???
         self.accepted_gen_list.append(self.current_generation)
         self.best_fit_history.append(self.current_generation.fitness_ranking[0].get('fitness value'))
 
@@ -642,7 +647,7 @@ class GeneticAlgorithm:
                 print(f"Creating rival generations")
                 for combination_id in operator_combinations_ids:
                     #  pickle.dumps(ga_manager)  # this will reproduce the same error
-                    new_worker = Process(
+                    new_worker = Process(  # TODO: right now this does not produce any rival generations!!!
                         target=_create_rival_generation,
                         args=(
                             combination_id,  # id
