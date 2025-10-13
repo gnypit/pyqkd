@@ -361,10 +361,7 @@ def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: 
         #      f"{member_to_evaluate.fit_val}")
 
         generation_pool[generation_id].members[member_index] = member_to_evaluate  # <-- Modify the member
-        generation_pool[generation_id].fitness_ranking.append(
-            {'index': member_index, 'fitness value': fitness_value}
-            # TODO: does the fitness ranking have to be in the shared memory too?
-        )
+        generation_pool[generation_id].fitness_ranking.append({'index': member_index, 'fitness value': fitness_value})
 
 
 class GeneticAlgorithm:
