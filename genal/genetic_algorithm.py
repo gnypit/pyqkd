@@ -269,7 +269,7 @@ class Generation:  # TODO: add diversity measures
 
 def _create_rival_generation(combination_id: int, selection: Callable, crossover: Callable, crossover_args: tuple,
                              parent_generation: Generation, fitness_function: Callable, generation_pool: DictProxy,
-                             manager: SyncManager):
+                             ga_manager: SyncManager):
     """Method for creating a single new Generation of children based on the parent Generation with selected operators.
 
     Parameters:
@@ -328,7 +328,7 @@ def _create_rival_generation(combination_id: int, selection: Callable, crossover
         num_parents_pairs=parent_generation.num_parents_pairs,
         elite_size=parent_generation.elite_size,  # TODO: allow changes in the elite size
         pool_size=parent_generation.pool_size,  # TODO: redundant, we should focus on selection_args
-        manager=manager
+        manager=ga_manager
     )
 
     """Generation pool is created as a DictProxy and each process (worker) will add it's Generation under a different 
