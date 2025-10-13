@@ -261,10 +261,7 @@ class Generation:  # TODO: add diversity measures
         members_to_evaluate = list(self.members)
         for i in range(self.size):
             members_to_evaluate[i].evaluate()
-            self.fitness_ranking.append(
-                {'index': i, 'fitness value': members_to_evaluate[i].fit_val}
-                # TODO: in here fitness ranking is built correctly, fitness value is calculated, but it is not saved in the Member/Chromosome!!!
-            )
+            self.fitness_ranking.append({'index': i, 'fitness value': members_to_evaluate[i].fit_val})
             self.members[i] = members_to_evaluate[i]
 
         self.fitness_ranking.sort(key=sort_dict_by_fit, reverse=reverse)
