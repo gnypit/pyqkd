@@ -6,17 +6,13 @@ from abc import ABC, abstractmethod
 from collections.abc import \
     Callable  # https://stackoverflow.com/questions/37835179/how-can-i-specify-the-function-type-in-my-type-hints
 from multiprocessing import Process, Manager, cpu_count
-from multiprocessing.managers import ListProxy, DictProxy, BaseManager
+from multiprocessing.managers import ListProxy, DictProxy
 from os import getpid
 
 import numpy as np
 
 """Global variable to hold IDs of chromosomes for backtracking"""
 identification = 0
-
-
-class ParallelGaManager(BaseManager):
-    pass
 
 
 def split_indexes(num_members, num_workers):
@@ -189,9 +185,6 @@ class Member(Chromosome):
     def __repr__(self) -> str:
         """Default method for self-representing objects of this class."""
         return f"{type(self).__name__}(genes={self.genome}, id={self.id}, parents_id={self.parents_id})"
-
-
-ParallelGaManager.register('Member', Member)
 
 
 class Generation:  # TODO: add diversity measures
@@ -510,7 +503,7 @@ class GeneticAlgorithm:
         if seed is not None:
             random.seed(a=seed)  # useful for debugging
 
-        self.manager = ParallelGaManager()
+        self.manager = Manager()
         self.manager.start()
         self.rival_gen_pool = self.manager.dict()
 
