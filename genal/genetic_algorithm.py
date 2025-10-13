@@ -244,8 +244,7 @@ class Generation:  # TODO: add diversity measures
         self.size = len(generation_members)
         self.fitness_ranking = []
 
-    def mutate_member(self,
-                      prob: float):  # TODO: implement any mutation operator as the default AND coordinate with the GeneticAlgorithm class on how to implement it exactly
+    def mutate_member(self, prob: float):
         """Method for applying a basic mutation operator to this generation - it randomly chooses a member to have their
         genome rested with the genome generator based on passed mutation probability `prob`."""
         pass
