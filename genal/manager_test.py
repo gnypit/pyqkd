@@ -1,21 +1,17 @@
+from multiprocessing import Value
 from multiprocessing.managers import SyncManager, BaseManager
 
 
 class SimpleObject:
-    a: float = None
-    b: float = None
-
     def __init__(self, b):
-        self.b = b
+        self.b = Value('i', b)
 
     def compute(self):
-        self.a = self.b * 2
+        self.a = Value('i', self.b.value * 2)
         return self.a
 
 
 class AdvancedObject(SimpleObject):
-    c: float = None
-
     def __init__(self, b):
         super().__init__(b)
 

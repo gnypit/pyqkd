@@ -1,33 +1,21 @@
 """Author: Jakub Gnyp; contact: gnyp.jakub@gmail.com, LinkedIn: https://www.linkedin.com/in/gnypit/
 Script is distributed under the license: https://github.com/gnypit/pyqkd/blob/main/LICENSE
 """
-import pickle
 import random
-from os import getpid
-import matplotlib.pyplot as plt
-import numpy as np
+from abc import ABC, abstractmethod
 from collections.abc import \
     Callable  # https://stackoverflow.com/questions/37835179/how-can-i-specify-the-function-type-in-my-type-hints
 from multiprocessing import Process, Manager, cpu_count
-from multiprocessing.managers import ListProxy, DictProxy, BaseManager, SyncManager
-from abc import ABC, abstractmethod
+from multiprocessing.managers import ListProxy, DictProxy, BaseManager
+from os import getpid
+
+import numpy as np
 
 """Global variable to hold IDs of chromosomes for backtracking"""
 identification = 0
 
 
-class ParallelGaManager(SyncManager):
-    """Custom manager with which classes needed in shared memory can be registered.
-
-    Usually custom managers are created with the BaseManager, but in this code both methods creating 'traditional'
-    data structures like dictionaries and custom classes are needed. In the shared memory, there will be DictProxy
-    objects with lists of Chromosomes, which need to be modified in-place. Thus, this custom manager inherits
-    SyncManager with its methods - new classes will be registered with it to create a single manager for all uses in
-    the parallel GA.
-
-    You can read more about SyncManagers here:
-    https://docs.python.org/3/library/multiprocessing.html#multiprocessing.managers.SyncManager
-    """
+class ParallelGaManager(BaseManager):
     pass
 
 
@@ -162,9 +150,6 @@ class Chromosome(ChromosomeInterface):
             new_genes (type[list | dict]): New genome to be stored by the chromosome.
         """
         self.genome = new_genes
-
-
-ParallelGaManager.register('Chromosome', Chromosome)
 
 
 class Member(Chromosome):
@@ -455,7 +440,7 @@ class GeneticAlgorithm:
     mutation_prob: float
     current_gen: Generation
     workers: list[Process] = []
-    manager: ParallelGaManager
+    manager: Manager
     rival_gen_pool: DictProxy[int, Generation]
     accepted_gen_list: list[Generation]
     best_fit_history: list[float]
@@ -559,13 +544,11 @@ class GeneticAlgorithm:
 
         for _ in range(self.pop_size):
             genes = self.genome_generator(self.args)
-            new_member = self.manager.Member(
+            first_members.append(Member(
                 genome=genes,
                 identification_number=identification,
-                fitness_function=self.fit_fun
+                fitness_function=self.fit_fun)
             )
-            print(new_member)
-            first_members.append(new_member)
             identification += 1
 
         # shared_first_members = self.manager.list(first_members)  # TODO: is this redundant?
@@ -664,7 +647,7 @@ class GeneticAlgorithm:
                             self.rival_gen_pool  # generation_pool
                         )
                     )
-                    new_worker.start()  # TODO TypeError: cannot pickle 'weakref.ReferenceType' object
+                    new_worker.start()
                     self.workers.append(new_worker)
 
                 """After work done, processes are collected and their list reset for new batch of workers:"""
