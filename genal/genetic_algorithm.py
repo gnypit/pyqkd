@@ -249,7 +249,7 @@ class Generation:  # TODO: add diversity measures
         genome rested with the genome generator based on passed mutation probability `prob`."""
         pass
 
-    def evaluate(self, reverse=True):
+    def evaluate(self, reverse=True):  # TODO: perhaps separate evaluation and building of the fitness ranking?
         """This method uses the fitness function stored in members of the generation to create and then sort the fitness
         ranking by the computed fitness values; 'reverse' means sorting will be performed from max fitness value to min.
 
@@ -675,32 +675,10 @@ class GeneticAlgorithm:
                 for worker in self.workers:
                     worker.join()
 
-                # Just for testing:
-                new_members = rival_members_container.get(0)
-                for member in new_members:
-                    print(member.fit_val)
-
-                """
-                for index in index_range:  # TODO: we will pass a simple shared list as a container and reorganise members into Generations later; the problem is when we try to save an evaluated member in the same Generation as another process; the pool being in shared memory is not going to help with that, as the problem is 'lower'
-                    generation_id = int(np.floor(index / workers_pool_size))  # make int from numpy's float 64 ID
-                    member_index = int(index - generation_id * population_size)  # make int from numpy's float 64 ID
-
-                    try:
-                        member_to_evaluate = rival_gen_pool[generation_id].members[member_index]
-                        member_to_evaluate.evaluate()
-                        fitness_value = member_to_evaluate.fit_val
-
-                        rival_gen_pool[generation_id].members[member_index] = member_to_evaluate  # <-- Modify the member
-                        # rival_gen_pool[generation_id].fitness_ranking.append({'index': member_index, 'fitness value': fitness_value})  # TODO: is a Lock necessary here?
-                        print(rival_gen_pool[generation_id].members[member_index].fit_val)
-                    except KeyError as e:
-                        print(f"While evaluating member with index={index} and fitness_value={fitness_value} we got error {e}")
-                """
-
                 """Reset workers"""
                 self.workers = []
 
-                """Rebuild fitness ranking for each Generation"""
+                """Rebuild fitness ranking for each Generation"""  # TODO: both create actual Generations and make them create their own fitness rankings
                 for gen_id, generation in self.rival_gen_pool.items():
                     generation.fitness_ranking = []
                     for i, member in enumerate(generation.members):
