@@ -495,28 +495,26 @@ class GeneticAlgorithm:
         """
         global identification
         selection, crossover = self.operators.get(combination_id)
-        crossover_args = self.args.get('crossover')
-        parent_generation = self.current_generation
 
         print(f"Process {getpid()}: Creating a new rival Generation")
 
         new_members = []
         try:
-            parents_in_order = selection(parent_generation)
+            parents_in_order = selection(self.current_generation)
         except TypeError as e:
-            for member in parent_generation.members:
+            for member in self.current_generation.members:
                 print(
                     f"In parent Generation Member = {member} has fitness function {member.fit_fun}. While applying the "
                     f"selection operator, the following error occurred: {e}")
             exit()
 
-        for index in range(parent_generation.num_parents_pairs):
+        for index in range(self.current_generation.num_parents_pairs):
             """We always take 2 consecutive members from the parents_in_order list and pass them to the crossover
             operator to get genomes of new members, for the new generation, to be created."""
             child1_genome, child2_genome = crossover(
                 parents_in_order[2 * index],
                 parents_in_order[2 * index + 1],
-                crossover_args
+                self.args.get('crossover')
             )
             new_members.append(Member(
                 genome=child1_genome,
@@ -532,9 +530,9 @@ class GeneticAlgorithm:
 
         new_generation = Generation(
             generation_members=new_members,  # we pass a list and then the manager who makes it into a shared one
-            num_parents_pairs=parent_generation.num_parents_pairs,
-            elite_size=parent_generation.elite_size,  # TODO: allow changes in the elite size
-            pool_size=parent_generation.pool_size  # TODO: redundant, we should focus on selection_args
+            num_parents_pairs=self.current_generation.num_parents_pairs,
+            elite_size=self.current_generation.elite_size,  # TODO: allow changes in the elite size
+            pool_size=self.current_generation.pool_size  # TODO: redundant, we should focus on selection_args
         )
 
         """Generation pool is created as a DictProxy and each process (worker) will add it's Generation under a different 
