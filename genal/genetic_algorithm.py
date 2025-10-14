@@ -267,75 +267,6 @@ class Generation:  # TODO: add diversity measures
         self.fitness_ranking.sort(key=sort_dict_by_fit, reverse=reverse)
 
 
-def _create_rival_generation(combination_id: int, selection: Callable, crossover: Callable, crossover_args: tuple,
-                             parent_generation: Generation, fitness_function: Callable, generation_pool: DictProxy,
-                             ga_manager: SyncManager):
-    """Method for creating a single new Generation of children based on the parent Generation with selected operators.
-
-    Parameters:
-        combination_id (int): An integer ID mathing the key under which a selection and crossover operators combination
-            is stored in the operators attribute of the GeneticAlgorithm class.
-        selection (Callable): Selection operator, a function returning an ordered list of parents to mate.
-        crossover (Callable): Crossover operator, a function returning two (children) Members based on two provided
-            (parent) Members.
-        crossover_args (tuple): All arguments that are required by the crossover operator. Could be None.
-        parent_generation (Generation): Any Generation containing Members who will be treated as parents to Members
-            in the Generation created by this function.
-        fitness_function (Callable): Fitness function for Members evaluation that is supposed to be passed to each
-            Member in the new Generation.
-        generation_pool (DictProxy): A dictionary in shared memory in which all new Generations are supposed to be
-            stored under the same kay as the selection and crossover operators combination.
-    """
-    global identification
-    # selection, crossover = self.operators.get(combination_id)
-
-    print(f"Process {getpid()}: Creating a new rival Generation")
-
-    new_members = []
-    try:
-        parents_in_order = selection(
-            parent_generation)  # TODO: either add more useful debugging tools inside selection or instead of passing a Generation to the selection operator, inject the operator into the algorithm as a Callable attribute and then debug
-    except TypeError as e:
-        for member in parent_generation.members:
-            print(f"In parent Generation Member = {member} has fitness function {member.fit_fun}. While applying the "
-                  f"selection operator, the following error occurred: {e}")
-        exit()
-
-    for index in range(parent_generation.num_parents_pairs):
-        """We always take 2 consecutive members from the parents_in_order list and pass them to the crossover
-        operator to get genomes of new members, for the new generation, to be created."""
-        child1_genome, child2_genome = crossover(
-            parents_in_order[2 * index],
-            parents_in_order[2 * index + 1],
-            crossover_args
-        )
-        new_members.append(Member(
-            genome=child1_genome,
-            identification_number=identification,
-            fitness_function=fitness_function)
-        )
-        new_members.append(Member(
-            genome=child2_genome,
-            identification_number=identification + 1,
-            fitness_function=fitness_function)
-        )
-        identification += 2
-
-    # shared_new_members = ga_manager.list(new_members)
-
-    new_generation = Generation(
-        generation_members=new_members,
-        num_parents_pairs=parent_generation.num_parents_pairs,
-        elite_size=parent_generation.elite_size,  # TODO: allow changes in the elite size
-        pool_size=parent_generation.pool_size,  # TODO: redundant, we should focus on selection_args
-        manager=ga_manager
-    )
-
-    """Generation pool is created as a DictProxy and each process (worker) will add it's Generation under a different 
-    key, so no additional lock is required."""
-    generation_pool[combination_id] = new_generation
-
-
 def _evaluate_members(generation_pool: DictProxy[int, Generation], index_range: list[int], population_size: int):
     """This function evaluates Members across multiple rival Generations.
 
@@ -500,7 +431,6 @@ class GeneticAlgorithm:
             random.seed(a=seed)  # useful for debugging
 
         self.manager = Manager()
-        self.manager.start()
         self.rival_gen_pool = self.manager.dict()
 
         """If the provided number of parents pairs would require more Members than the current (initial) generation has,
@@ -551,6 +481,71 @@ class GeneticAlgorithm:
         self.current_generation.evaluate()
         self.accepted_gen_list = [self.current_generation]
         self.best_fit_history = [self.current_generation.fitness_ranking[0].get('fitness value')]
+
+    def _create_rival_generation(self, combination_id: int, selection: Callable, crossover: Callable,
+                                 crossover_args: tuple,
+                                 parent_generation: Generation, fitness_function: Callable, generation_pool: DictProxy):
+        """Method for creating a single new Generation of children based on the parent Generation with selected operators.
+
+        Parameters:
+            combination_id (int): An integer ID mathing the key under which a selection and crossover operators combination
+                is stored in the operators attribute of the GeneticAlgorithm class.
+            selection (Callable): Selection operator, a function returning an ordered list of parents to mate.
+            crossover (Callable): Crossover operator, a function returning two (children) Members based on two provided
+                (parent) Members.
+            crossover_args (tuple): All arguments that are required by the crossover operator. Could be None.
+            parent_generation (Generation): Any Generation containing Members who will be treated as parents to Members
+                in the Generation created by this function.
+            fitness_function (Callable): Fitness function for Members evaluation that is supposed to be passed to each
+                Member in the new Generation.
+            generation_pool (DictProxy): A dictionary in shared memory in which all new Generations are supposed to be
+                stored under the same kay as the selection and crossover operators combination.
+        """
+        global identification
+        # selection, crossover = self.operators.get(combination_id)
+
+        print(f"Process {getpid()}: Creating a new rival Generation")
+
+        new_members = []
+        try:
+            parents_in_order = selection(parent_generation)
+        except TypeError as e:
+            for member in parent_generation.members:
+                print(
+                    f"In parent Generation Member = {member} has fitness function {member.fit_fun}. While applying the "
+                    f"selection operator, the following error occurred: {e}")
+            exit()
+
+        for index in range(parent_generation.num_parents_pairs):
+            """We always take 2 consecutive members from the parents_in_order list and pass them to the crossover
+            operator to get genomes of new members, for the new generation, to be created."""
+            child1_genome, child2_genome = crossover(
+                parents_in_order[2 * index],
+                parents_in_order[2 * index + 1],
+                crossover_args
+            )
+            new_members.append(Member(
+                genome=child1_genome,
+                identification_number=identification,
+                fitness_function=fitness_function)
+            )
+            new_members.append(Member(
+                genome=child2_genome,
+                identification_number=identification + 1,
+                fitness_function=fitness_function)
+            )
+            identification += 2
+
+        new_generation = Generation(
+            generation_members=new_members,  # we pass a list and then the manager who makes it into a shared one
+            num_parents_pairs=parent_generation.num_parents_pairs,
+            elite_size=parent_generation.elite_size,  # TODO: allow changes in the elite size
+            pool_size=parent_generation.pool_size  # TODO: redundant, we should focus on selection_args
+        )
+
+        """Generation pool is created as a DictProxy and each process (worker) will add it's Generation under a different 
+        key, so no additional lock is required."""
+        generation_pool[combination_id] = new_generation
 
     def best_solution(self):
         """Returns the genome of Member with the highest fitness value with its fitness value,
@@ -624,7 +619,7 @@ class GeneticAlgorithm:
                     new_worker = Process(  # TODO: right now this does not produce any rival generations!!!
                         target=_create_rival_generation,
                         args=(
-                            ga_manager,
+                            ga_manager,  # TODO: we're back to pickling managers
                             combination_id,  # id
                             self.operators.get(combination_id)[0],  # selection
                             self.operators.get(combination_id)[1],  # crossover
