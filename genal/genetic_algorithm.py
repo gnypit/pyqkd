@@ -483,21 +483,15 @@ class GeneticAlgorithm:
         self.best_fit_history = [self.current_generation.fitness_ranking[0].get('fitness value')]
 
     def _create_rival_generation(self, combination_id: int, generation_pool: DictProxy[int, Generation]):
-        """Method for creating a single new Generation of children based on the parent Generation with selected operators.
+        """Method for creating a single new Generation with operators indicated by their combination ID.
 
         Parameters:
-            combination_id (int): An integer ID mathing the key under which a selection and crossover operators combination
-                is stored in the operators attribute of the GeneticAlgorithm class.
-            selection (Callable): Selection operator, a function returning an ordered list of parents to mate.
-            crossover (Callable): Crossover operator, a function returning two (children) Members based on two provided
-                (parent) Members.
-            crossover_args (tuple): All arguments that are required by the crossover operator. Could be None.
-            parent_generation (Generation): Any Generation containing Members who will be treated as parents to Members
-                in the Generation created by this function.
-            fitness_function (Callable): Fitness function for Members evaluation that is supposed to be passed to each
-                Member in the new Generation.
-            generation_pool (DictProxy): A dictionary in shared memory in which all new Generations are supposed to be
-                stored under the same key as the selection and crossover operators combination.
+            combination_id (int): an ID matching the key under which a combination of selection and crossover operators
+                is stored in the 'operators' attribute; the new rival Generation is to be created with these operators.
+            generation_pool (DictProxy): A dictionary in shared memory in which all new rival Generations are supposed
+                to be stored under the same key as the respective selection and crossover operators combinations. It
+                serves as a container for the Process which is executing this method, saving results of computation
+                done in parallel, accessible by all Processes and stored in a shared memory.
         """
         global identification
         selection, crossover = self.operators.get(combination_id)
