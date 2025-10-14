@@ -482,16 +482,16 @@ class GeneticAlgorithm:
         self.accepted_gen_list = [self.current_generation]
         self.best_fit_history = [self.current_generation.fitness_ranking[0].get('fitness value')]
 
-    def _create_rival_generation(self, combination_id: int, generation_pool: DictProxy[int, Generation]):
+    def _create_members_for_rival_generation(self, combination_id: int, members_pool: DictProxy[int, list[Member]]):
         """Method for creating a single new Generation with operators indicated by their combination ID.
 
         Parameters:
             combination_id (int): an ID matching the key under which a combination of selection and crossover operators
                 is stored in the 'operators' attribute; the new rival Generation is to be created with these operators.
-            generation_pool (DictProxy): A dictionary in shared memory in which all new rival Generations are supposed
-                to be stored under the same key as the respective selection and crossover operators combinations. It
-                serves as a container for the Process which is executing this method, saving results of computation
-                done in parallel, accessible by all Processes and stored in a shared memory.
+            members_pool (DictProxy): A dictionary in shared memory in which all members of new rival Generations are
+                supposed to be stored under the same key as the respective selection and crossover operators
+                combinations. It serves as a container for the Process which is executing this method, saving results of
+                computation done in parallel, accessible by all Processes and stored in a shared memory.
         """
         global identification
         selection, crossover = self.operators.get(combination_id)
@@ -528,16 +528,9 @@ class GeneticAlgorithm:
             )
             identification += 2
 
-        new_generation = Generation(
-            generation_members=new_members,  # we pass a list and then the manager who makes it into a shared one
-            num_parents_pairs=self.current_generation.num_parents_pairs,
-            elite_size=self.current_generation.elite_size,  # TODO: allow changes in the elite size
-            pool_size=self.current_generation.pool_size  # TODO: redundant, we should focus on selection_args
-        )
-
-        """Generation pool is created as a DictProxy and each process (worker) will add it's Generation under a different 
+        """Members' pool is created as a DictProxy and each process (worker) will add it's new members under a different 
         key, so no additional lock is required."""
-        generation_pool[combination_id] = new_generation
+        members_pool[combination_id] = new_members
 
     def best_solution(self):
         """Returns the genome of Member with the highest fitness value with its fitness value,
@@ -595,17 +588,18 @@ class GeneticAlgorithm:
 
         operator_combinations_ids = list(self.operators.keys())
 
-        with self.manager:
+        with self.manager as ga_manager:
+            rival_members_pool = ga_manager.dict()
             for _ in range(self.no_generations):
                 """Rival generations are created based on accessible combinations of selection and crossover
                 operators with different processes in parallel:"""
                 print(f"Creating rival generations")
                 for combination_id in operator_combinations_ids:
                     new_worker = Process(
-                        target=self._create_rival_generation,
+                        target=self._create_members_for_rival_generation,
                         args=(  # TODO: pass a container!
                             combination_id,  # id
-                            self.rival_gen_pool  # generation_pool <-- can this be a container?
+                            rival_members_pool  # members_pool
                         )
                     )
                     new_worker.start()
@@ -615,12 +609,7 @@ class GeneticAlgorithm:
                 for worker in self.workers:
                     worker.join()
 
-                """
-                #Just for testing:
-                new_members = self.rival_gen_pool.get(0).members
-                for member in new_members:
-                    print(member.genome)
-                """
+                # TODO: actually create the rival Generations in here
 
                 self.workers = []
 
