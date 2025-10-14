@@ -541,16 +541,15 @@ class GeneticAlgorithm:
             generation_id = int(np.floor(index / population_size))  # make int from numpy's float 64 ID
             member_index = int(index - generation_id * population_size)  # make int from numpy's float 64 ID
 
-            """Fetch Member from the members att. of given Generation in shared memory"""
+            """Copy Member from the container, evaluate it and paste updated one in the container:"""
             try:
                 member_to_evaluate = members_to_evaluate.get(generation_id)[member_index]
             except TypeError as e:
                 print(f"With generation_id={generation_id} and member_index={member_index} we have {e}")
+                exit()
 
             member_to_evaluate.evaluate()
-            # fitness_value = member_to_evaluate.fit_val
-
-            members_to_evaluate[generation_id][member_index] = member_to_evaluate  # <-- Modify the member in place
+            members_to_evaluate[generation_id][member_index] = member_to_evaluate
 
     def best_solution(self):
         """Returns the genome of Member with the highest fitness value with its fitness value,
