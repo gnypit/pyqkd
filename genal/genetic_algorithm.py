@@ -597,7 +597,7 @@ class GeneticAlgorithm:
                 for combination_id in operator_combinations_ids:
                     new_worker = Process(
                         target=self._create_members_for_rival_generation,
-                        args=(  # TODO: pass a container!
+                        args=(
                             combination_id,  # id
                             rival_members_pool  # members_pool
                         )
