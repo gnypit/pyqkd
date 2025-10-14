@@ -482,9 +482,7 @@ class GeneticAlgorithm:
         self.accepted_gen_list = [self.current_generation]
         self.best_fit_history = [self.current_generation.fitness_ranking[0].get('fitness value')]
 
-    def _create_rival_generation(self, combination_id: int, selection: Callable, crossover: Callable,
-                                 crossover_args: tuple,
-                                 parent_generation: Generation, fitness_function: Callable, generation_pool: DictProxy):
+    def _create_rival_generation(self, combination_id: int, generation_pool: DictProxy[int, Generation]):
         """Method for creating a single new Generation of children based on the parent Generation with selected operators.
 
         Parameters:
@@ -499,10 +497,12 @@ class GeneticAlgorithm:
             fitness_function (Callable): Fitness function for Members evaluation that is supposed to be passed to each
                 Member in the new Generation.
             generation_pool (DictProxy): A dictionary in shared memory in which all new Generations are supposed to be
-                stored under the same kay as the selection and crossover operators combination.
+                stored under the same key as the selection and crossover operators combination.
         """
         global identification
-        # selection, crossover = self.operators.get(combination_id)
+        selection, crossover = self.operators.get(combination_id)
+        crossover_args = self.args.get('crossover')
+        parent_generation = self.current_generation
 
         print(f"Process {getpid()}: Creating a new rival Generation")
 
@@ -527,12 +527,12 @@ class GeneticAlgorithm:
             new_members.append(Member(
                 genome=child1_genome,
                 identification_number=identification,
-                fitness_function=fitness_function)
+                fitness_function=self.fit_fun)
             )
             new_members.append(Member(
                 genome=child2_genome,
                 identification_number=identification + 1,
-                fitness_function=fitness_function)
+                fitness_function=self.fit_fun)
             )
             identification += 2
 
@@ -601,32 +601,19 @@ class GeneticAlgorithm:
         print(f"Creating the initial population.")
         self._create_initial_generation()
 
-        # For testing:
-        """
-        for member in self.current_generation.members:
-            print(member.fit_val)
-        """
-
         operator_combinations_ids = list(self.operators.keys())
 
-        with self.manager as ga_manager:
+        with self.manager:
             for _ in range(self.no_generations):
                 """Rival generations are created based on accessible combinations of selection and crossover
                 operators with different processes in parallel:"""
                 print(f"Creating rival generations")
                 for combination_id in operator_combinations_ids:
-                    #  pickle.dumps(ga_manager)  # this will reproduce the same error
-                    new_worker = Process(  # TODO: right now this does not produce any rival generations!!!
-                        target=_create_rival_generation,
-                        args=(
-                            ga_manager,  # TODO: we're back to pickling managers
+                    new_worker = Process(
+                        target=self._create_rival_generation,
+                        args=(  # TODO: pass a container!
                             combination_id,  # id
-                            self.operators.get(combination_id)[0],  # selection
-                            self.operators.get(combination_id)[1],  # crossover
-                            self.args.get('crossover'),  # crossover_args
-                            self.current_generation,  # parent_generation
-                            self.fit_fun,  # fitness_function
-                            self.rival_gen_pool  # generation_pool
+                            self.rival_gen_pool  # generation_pool <-- can this be a container?
                         )
                     )
                     new_worker.start()
