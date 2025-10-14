@@ -453,8 +453,8 @@ class GeneticAlgorithm:
         self.accepted_gen_list = [self.current_generation]
         self.best_fit_history = [self.current_generation.fitness_ranking[0].get('fitness value')]
 
-    def _create_members_for_rival_generation(self, combination_id: int,
-                                             members_container: DictProxy[int, list[Member]]):
+    @staticmethod
+    def _create_members_for_rival_generation(combination_id: int, members_container: DictProxy[int, list[Member]]):
         """Method for creating a single new Generation with operators indicated by their combination ID.
 
         Parameters:
