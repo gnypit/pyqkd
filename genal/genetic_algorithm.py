@@ -249,20 +249,24 @@ class Generation:  # TODO: add diversity measures
         genome rested with the genome generator based on passed mutation probability `prob`."""
         pass
 
-    def evaluate(self, reverse=True):  # TODO: perhaps separate evaluation and building of the fitness ranking?
-        """This method uses the fitness function stored in members of the generation to create and then sort the fitness
-        ranking by the computed fitness values; 'reverse' means sorting will be performed from max fitness value to min.
+    def evaluate(self):
+        """This method calls the 'evaluate' method on each Member of this Generation."""
+        members_to_evaluate = list(self.members)
+        for i in range(self.size):
+            members_to_evaluate[i].evaluate()
+            self.members[i] = members_to_evaluate[i]
+
+    def create_fitness_ranking(self, reverse=True):
+        """This method creates and then sorts the fitness ranking of the Members; 'reverse' means sorting will be
+        performed from max fitness value to min.
 
         Parameters:
             reverse (Bool=True, optional): parameter which decided whether the fitness ranking should be sorted in
                 ascending order of fitness values (reverse=False) or in descending order (reverse=True), which is
                 the default.
         """
-        members_to_evaluate = list(self.members)
         for i in range(self.size):
-            members_to_evaluate[i].evaluate()
-            self.fitness_ranking.append({'index': i, 'fitness value': members_to_evaluate[i].fit_val})
-            self.members[i] = members_to_evaluate[i]
+            self.fitness_ranking.append({'index': i, 'fitness value': self.members[i].fit_val})
 
         self.fitness_ranking.sort(key=sort_dict_by_fit, reverse=reverse)
 
@@ -452,6 +456,7 @@ class GeneticAlgorithm:
             pool_size=self.pool_size
         )
         self.current_generation.evaluate()
+        self.current_generation.create_fitness_ranking()
         self.accepted_gen_list = [self.current_generation]
         self.best_fit_history = [self.current_generation.fitness_ranking[0].get('fitness value')]
 
