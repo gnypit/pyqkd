@@ -1,9 +1,10 @@
 import math
+
+import numpy as np
+
+import crossover_operators
 import genetic_algorithm
 import selection_operators
-import crossover_operators
-import pygad
-import numpy as np
 
 
 def endurance(x, y, z, u, v, w):
@@ -87,4 +88,4 @@ if __name__ == '__main__':
 
     best_result = new_ga_instance.best_solution()
 
-    print(f"Our code returned {best_result}")  # TODO BrokenPipeError: [WinError 232] Trwa zamykanie potoku
+    print(f"Our code returned {best_result}")

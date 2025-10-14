@@ -216,19 +216,19 @@ class Generation:  # TODO: add diversity measures
         fitness_ranking (list[dict]): dicts in this list have the index of a Member in the Generation as keys and its
             fitness value as values.
     """
-    members: ListProxy[Member]  # this needs to be accessible from multiple processes running in parallel
+    members: list[Member]  # this needs to be accessible from multiple processes running in parallel
     num_parents_pairs: int
     elite_size: int
     pool_size: int
     size: int
     fitness_ranking: list[dict]
 
-    def __init__(self, generation_members: ListProxy[Member], num_parents_pairs: int, elite_size: int,
+    def __init__(self, generation_members: list[Member], num_parents_pairs: int, elite_size: int,
                  pool_size: int):
         """Constructor for any Generation inside the GeneticAlgorithm.
 
         Parameters:
-            generation_members (ListProxy[Member]): list of Members, in shared memory, to be put in this Generation.
+            generation_members (list[Member]): list of Members, in shared memory, to be put in this Generation.
             num_parents_pairs (int): number of Members' pairs that can be parents.
             elite_size (int): number of Members to be copy-pasted directly into a new Generation.
             pool_size (int): parameter for the tournament selection operator.  # TODO: redundant, put it into args in the GeneticAlgorithm class
@@ -251,10 +251,8 @@ class Generation:  # TODO: add diversity measures
 
     def evaluate(self):
         """This method calls the 'evaluate' method on each Member of this Generation."""
-        members_to_evaluate = list(self.members)
         for i in range(self.size):
-            members_to_evaluate[i].evaluate()
-            self.members[i] = members_to_evaluate[i]
+            self.members[i].evaluate()
 
     def create_fitness_ranking(self, reverse=True):
         """This method creates and then sorts the fitness ranking of the Members; 'reverse' means sorting will be
@@ -450,7 +448,7 @@ class GeneticAlgorithm:
 
         shared_first_members = self.manager.list(first_members)
         self.current_generation = Generation(
-            generation_members=shared_first_members,
+            generation_members=first_members,
             num_parents_pairs=self.no_parents_pairs,
             elite_size=self.elite_size,
             pool_size=self.pool_size
@@ -564,9 +562,8 @@ class GeneticAlgorithm:
             tuple[type[list | dict], float]: tuple of the genome list/dict of the best Member and its float fit. value
         """
         index_of_best_member = self.current_generation.fitness_ranking[0].get('index')
-        best_member = list(self.current_generation.members)[
-            index_of_best_member]  # TODO BrokenPipeError: [WinError 232] Trwa zamykanie potoku
-        best_genome = list(best_member.genome)
+        best_member = self.current_generation.members[index_of_best_member]
+        best_genome = best_member.genome
         best_fit_val = best_member.fit_val
 
         bf = (best_genome, best_fit_val)
@@ -675,7 +672,7 @@ class GeneticAlgorithm:
                 """Build rival Generations out of members and compose their respective fitness rankings"""
                 for combination_id in operator_combinations_ids:
                     new_rival_generation = Generation(
-                        generation_members=rival_members_container.get(combination_id),
+                        generation_members=list(rival_members_container.get(combination_id)),
                         num_parents_pairs=self.current_generation.num_parents_pairs,
                         elite_size=self.elite_size,
                         pool_size=self.pool_size
