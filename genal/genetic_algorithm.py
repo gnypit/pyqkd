@@ -454,49 +454,64 @@ class GeneticAlgorithm:
         self.best_fit_history = [self.current_generation.fitness_ranking[0].get('fitness value')]
 
     @staticmethod
-    def _create_members_for_rival_generation(combination_id: int, members_container: DictProxy[int, list[Member]]):
-        """Method for creating a single new Generation with operators indicated by their combination ID.
+    def _create_members_for_rival_generation(
+            combination_id: int,
+            members_container: DictProxy[int, list[Member]],
+            parent_generation: Generation,
+            fitness_function: Callable,
+            operators: dict,
+            args: dict
+    ):
+        """Method for creating a single new Generation with operators indicated by their combination ID. It has to be
+        static because self-reference to the GeneticAlgorithm class is not pickleable. For better clarity of the
+        algorithm logic, this method is included in the class, but it uses only arguments passed to it directly,
+        including a container for the new members, being a result of this method.
 
         Parameters:
             combination_id (int): an ID matching the key under which a combination of selection and crossover operators
-                is stored in the 'operators' attribute; the new rival Generation is to be created with these operators.
-            members_container (DictProxy): A dictionary in shared memory in which all members of new rival Generations
+                is stored in the 'operators'; the new rival Generation is to be created with these operators.
+            members_container (DictProxy): a dictionary in shared memory in which all members of new rival Generations
                 are supposed to be stored under the same key as the respective selection and crossover operators
                 combinations. It serves as a container for the Process which is executing this method, saving results of
                 computation done in parallel, accessible by all Processes and stored in a shared memory.
+            parent_generation (Generation): Generation with members, on which selection is to be applied to get parents
+                of the new (rival) Generation members.
+            fitness_function (Callable): reference to a fitness function specified by the User.
+            operators (dict): a dictionary with selection and crossover operators combinations.
+            args (dict): a dictionary with any arguments that the selection and crossover operators might need.
         """
         global identification
-        selection, crossover = self.operators.get(combination_id)
+        selection, crossover = operators.get(combination_id)
 
         print(f"Process {getpid()}: Creating a new rival Generation")
 
         new_members = []
         try:
-            parents_in_order = selection(self.current_generation)
+            parents_in_order = selection(parent_generation)
         except TypeError as e:
-            for member in self.current_generation.members:
+            for member in parent_generation.members:
                 print(
                     f"In parent Generation Member = {member} has fitness function {member.fit_fun}. While applying the "
                     f"selection operator, the following error occurred: {e}")
             exit()
 
-        for index in range(self.current_generation.num_parents_pairs):
+        for index in range(parent_generation.num_parents_pairs):
             """We always take 2 consecutive members from the parents_in_order list and pass them to the crossover
             operator to get genomes of new members, for the new generation, to be created."""
             child1_genome, child2_genome = crossover(
                 parents_in_order[2 * index],
                 parents_in_order[2 * index + 1],
-                self.args.get('crossover')
+                args.get('crossover')
             )
             new_members.append(Member(
                 genome=child1_genome,
                 identification_number=identification,
-                fitness_function=self.fit_fun)
+                fitness_function=fitness_function)
             )
             new_members.append(Member(
                 genome=child2_genome,
                 identification_number=identification + 1,
-                fitness_function=self.fit_fun)
+                fitness_function=fitness_function)
             )
             identification += 2
 
@@ -591,7 +606,10 @@ class GeneticAlgorithm:
                 for combination_id in operator_combinations_ids:
                     new_worker = Process(
                         target=GeneticAlgorithm._create_members_for_rival_generation,
-                        args=(self, combination_id, rival_members_container)  # TODO: something in self is not pickeable
+                        args=(
+                            combination_id, rival_members_container, self.current_generation, self.fit_fun,
+                            self.operators, self.args
+                        )
                     )
                     new_worker.start()
                     self.workers.append(new_worker)
