@@ -633,16 +633,6 @@ class GeneticAlgorithm:
                 for worker in self.workers:
                     worker.join()
 
-                """
-                for combination_id in operator_combinations_ids:
-                    self.rival_gen_pool[combination_id] = Generation(
-                        generation_members=rival_members_container.get(combination_id),
-                        num_parents_pairs=self.current_generation.num_parents_pairs,
-                        elite_size=self.elite_size,
-                        pool_size=self.pool_size
-                    )
-                """
-
                 """We rebuild the rival_members_container to hold proxies for lists of particular Generation's Members
                 in the shared memory:"""
                 for key in list(rival_members_container.keys()):
@@ -682,25 +672,20 @@ class GeneticAlgorithm:
                 """Reset workers"""
                 self.workers = []
 
-                """Rebuild fitness ranking for each Generation"""  # TODO: both create actual Generations and make them create their own fitness rankings
-                for gen_id, generation in self.rival_gen_pool.items():
-                    generation.fitness_ranking = []
-                    for i, member in enumerate(generation.members):
-                        if member.fit_val is None:
-                            print(f"Skipping member {i} with fit fun. {member.fit_fun} in Generation {gen_id} due to "
-                                  f"None fitness!")
-                            # print(f"When computing fitness manually, we get {member.evaluate()}!")
-                            print(member)
-                            continue  # <-- skip if fitness is None
-                        generation.fitness_ranking.append({'index': i, 'fitness value': member.fit_val})
-                    if generation.fitness_ranking:
-                        generation.fitness_ranking.sort(key=sort_dict_by_fit, reverse=True)
-                    else:
-                        print(f"Warning: Generation {gen_id} has no valid members to rank!")
-                    self.rival_gen_pool[gen_id] = generation  # reassign an updated generation
+                """Build rival Generations out of members and compose their respective fitness rankings"""
+                for combination_id in operator_combinations_ids:
+                    new_rival_generation = Generation(
+                        generation_members=rival_members_container.get(combination_id),
+                        num_parents_pairs=self.current_generation.num_parents_pairs,
+                        elite_size=self.elite_size,
+                        pool_size=self.pool_size
+                    )
+                    new_rival_generation.create_fitness_ranking()
+                    self.rival_gen_pool[combination_id] = new_rival_generation
 
                 """Last stage of each iteration is to choose the next accepted Generation and mutate it:"""
                 self._choose_best_rival_generation()
+                print(self.best_solution())
                 # self.mutate()  # mutation in here introduces Members with their fitness not evaluated! TODO: make sure mutation is applied to each rival generation after children are created and before fitness is evaluated
 
     def fitness_plot(self):  # TODO: finish with an optional argument for using plotly or matplotlib
