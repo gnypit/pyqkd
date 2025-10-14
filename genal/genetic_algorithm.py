@@ -504,30 +504,26 @@ class GeneticAlgorithm:
         key, so no additional lock is required."""
         members_container[combination_id] = new_members
 
-    def _evaluate_members(self, generation_pool: DictProxy[int, Generation], index_range: list[int],
-                          population_size: int):  # TODO: make sure a container is passed to this method!
+    def _evaluate_members(self, index_range: list[int]):
         """This method fetches Members across multiple rival Generations, calls their evaluate method and updates them
         in the container.
 
         Parameters:
-            generation_pool (DictProxy[int, Generation]): a dictionary in shared memory containing rival Generation created
-                inside the `GeneticAlgorithm` class, with Members up for evaluation.
             index_range (list[int]): list containing single indexes from which ID of a Generation from the generation_pool
                 and indexes of Members inside it are computed, so that they (Members) can be told to evaluate themselves.
-            population_size (int): Number of Members in each Generation from the generation_pool.
         """
         for index in index_range:
-            generation_id = int(np.floor(index / population_size))  # make int from numpy's float 64 ID
-            member_index = int(index - generation_id * population_size)  # make int from numpy's float 64 ID
+            generation_id = int(np.floor(index / self.pool_size))  # make int from numpy's float 64 ID
+            member_index = int(index - generation_id * self.pop_size)  # make int from numpy's float 64 ID
 
             """Fetch Member from the members att. of given Generation in shared memory"""
-            member_to_evaluate = generation_pool[generation_id].members[member_index]
+            member_to_evaluate = self.rival_gen_pool[generation_id].members[member_index]
 
             member_to_evaluate.evaluate()
             fitness_value = member_to_evaluate.fit_val
 
-            generation_pool[generation_id].members[member_index] = member_to_evaluate  # <-- Modify the member
-            generation_pool[generation_id].fitness_ranking.append(
+            self.rival_gen_pool[generation_id].members[member_index] = member_to_evaluate  # <-- Modify the member
+            self.rival_gen_pool[generation_id].fitness_ranking.append(
                 {'index': member_index, 'fitness value': fitness_value})
 
     def best_solution(self):
@@ -594,11 +590,8 @@ class GeneticAlgorithm:
                 print(f"Creating rival generations")
                 for combination_id in operator_combinations_ids:
                     new_worker = Process(
-                        target=self._create_members_for_rival_generation,
-                        args=(
-                            combination_id,  # id
-                            rival_members_container  # members_pool
-                        )
+                        target=GeneticAlgorithm._create_members_for_rival_generation,
+                        args=(self, combination_id, rival_members_container)  # TODO: something in self is not pickeable
                     )
                     new_worker.start()
                     self.workers.append(new_worker)
@@ -632,15 +625,7 @@ class GeneticAlgorithm:
 
                 for index in range(no_workers):
                     indexes_of_members_to_evaluate = indexes_batches[index]
-                    new_worker = Process(
-                        target=self._evaluate_members,
-                        # TODO: update this function and the respective Process following updates to creating rival Generations
-                        args=(
-                            self.rival_gen_pool,
-                            indexes_of_members_to_evaluate,
-                            self.pop_size
-                        )
-                    )
+                    new_worker = Process(target=self._evaluate_members, args=(indexes_of_members_to_evaluate,))
                     new_worker.start()
                     self.workers.append(new_worker)
 
@@ -648,12 +633,10 @@ class GeneticAlgorithm:
                 for worker in self.workers:
                     worker.join()
 
-                """
                 # Just for testing:
                 new_members = self.rival_gen_pool.get(0).members
                 for member in new_members:
                     print(member.fit_val)
-                """
 
                 """Reset workers"""
                 self.workers = []
