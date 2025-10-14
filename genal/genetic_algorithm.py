@@ -223,7 +223,7 @@ class Generation:  # TODO: add diversity measures
     size: int
     fitness_ranking: list[dict]
 
-    def __init__(self, manager: SyncManager, generation_members: list[Member], num_parents_pairs: int, elite_size: int,
+    def __init__(self, generation_members: ListProxy[Member], num_parents_pairs: int, elite_size: int,
                  pool_size: int):
         """Constructor for any Generation inside the GeneticAlgorithm.
 
@@ -233,7 +233,7 @@ class Generation:  # TODO: add diversity measures
             elite_size (int): number of Members to be copy-pasted directly into a new Generation.
             pool_size (int): parameter for the tournament selection operator.  # TODO: redundant, put it into args in the GeneticAlgorithm class
         """
-        self.members = manager.list(generation_members)
+        self.members = generation_members
         self.num_parents_pairs = num_parents_pairs
         self.elite_size = elite_size
         if 0 < pool_size <= self.num_parents_pairs:
