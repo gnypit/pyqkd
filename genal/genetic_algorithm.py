@@ -302,6 +302,7 @@ class GeneticAlgorithm:
             current Generation in the next iteration. In the rival_gen DictProxy each of these rival Generations is
             stored with its integer id as a key, and parallel processes (workers) may add Generations to it after
             acquiring access through a manager's lock.
+        members_to_evaluate (list[Member]): TODO: update this docstring
         accepted_gen_list (list[Generation]): the best of the rival Generations is added to a list of the accepted
             Generations and treated as the current Generation in the next iteration of the algorithm. If there is only
             one new, 'rival' Generation, then automatically it is appended to the accepted Generations list+.
@@ -334,6 +335,7 @@ class GeneticAlgorithm:
     workers: list[Process] = []
     manager: SyncManager
     rival_gen_pool: DictProxy[int, Generation]
+    members_to_evaluate: ListProxy[Member]
     accepted_gen_list: list[Generation]
     best_fit_history: list[float]
     args: dict
@@ -519,27 +521,36 @@ class GeneticAlgorithm:
         key, so no additional lock is required."""
         members_container[combination_id] = new_members
 
-    def _evaluate_members(self, index_range: list[int]):
+    @staticmethod
+    def _evaluate_members(
+            index_range: list[int],
+            population_size: int,
+            members_to_evaluate: DictProxy[int, ListProxy[Member]]
+    ):
         """This method fetches Members across multiple rival Generations, calls their evaluate method and updates them
-        in the container.
+        in the container - pool of the rival Generations.
 
         Parameters:
-            index_range (list[int]): list containing single indexes from which ID of a Generation from the generation_pool
-                and indexes of Members inside it are computed, so that they (Members) can be told to evaluate themselves.
+            index_range (list[int]): list containing single indexes from which ID of a Generation from the
+                generation_pool and indexes of Members inside it are computed, so that they (Members) can be fetched,
+                evaluated and updated in their Generation.
+            population_size (int): size of a single Generation in the fixed population size GA.
+            members_to_evaluate (DictProxy[int, ListProxy[Member]]): a container with Members to be evaluated.
         """
         for index in index_range:
-            generation_id = int(np.floor(index / self.pool_size))  # make int from numpy's float 64 ID
-            member_index = int(index - generation_id * self.pop_size)  # make int from numpy's float 64 ID
+            generation_id = int(np.floor(index / population_size))  # make int from numpy's float 64 ID
+            member_index = int(index - generation_id * population_size)  # make int from numpy's float 64 ID
 
             """Fetch Member from the members att. of given Generation in shared memory"""
-            member_to_evaluate = self.rival_gen_pool[generation_id].members[member_index]
+            try:
+                member_to_evaluate = members_to_evaluate.get(generation_id)[member_index]
+            except TypeError as e:
+                print(f"With generation_id={generation_id} and member_index={member_index} we have {e}")
 
             member_to_evaluate.evaluate()
-            fitness_value = member_to_evaluate.fit_val
+            # fitness_value = member_to_evaluate.fit_val
 
-            self.rival_gen_pool[generation_id].members[member_index] = member_to_evaluate  # <-- Modify the member
-            self.rival_gen_pool[generation_id].fitness_ranking.append(
-                {'index': member_index, 'fitness value': fitness_value})
+            members_to_evaluate[generation_id][member_index] = member_to_evaluate  # <-- Modify the member in place
 
     def best_solution(self):
         """Returns the genome of Member with the highest fitness value with its fitness value,
@@ -618,6 +629,7 @@ class GeneticAlgorithm:
                 for worker in self.workers:
                     worker.join()
 
+                """
                 for combination_id in operator_combinations_ids:
                     self.rival_gen_pool[combination_id] = Generation(
                         generation_members=rival_members_container.get(combination_id),
@@ -625,13 +637,19 @@ class GeneticAlgorithm:
                         elite_size=self.elite_size,
                         pool_size=self.pool_size
                     )
+                """
+
+                """We rebuild the rival_members_container to hold proxies for lists of particular Generation's Members
+                in the shared memory:"""
+                for key in list(rival_members_container.keys()):
+                    rival_members_container[key] = ga_manager.list(rival_members_container.get(key))
 
                 self.workers = []
 
                 """For fitness evaluation as many workers as the CPU allows are created. All members are distributed
                  between these processes to be evaluated:"""
                 no_workers = cpu_count()
-                no_members = self.pop_size * len(self.rival_gen_pool)
+                no_members = self.pop_size * len(rival_members_container)
 
                 members_per_worker = no_members / no_workers
                 if members_per_worker <= 1:
@@ -643,7 +661,13 @@ class GeneticAlgorithm:
 
                 for index in range(no_workers):
                     indexes_of_members_to_evaluate = indexes_batches[index]
-                    new_worker = Process(target=self._evaluate_members, args=(indexes_of_members_to_evaluate,))
+                    new_worker = Process(
+                        target=GeneticAlgorithm._evaluate_members,
+                        args=(
+                            indexes_of_members_to_evaluate,
+                            self.pop_size,
+                            rival_members_container
+                        ))
                     new_worker.start()
                     self.workers.append(new_worker)
 
@@ -652,9 +676,26 @@ class GeneticAlgorithm:
                     worker.join()
 
                 # Just for testing:
-                new_members = self.rival_gen_pool.get(0).members
+                new_members = rival_members_container.get(0)
                 for member in new_members:
                     print(member.fit_val)
+
+                """
+                for index in index_range:  # TODO: we will pass a simple shared list as a container and reorganise members into Generations later; the problem is when we try to save an evaluated member in the same Generation as another process; the pool being in shared memory is not going to help with that, as the problem is 'lower'
+                    generation_id = int(np.floor(index / workers_pool_size))  # make int from numpy's float 64 ID
+                    member_index = int(index - generation_id * population_size)  # make int from numpy's float 64 ID
+
+                    try:
+                        member_to_evaluate = rival_gen_pool[generation_id].members[member_index]
+                        member_to_evaluate.evaluate()
+                        fitness_value = member_to_evaluate.fit_val
+
+                        rival_gen_pool[generation_id].members[member_index] = member_to_evaluate  # <-- Modify the member
+                        # rival_gen_pool[generation_id].fitness_ranking.append({'index': member_index, 'fitness value': fitness_value})  # TODO: is a Lock necessary here?
+                        print(rival_gen_pool[generation_id].members[member_index].fit_val)
+                    except KeyError as e:
+                        print(f"While evaluating member with index={index} and fitness_value={fitness_value} we got error {e}")
+                """
 
                 """Reset workers"""
                 self.workers = []
