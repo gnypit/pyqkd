@@ -609,7 +609,7 @@ class GeneticAlgorithm:
         operator_combinations_ids = list(self.operators.keys())
 
         with self.manager as ga_manager:
-            rival_members_container = ga_manager.dict()
+            rival_members_container = ga_manager.dict()  # TODO: try to operate with the manager inside the loop, not iterate under the same manager and rival generation pool - or reset the rival generation pool?
             for _ in range(self.no_generations):
                 """Rival generations are created based on accessible combinations of selection and crossover
                 operators with different processes in parallel:"""
