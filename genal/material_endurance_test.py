@@ -69,7 +69,7 @@ if __name__ == '__main__':
     """Secondly, approach with our GeneticAlgorithm:"""
     new_ga_instance = genetic_algorithm.GeneticAlgorithm(
         initial_pop_size=20,
-        number_of_generations=2,
+        number_of_generations=70,
         elite_size=0,
         args={
             'genome': (np.linspace(start=0, stop=1, num=100000), 6),  # six genes
@@ -84,7 +84,7 @@ if __name__ == '__main__':
         no_parents_pairs=10,  # has to be even for now
         mutation_prob=float(1 / 6)
     )
-    new_ga_instance.run()
+    new_ga_instance.run()  # TODO: after the initial generation once the max fitness changes, but then the returned/printed result at each iteration is exactly the same - why?
 
     best_result = new_ga_instance.best_solution()
 

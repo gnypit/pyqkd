@@ -115,7 +115,6 @@ class Chromosome(ChromosomeInterface):
         Returns:
             float: Fitness value as a float number.
         """
-        print("Using evaluate")
         try:
             if self.fit_fun is not None:
                 result = self.fit_fun(self.genome)
@@ -488,7 +487,7 @@ class GeneticAlgorithm:
         global identification
         selection, crossover = operators.get(combination_id)
 
-        print(f"Process {getpid()}: Creating a new rival Generation")
+        print(f"Process {getpid()}: Creating a new rival Generation")  # TODO: change from printing to logging
 
         new_members = []
         try:
@@ -648,7 +647,7 @@ class GeneticAlgorithm:
 
                 indexes_batches = split_indexes(num_members=no_members, num_workers=no_workers)
 
-                print(f"Evaluating fitness of the rival generations. It is iteration number {_}")
+                print(f"Evaluating fitness of the rival generations. It is iteration number {_}")  # TODO: change from printing to logging
 
                 for index in range(no_workers):
                     indexes_of_members_to_evaluate = indexes_batches[index]
