@@ -1,4 +1,5 @@
 import math
+import pygad
 
 import numpy as np
 
@@ -40,7 +41,6 @@ def fitness_function_pyqkd(chromosome):
 
 if __name__ == '__main__':
     """Firstly, solving problem with pygad:"""
-    """
     ga_instance = pygad.GA(
         gene_space=np.linspace(start=0, stop=1, num=100000),
         num_generations=70,
@@ -63,8 +63,7 @@ if __name__ == '__main__':
     print(f"Fitness value of the best solution: {solution_fitness}")
     print(f"It took {generations_number} generations to find an optimal solution.")
 
-    #  ga_instance.plot_fitness()
-    """
+    ga_instance.plot_fitness()
 
     """Secondly, approach with our GeneticAlgorithm:"""
     new_ga_instance = genetic_algorithm.GeneticAlgorithm(
