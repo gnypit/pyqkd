@@ -503,8 +503,8 @@ class GeneticAlgorithm:
             """We always take 2 consecutive members from the parents_in_order list and pass them to the crossover
             operator to get genomes of new members, for the new generation, to be created."""
             child1_genome, child2_genome = crossover(
-                parents_in_order[2 * index],
-                parents_in_order[2 * index + 1],
+                parents_in_order[2 * index].genome,
+                parents_in_order[2 * index + 1].genome,
                 args.get('crossover')
             )
             new_members.append(Member(
@@ -609,25 +609,35 @@ class GeneticAlgorithm:
         operator_combinations_ids = list(self.operators.keys())
 
         with self.manager as ga_manager:
-            rival_members_container = ga_manager.dict()  # TODO: try to operate with the manager inside the loop, not iterate under the same manager and rival generation pool - or reset the rival generation pool?
             for _ in range(self.no_generations):
                 """Rival generations are created based on accessible combinations of selection and crossover
                 operators with different processes in parallel:"""
+                rival_members_container = ga_manager.dict()
                 print(f"Creating rival generations")
-                for combination_id in operator_combinations_ids:
-                    new_worker = Process(
-                        target=GeneticAlgorithm._create_members_for_rival_generation,
-                        args=(
-                            combination_id, rival_members_container, self.current_generation, self.fit_fun,
-                            self.operators, self.args
-                        )
-                    )
-                    new_worker.start()
-                    self.workers.append(new_worker)
 
-                """After work done, processes are collected and their list reset for new batch of workers:"""
-                for worker in self.workers:
-                    worker.join()
+                if len(operator_combinations_ids) == 1:
+                    GeneticAlgorithm._create_members_for_rival_generation(
+                        combination_id=0,
+                        members_container=rival_members_container,
+                        parent_generation=self.current_generation,
+                        fitness_function=self.fit_fun,
+                        operators=self.operators, args=self.args
+                    )
+                else:
+                    for combination_id in operator_combinations_ids:
+                        new_worker = Process(
+                            target=GeneticAlgorithm._create_members_for_rival_generation,
+                            args=(
+                                combination_id, rival_members_container, self.current_generation, self.fit_fun,
+                                self.operators, self.args
+                            )
+                        )
+                        new_worker.start()
+                        self.workers.append(new_worker)
+
+                    """After work done, processes are collected and their list reset for new batch of workers:"""
+                    for worker in self.workers:
+                        worker.join()
 
                 """We rebuild the rival_members_container to hold proxies for lists of particular Generation's Members
                 in the shared memory:"""
@@ -682,7 +692,7 @@ class GeneticAlgorithm:
                 """Last stage of each iteration is to choose the next accepted Generation and mutate it:"""
                 self._choose_best_rival_generation()
                 print(self.best_solution())
-                # self.mutate()  # mutation in here introduces Members with their fitness not evaluated! TODO: make sure mutation is applied to each rival generation after children are created and before fitness is evaluated
+                # self.mutate()  # mutation in here introduces Members with their fitness not evaluated! TODO: make sure mutation is applied to each rival generation after children are created and before fitness is evaluated + that's what's missing and why the code produces more and more of the same children
 
     def fitness_plot(self):  # TODO: finish with an optional argument for using plotly or matplotlib
         """Method for plotting fitness values history of the best Members from each accepted Generation."""
