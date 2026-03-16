@@ -13,12 +13,9 @@ from numpy.random import binomial as np_binom
 # TODO: we need more detailed comments
 # TODO: perhaps specific crossover operators should be children of a general class 'CrossoverOperator'?
 
-def single_point_crossover(parent1, parent2, args):
+def single_point_crossover(parent1_genes, parent2_genes, args):
     """Parents will be crossed such that genes from first one (numbered from 0) up to crossover_point
     included shall go to one child, and the rest to the other."""
-
-    parent1_genes = list(parent1.genome)
-    parent2_genes = list(parent2.genome)
 
     if args is None:
         crossover_point = None
@@ -26,7 +23,7 @@ def single_point_crossover(parent1, parent2, args):
         crossover_point = args[0]  # TODO in here we need one argument, so I assume a one-element list... be better
 
     if crossover_point is None:
-        crossover_point = len(parent1_genes) // 2
+        crossover_point = max(0, len(parent1_genes) // 2 - 1)
 
     # TODO: different working with genes whether it's a dict or a list
 
@@ -120,3 +117,9 @@ def plco(parent1, parent2, args):  # partially linear crossover operator
         child2_genes.append(alfa * parent2_genes[index] + beta * parent1_genes[index])
 
     return [child1_genes, child2_genes]
+
+
+if __name__ == '__main__':
+    a, b = single_point_crossover([1, 2, 3, 4], [5, 6, 7, 8], None)
+    print(a)
+    print(b)
