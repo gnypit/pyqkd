@@ -3,15 +3,25 @@ Selection operators in this script take a parent generation from a genetic algor
 and return a child (rival) generation.
 """
 import random
-from genetic_algorithm import Generation
+from typing import Protocol
+
+from genetic_algorithm import Generation, Member
 
 
-def tournament_selection(parent_generation: Generation):
+class SelectionOperator(Protocol):
+    def __call__(self, parent_generation: Generation, args: dict) -> list[Member]:
+        """A selection operator must take a Generation with Members (parents) & args from the GeneticAlgorithm"""
+        ...
+
+
+def tournament_selection(parent_generation: Generation, args: dict):
     """
     Performs tournament selection to choose parent candidates for mating.
     
     Args:
         parent_generation (Generation): An instance of the Generation class containing members and mating configuration.
+        args (dict): A dictionary from the GeneticAlgorithm attributes with arguments necessary for this selection
+            operator to run on the parent generation.
                 
     Returns:
         list[Member]: A list of selected parent candidates.
@@ -19,9 +29,21 @@ def tournament_selection(parent_generation: Generation):
     parents = []
 
     # Initialize a list to store the best candidates from each tournament
-    for _ in range(parent_generation.num_parents_pairs * 2):
+    num_parents_pairs = parent_generation.num_parents_pairs
+
+    for _ in range(num_parents_pairs * 2):
         # Randomly select a subset of members for the tournament
-        tournament_members = random.sample(list(parent_generation.members), parent_generation.pool_size)  # We must apply list() on the ListProxy object
+        try:
+            pool_size = args.get("pool size")
+            if 0 < pool_size <= num_parents_pairs:
+                # We must apply list() on the ListProxy object
+                tournament_members = random.sample(list(parent_generation.members), pool_size)
+            else:
+                raise ValueError(f"Pool size = {pool_size} is not between 0 and number of parents mating "
+                                 f"({num_parents_pairs})")
+        except KeyError as e:
+            raise KeyError(f"Key error in tournament selection operator: {e}"
+                           f"Note: in the selection args a 'pool size' key is expected.")
 
         for member in tournament_members:
             # print(f"Member {member.id}: fitness_function={member.fit_fun}")

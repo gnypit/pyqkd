@@ -210,7 +210,6 @@ class Generation:  # TODO: add diversity measures
             parents' IDs. Has to be accessible form multiple processes evaluating the Members in parallel.
         num_parents_pairs (int): number of pairs of Members can be parents, e.g., 20 pairs means 40 mating chromosomes.
         elite_size (int): number of Members to be copy-pasted directly into a new Generation.
-        pool_size (int): parameter for the tournament selection operator.  # TODO: redundant, put it into args in the GeneticAlgorithm class
         size (int): number of Members in the generation.
         fitness_ranking (list[dict]): dicts in this list have the index of a Member in the Generation as keys and its
             fitness value as values.
@@ -218,28 +217,20 @@ class Generation:  # TODO: add diversity measures
     members: list[Member]  # this needs to be accessible from multiple processes running in parallel
     num_parents_pairs: int
     elite_size: int
-    pool_size: int
     size: int
     fitness_ranking: list[dict]
 
-    def __init__(self, generation_members: list[Member], num_parents_pairs: int, elite_size: int,
-                 pool_size: int):
+    def __init__(self, generation_members: list[Member], num_parents_pairs: int, elite_size: int):
         """Constructor for any Generation inside the GeneticAlgorithm.
 
         Parameters:
             generation_members (list[Member]): list of Members, in shared memory, to be put in this Generation.
             num_parents_pairs (int): number of Members' pairs that can be parents.
             elite_size (int): number of Members to be copy-pasted directly into a new Generation.
-            pool_size (int): parameter for the tournament selection operator.  # TODO: redundant, put it into args in the GeneticAlgorithm class
         """
         self.members = generation_members
         self.num_parents_pairs = num_parents_pairs
         self.elite_size = elite_size
-        if 0 < pool_size <= self.num_parents_pairs:
-            self.pool_size = pool_size
-        else:
-            raise ValueError(f"Pool size = {pool_size} is not between 0 and number of parents mating "
-                             f"({self.num_parents_pairs})")
         self.size = len(generation_members)
         self.fitness_ranking = []
 
@@ -369,8 +360,8 @@ class GeneticAlgorithm:
     def __init__(self, initial_pop_size: int, number_of_generations: int, elite_size: int, args: dict,
                  fitness_function: Callable, genome_generator: Callable,
                  selection: list[Callable] | Callable, crossover: list[Callable] | Callable,
-                 pool_size, no_parents_pairs=None, mutation_prob: float = 0.0,
-                 seed=None):  # TODO: put pool_size in the args dict for self.selection_args = args.get('selection') below
+                 no_parents_pairs=None, mutation_prob: float = 0.0,
+                 seed=None):
         """GeneticAlgorithm class constructor.
 
         Parameters:
@@ -397,8 +388,6 @@ class GeneticAlgorithm:
 
         # self.genome_generator_args = args.get('genome')
         self.args = args
-        self.selection_args = args.get('selection')  # TODO: we should stick to using self.args
-        self.crossover_args = args.get('crossover')  # TODO: we should stick to using self.args
 
         self.fit_fun = fitness_function
         self.mutation_prob = mutation_prob
@@ -429,7 +418,6 @@ class GeneticAlgorithm:
             crossover = [crossover]
 
         self.operators = self.__zip_crossover_selection(selection_operators=selection, crossover_operators=crossover)
-        self.pool_size = pool_size  # will be redundant after the selection args are properly handled
 
     def _create_initial_generation(self):
         """Creating the first - initial - generation in this population."""
@@ -445,12 +433,11 @@ class GeneticAlgorithm:
             )
             identification += 1
 
-        shared_first_members = self.manager.list(first_members)
+        shared_first_members = self.manager.list(first_members)  # TODO: is this redundant?
         self.current_generation = Generation(
             generation_members=first_members,
             num_parents_pairs=self.no_parents_pairs,
-            elite_size=self.elite_size,
-            pool_size=self.pool_size
+            elite_size=self.elite_size
         )
         self.current_generation.evaluate()
         self.current_generation.create_fitness_ranking()
@@ -491,7 +478,7 @@ class GeneticAlgorithm:
 
         new_members = []
         try:
-            parents_in_order = selection(parent_generation)
+            parents_in_order = selection(parent_generation, args)
         except TypeError as e:
             for member in parent_generation.members:
                 print(
@@ -621,7 +608,7 @@ class GeneticAlgorithm:
                     members_container=rival_members_container,
                     parent_generation=self.current_generation,
                     fitness_function=self.fit_fun,
-                    operators=self.operators, args=self.args
+                    operators=self.operators, args=self.args.get("selection")
                 )
             else:
                 for combination_id in operator_combinations_ids:
@@ -629,7 +616,7 @@ class GeneticAlgorithm:
                         target=GeneticAlgorithm._create_members_for_rival_generation,
                         args=(
                             combination_id, rival_members_container, self.current_generation, self.fit_fun,
-                            self.operators, self.args
+                            self.operators, self.args.get("selection")
                         )
                     )
                     new_worker.start()
@@ -684,8 +671,7 @@ class GeneticAlgorithm:
                 new_rival_generation = Generation(
                     generation_members=list(rival_members_container.get(combination_id)),
                     num_parents_pairs=self.current_generation.num_parents_pairs,
-                    elite_size=self.elite_size,
-                    pool_size=self.pool_size
+                    elite_size=self.elite_size
                 )
                 new_rival_generation.create_fitness_ranking()
                 self.rival_gen_pool[combination_id] = new_rival_generation
