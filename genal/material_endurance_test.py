@@ -1,7 +1,7 @@
 import math
-import pygad
 
 import numpy as np
+import pygad
 
 import crossover_operators
 import genetic_algorithm
@@ -72,18 +72,17 @@ if __name__ == '__main__':
         elite_size=0,
         args={
             'genome': (np.linspace(start=0, stop=1, num=100000), 6),  # six genes
-            'selection': 4,  # pool size for the tournament selection operator
+            'selection': {"pool size": 4},
             'crossover': None  # for a single point crossover operator
         },
         fitness_function=fitness_function_pyqkd,
         genome_generator=genetic_algorithm.uniform_gene_generator,
         selection=selection_operators.tournament_selection,
         crossover=crossover_operators.single_point_crossover,
-        pool_size=4,  # we could find a better value for this
         no_parents_pairs=10,  # has to be even for now
         mutation_prob=float(1 / 6)
     )
-    new_ga_instance.run()  # TODO: after the initial generation once the max fitness changes, but then the returned/printed result at each iteration is exactly the same - why?
+    new_ga_instance.run()
 
     best_result = new_ga_instance.best_solution()
 
