@@ -5,11 +5,79 @@ import random
 from abc import ABC, abstractmethod
 from collections.abc import \
     Callable  # https://stackoverflow.com/questions/37835179/how-can-i-specify-the-function-type-in-my-type-hints
-from multiprocessing import Process, Manager, cpu_count
+from enum import Enum
+from multiprocessing import Process, Manager
 from multiprocessing.managers import ListProxy, DictProxy, SyncManager
 from os import getpid
 
 import numpy as np
+
+
+class AdaptiveMutationStrategy(Enum):
+    """Strategies for adaptive mutation based on population convergence."""
+    EXPLORATION = "exploration"  # High diversity, aggressive mutations
+    EXPLOITATION = "exploitation"  # Fine-tuning, conservative mutations
+    BALANCED = "balanced"  # Mix of both strategies
+    AUTO = "auto"  # Automatically switch based on diversity
+
+
+class MutationMetrics:
+    """Tracks mutation-related metrics across generations for adaptation."""
+
+    def __init__(self):
+        self.diversity_history: list[float] = []
+        self.fitness_improvement_history: list[float] = []
+        self.current_mutation_strategy: AdaptiveMutationStrategy = AdaptiveMutationStrategy.EXPLORATION
+        self.strategy_switch_count: int = 0
+
+    def calculate_population_diversity(self, generation: 'Generation') -> float:
+        """Calculates genetic diversity of the population (0.0 = all identical, 1.0 = max diversity).
+        
+        Uses average pairwise hamming distance for discrete genes and normalized distance for numeric.
+        
+        Parameters:
+            generation (Generation): The generation to analyze
+            
+        Returns:
+            float: Diversity metric between 0.0 and 1.0
+        """
+        if generation.size < 2:
+            return 0.0
+
+        total_distance = 0.0
+        comparisons = 0
+
+        for i in range(generation.size):
+            for j in range(i + 1, generation.size):
+                genome1 = generation.members[i].genome
+                genome2 = generation.members[j].genome
+
+                distance = 0
+                for gene_idx in range(len(genome1)):
+                    if genome1[gene_idx] != genome2[gene_idx]:
+                        distance += 1
+
+                total_distance += distance / len(genome1)
+                comparisons += 1
+
+        # Normalize to 0-1 range
+        diversity = (total_distance / comparisons) / generation.genome_size if comparisons > 0 else 0.0
+        return min(1.0, diversity)
+
+    def calculate_fitness_improvement(self, prev_best_fitness: float, curr_best_fitness: float) -> float:
+        """Calculates relative improvement in best fitness.
+        
+        Parameters:
+            prev_best_fitness (float): Best fitness from previous generation
+            curr_best_fitness (float): Best fitness from current generation
+            
+        Returns:
+            float: Improvement metric (positive = improvement)
+        """
+        if prev_best_fitness == 0:
+            return 0.0
+        return (curr_best_fitness - prev_best_fitness) / abs(prev_best_fitness)
+
 
 """Global variable to hold IDs of chromosomes for backtracking"""
 identification = 0
@@ -32,21 +100,57 @@ def sort_dict_by_fit(dictionary: dict) -> float:
     return dictionary['fitness value']
 
 
-def uniform_gene_generator(
-        ga_args: dict):  # TODO: just take a tuple at the start, genome args will be passed directly, not the whole args dict
-    """Simple function for generating a sample of a given length from the gene_space with a uniform probability.
-
+def uniform_gene_generator(ga_args: dict):
+    """Generates a complete genome based on structured gene space.
+    
+    The 'genome' key in ga_args should contain:
+    - dict: {gene_name: specification, ...} for named genes
+    - list: [specification, ...] for positional genes
+    
+    Where specification is:
+    - tuple (min, max): for numeric ranges
+    - list: for discrete values
+    
     Parameters:
-        ga_args (dict): This dictionary is stored within the GeneticAlgorithm class and contains info about args to be
-            used by either genome generator, crossover operators or selection operators. For the genome generation,
-            args are stored under the key 'genome'. There should be gene space and length of chromosomes (their genome).
-
+        ga_args (dict): Dictionary containing 'genome' specification
+        
     Returns:
-         ndarray: A numpy array containing genes randomised from the gene space. There should be at least two genes
-            in each chromosome, so this function should never return a single int, str, etc.
+        list: A genome with randomly generated genes according to specification
     """
-    gene_space, length = ga_args.get('genome')
-    return list(np.random.choice(gene_space, length))
+    genome_spec = ga_args.get('genome')
+    genome = []
+
+    # Handle dict-based specification (named genes)
+    if isinstance(genome_spec, dict):
+        for gene_spec in genome_spec.values():
+            genome.append(_generate_single_gene(gene_spec))
+    # Handle list-based specification (positional genes)
+    elif isinstance(genome_spec, list):
+        for gene_spec in genome_spec:
+            genome.append(_generate_single_gene(gene_spec))
+    else:
+        raise ValueError(f"genome specification must be dict or list, got {type(genome_spec)}")
+
+    return genome
+
+
+def _generate_single_gene(gene_specification):
+    """Helper function to generate a single gene from its specification.
+    
+    Parameters:
+        gene_specification: Either tuple(min, max) for numeric range or list for discrete values
+        
+    Returns:
+        A single gene value
+    """
+    if isinstance(gene_specification, tuple) and len(gene_specification) == 2:
+        # Numeric range: tuple (min, max)
+        return np.random.uniform(gene_specification[0], gene_specification[1])
+    elif isinstance(gene_specification, list):
+        # Discrete values: list of choices
+        return np.random.choice(gene_specification)
+    else:
+        raise ValueError(f"Invalid gene specification: {gene_specification}")
 
 
 class ChromosomeInterface(ABC):
@@ -208,6 +312,7 @@ class Generation:  # TODO: add diversity measures
     Attributes:
         members (ListProxy[Member]): list of Members in shared memory; chromosomes of the generation with their and
             parents' IDs. Has to be accessible form multiple processes evaluating the Members in parallel.
+        # TODO: add genome size for per-gene mutation
         num_parents_pairs (int): number of pairs of Members can be parents, e.g., 20 pairs means 40 mating chromosomes.
         elite_size (int): number of Members to be copy-pasted directly into a new Generation.
         size (int): number of Members in the generation.
@@ -215,6 +320,7 @@ class Generation:  # TODO: add diversity measures
             fitness value as values.
     """
     members: list[Member]  # this needs to be accessible from multiple processes running in parallel
+    genome_size: int
     num_parents_pairs: int
     elite_size: int
     size: int
@@ -229,6 +335,7 @@ class Generation:  # TODO: add diversity measures
             elite_size (int): number of Members to be copy-pasted directly into a new Generation.
         """
         self.members = generation_members
+        self.genome_size = len(generation_members[0].genome)
         self.num_parents_pairs = num_parents_pairs
         self.elite_size = elite_size
         self.size = len(generation_members)
@@ -565,125 +672,90 @@ class GeneticAlgorithm:
         self.accepted_gen_list.append(self.current_generation)
         self.best_fit_history.append(self.current_generation.fitness_ranking[0].get('fitness value'))
 
-    def mutate(self):
-        """Mutation probability is the probability of 'resetting' a member of the current generation, i.e. changing
-        its genome randomly. For optimisation purposes instead of a loop over the whole generation, I calculate the
-        number of members to be mutated and then generate pseudo-randomly a list of member indexes in the current
-        generation to be mutated.
+    def mutate(self, mutation_type: str = "member"):
+        """Applies mutation to the current generation.
+        
+        Mutation types:
+        - "member": Entire genome reset
+        - "gene": Individual genes replaced
+        - "gaussian": Numeric genes perturbed (Gaussian noise)
+        - "swap": Two random genes swap positions
+        
+        Parameters:
+            mutation_type (str): Type of mutation to apply
         """
-        number_of_mutations = np.floor(self.mutation_prob * self.current_generation.size)
+        if self.mutation_prob == 0.0:
+            return
 
-        """Size of generation is a constant, it has to be adjusted to the lack of elite; the elite Members are not
-        supposed to be mutated. Additionally, number of mutations has to be an integer, e.g., 
-        half of a mutation cannot be performed.
-        """
-        indexes = random.sample(
-            range(self.current_generation.size - self.elite_size),
-            int(number_of_mutations)  # has to be an integer, e.g. you can't make half of a mutation
-        )
+        match mutation_type:
+            case "member":
+                self._mutate_members()
+            case "gene":
+                self._mutate_genes()
+            case "gaussian":
+                self._mutate_gaussian()
+            case "swap":
+                self._mutate_swap()
+            case _:
+                print(f"Warning: Unknown mutation type '{mutation_type}'. Using 'member' by default.")
+                self._mutate_members()
 
-        """For new (mutated) genome creation I use the generator passed to the superclass in it's initialisation:"""
-        for index in indexes:
-            self.current_generation.members[index].change_genes(self.genome_generator(self.args))  # self.manager
-            self.current_generation.members[index].evaluate()
+    def _mutate_gaussian(self):
+        """Gaussian mutation: adds random noise to numeric genes only."""
+        non_elite_members_count = self.current_generation.size - self.elite_size
+        total_available_genes = non_elite_members_count * self.current_generation.genome_size
 
-    def run(self):
-        """This is the main method for an automated run of the Genetic Algorithm, supposed to be used right after this
-        class' instance initialisation. It creates the initial Generation and then performs the `no_generations`
-        iterations of creating new/rival Generations, choosing the best one and mutation, if necessary."""
-        print(f"Creating the initial population.")
-        self._create_initial_generation()
+        number_of_mutations = int(np.floor(self.mutation_prob * total_available_genes))
 
-        operator_combinations_ids = list(self.operators.keys())
+        if number_of_mutations == 0:
+            return
 
-        for _ in range(self.no_generations):
-            """Rival generations are created based on accessible combinations of selection and crossover
-            operators with different processes in parallel:"""
-            rival_members_container = self.manager.dict()
-            print(f"Creating rival generations")
+        gene_indexes = random.sample(range(total_available_genes), number_of_mutations)
 
-            if len(operator_combinations_ids) == 1:
-                GeneticAlgorithm._create_members_for_rival_generation(
-                    combination_id=0,
-                    members_container=rival_members_container,
-                    parent_generation=self.current_generation,
-                    fitness_function=self.fit_fun,
-                    operators=self.operators, args=self.args.get("selection")
-                )
-            else:
-                for combination_id in operator_combinations_ids:
-                    new_worker = Process(
-                        target=GeneticAlgorithm._create_members_for_rival_generation,
-                        args=(
-                            combination_id, rival_members_container, self.current_generation, self.fit_fun,
-                            self.operators, self.args.get("selection")
-                        )
-                    )
-                    new_worker.start()
-                    self.workers.append(new_worker)
+        if isinstance(self.genome_spec, dict):
+            spec_list = list(self.genome_spec.values())
+        else:
+            spec_list = self.genome_spec
 
-                """After work done, processes are collected and their list reset for new batch of workers:"""
-                for worker in self.workers:
-                    worker.join()
+        affected_members = set()
 
-            """We rebuild the rival_members_container to hold proxies for lists of particular Generation's Members
-            in the shared memory:"""
-            for key in list(rival_members_container.keys()):
-                rival_members_container[key] = self.manager.list(rival_members_container.get(key))
+        for gene_index in gene_indexes:
+            member_index = gene_index // self.current_generation.genome_size
+            gene_position = gene_index % self.current_generation.genome_size
 
-            self.workers = []
+            gene_spec = spec_list[gene_position]
 
-            """For fitness evaluation as many workers as the CPU allows are created. All members are distributed
-             between these processes to be evaluated:"""
-            no_workers = cpu_count()
-            no_members = self.pop_size * len(rival_members_container)
+            # Only apply Gaussian mutation to numeric genes (tuples)
+            if isinstance(gene_spec, tuple) and len(gene_spec) == 2:
+                current_value = self.current_generation.members[member_index].genome[gene_position]
+                # Add Gaussian noise (std = 5% of range)
+                range_size = gene_spec[1] - gene_spec[0]
+                noise = np.random.normal(0, range_size * 0.05)
+                new_value = np.clip(current_value + noise, gene_spec[0], gene_spec[1])
 
-            members_per_worker = no_members / no_workers
-            if members_per_worker <= 1:
-                no_workers = int(no_members)
+                self.current_generation.members[member_index].genome[gene_position] = new_value
+                affected_members.add(member_index)
 
-            indexes_batches = split_indexes(num_members=no_members, num_workers=no_workers)
+        for member_index in affected_members:
+            self.current_generation.members[member_index].evaluate()
 
-            print(
-                f"Evaluating fitness of the rival generations. It is iteration number {_}")  # TODO: change from printing to logging
+    def _mutate_swap(self):
+        """Swap mutation: randomly swaps two genes within a Member's genome."""
+        non_elite_members_count = self.current_generation.size - self.elite_size
+        number_of_mutations = int(np.floor(self.mutation_prob * non_elite_members_count))
 
-            for index in range(no_workers):
-                indexes_of_members_to_evaluate = indexes_batches[index]
-                new_worker = Process(
-                    target=GeneticAlgorithm._evaluate_members,
-                    args=(
-                        indexes_of_members_to_evaluate,
-                        self.pop_size,
-                        rival_members_container
-                    ))
-                new_worker.start()
-                self.workers.append(new_worker)
+        if number_of_mutations == 0:
+            return
 
-            """After evaluation, processes are again joined:"""
-            for worker in self.workers:
-                worker.join()
+        member_indexes = random.sample(range(non_elite_members_count), number_of_mutations)
 
-            """Reset workers"""
-            self.workers = []
+        for member_index in member_indexes:
+            # Randomly select two gene positions to swap
+            pos1, pos2 = random.sample(range(self.current_generation.genome_size), 2)
 
-            """Build rival Generations out of members and compose their respective fitness rankings"""
-            for combination_id in operator_combinations_ids:
-                new_rival_generation = Generation(
-                    generation_members=list(rival_members_container.get(combination_id)),
-                    num_parents_pairs=self.current_generation.num_parents_pairs,
-                    elite_size=self.elite_size
-                )
-                new_rival_generation.create_fitness_ranking()
-                self.rival_gen_pool[combination_id] = new_rival_generation
+            # Swap genes
+            genome = self.current_generation.members[member_index].genome
+            genome[pos1], genome[pos2] = genome[pos2], genome[pos1]
 
-            """Last stage of each iteration is to choose the next accepted Generation and mutate it:"""
-            self._choose_best_rival_generation()
-            print(self.best_solution())
-            self.mutate()
-            self.current_generation.fitness_ranking = []
-            self.current_generation.create_fitness_ranking()
-            self.best_fit_history[-1] = self.current_generation.fitness_ranking[0].get('fitness value')
-
-    def fitness_plot(self):  # TODO: finish with an optional argument for using plotly or matplotlib
-        """Method for plotting fitness values history of the best Members from each accepted Generation."""
-        pass
+            # Re-evaluate
+            self.current_generation.members[member_index].evaluate()
