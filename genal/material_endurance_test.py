@@ -68,12 +68,13 @@ if __name__ == '__main__':
     """Secondly, approach with our GeneticAlgorithm:"""
     new_ga_instance = genetic_algorithm.GeneticAlgorithm(
         initial_pop_size=20,
-        number_of_generations=70,
+        number_of_generations=4,
         elite_size=0,
         args={
             'genome': (np.linspace(start=0, stop=1, num=100000), 6),  # six genes
-            'selection': {"pool size": 4},
-            'crossover': None  # for a single point crossover operator
+            'selection': {"pool size": 3},
+            'crossover': None,  # for a single point crossover operator
+            'mutation': 'member'
         },
         fitness_function=fitness_function_pyqkd,
         genome_generator=genetic_algorithm.uniform_gene_generator,
