@@ -805,7 +805,8 @@ class GeneticAlgorithm:
 
             """Last stage of each iteration is to choose the next accepted Generation and mutate it:"""
             self._choose_best_rival_generation()
-            print(self.best_solution())
+            # print(self.best_solution())
+            # print(self.current_generation.members)
             self.mutate(mutation_type=self.args.get('mutation'))
             self.current_generation.fitness_ranking = []
             self.current_generation.create_fitness_ranking()

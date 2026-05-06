@@ -1,4 +1,5 @@
 import math
+from time import time
 
 import numpy as np
 import pygad
@@ -41,6 +42,7 @@ def fitness_function_pyqkd(chromosome):
 
 if __name__ == '__main__':
     """Firstly, solving problem with pygad:"""
+    pygad_start = time()
     ga_instance = pygad.GA(
         gene_space=np.linspace(start=0, stop=1, num=100000),
         num_generations=70,
@@ -55,6 +57,7 @@ if __name__ == '__main__':
     )
 
     ga_instance.run()
+    pygad_end = time()
 
     solution, solution_fitness, solution_idx = ga_instance.best_solution()
     generations_number = ga_instance.best_solution_generation
@@ -66,15 +69,16 @@ if __name__ == '__main__':
     ga_instance.plot_fitness()
 
     """Secondly, approach with our GeneticAlgorithm:"""
+    genal_start = time()
     new_ga_instance = genetic_algorithm.GeneticAlgorithm(
         initial_pop_size=20,
-        number_of_generations=4,
+        number_of_generations=70,
         elite_size=0,
         args={
             'genome': (np.linspace(start=0, stop=1, num=100000), 6),  # six genes
             'selection': {"pool size": 3},
             'crossover': None,  # for a single point crossover operator
-            'mutation': 'member'
+            'mutation': 'gene'
         },
         fitness_function=fitness_function_pyqkd,
         genome_generator=genetic_algorithm.uniform_gene_generator,
@@ -85,6 +89,12 @@ if __name__ == '__main__':
     )
     new_ga_instance.run()
 
+    genal_end = time()
+
     best_result = new_ga_instance.best_solution()
 
+    print(new_ga_instance.best_fit_history)
+
     print(f"Our code returned {best_result}")
+
+    print(f"Times: pygad = {pygad_end - pygad_start}; genal = {genal_end - genal_start}")
