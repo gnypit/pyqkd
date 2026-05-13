@@ -208,6 +208,7 @@ class Generation:  # TODO: add diversity measures
     Attributes:
         members (ListProxy[Member]): list of Members in shared memory; chromosomes of the generation with their and
             parents' IDs. Has to be accessible form multiple processes evaluating the Members in parallel.
+        # TODO: add genome size for per-gene mutation
         num_parents_pairs (int): number of pairs of Members can be parents, e.g., 20 pairs means 40 mating chromosomes.
         elite_size (int): number of Members to be copy-pasted directly into a new Generation.
         size (int): number of Members in the generation.
@@ -215,6 +216,7 @@ class Generation:  # TODO: add diversity measures
             fitness value as values.
     """
     members: list[Member]  # this needs to be accessible from multiple processes running in parallel
+    genome_size: int
     num_parents_pairs: int
     elite_size: int
     size: int
@@ -229,6 +231,7 @@ class Generation:  # TODO: add diversity measures
             elite_size (int): number of Members to be copy-pasted directly into a new Generation.
         """
         self.members = generation_members
+        self.genome_size = len(generation_members[0].genome)
         self.num_parents_pairs = num_parents_pairs
         self.elite_size = elite_size
         self.size = len(generation_members)
@@ -565,13 +568,41 @@ class GeneticAlgorithm:
         self.accepted_gen_list.append(self.current_generation)
         self.best_fit_history.append(self.current_generation.fitness_ranking[0].get('fitness value'))
 
-    def mutate(self):
-        """Mutation probability is the probability of 'resetting' a member of the current generation, i.e. changing
-        its genome randomly. For optimisation purposes instead of a loop over the whole generation, I calculate the
-        number of members to be mutated and then generate pseudo-randomly a list of member indexes in the current
-        generation to be mutated.
+    def mutate(self, mutation_type: str = "member"):  # TODO: add adaptive mutation (diversity measures first?)
+        """Applies mutation to the current generation.
+        
+        Mutation types:
+        - "member": Entire genome reset
+        - "gene": Individual genes replaced
+        - "gaussian": Numeric genes perturbed (Gaussian noise)
+        - "swap": Two random genes swap positions
+        
+        Parameters:
+            mutation_type (str): Type of mutation to apply
         """
-        number_of_mutations = np.floor(self.mutation_prob * self.current_generation.size)
+        if self.mutation_prob == 0.0:
+            return
+
+        match mutation_type:
+            case "member":
+                self._mutate_members()
+            case "gene":
+                self._mutate_genes()
+            case "gaussian":
+                self._mutate_gaussian()
+            case "swap":
+                self._mutate_swap()
+            case _:
+                print(f"Warning: Unknown mutation type '{mutation_type}'. Using 'member' by default.")
+                self._mutate_members()
+
+    def _mutate_members(self):
+        """In this case mutation probability is the probability of 'resetting' a member of the current generation, i.e.,
+        generating its genome from scratch. For optimisation purposes instead of a loop over the whole generation, the
+        number of members to be mutated is calculated, and then a list of member indexes in the current generation to be
+        mutated is generated pseudo-randomly.
+        """
+        number_of_mutations = np.floor(self.mutation_prob * (self.current_generation.size - self.elite_size))
 
         """Size of generation is a constant, it has to be adjusted to the lack of elite; the elite Members are not
         supposed to be mutated. Additionally, number of mutations has to be an integer, e.g., 
@@ -586,6 +617,102 @@ class GeneticAlgorithm:
         for index in indexes:
             self.current_generation.members[index].change_genes(self.genome_generator(self.args))  # self.manager
             self.current_generation.members[index].evaluate()
+
+    def _mutate_genes(self):
+        """Mutates individual genes across members of the current generation.
+
+        Uses mutation_prob to select random gene positions across all non-elite members.
+        For each selected gene index, generates a complete temporary member using genome_generator,
+        then takes the corresponding gene from it to replace the original gene.
+        """
+        non_elite_members_count = self.current_generation.size - self.elite_size
+        total_available_genes = non_elite_members_count * self.current_generation.genome_size
+
+        number_of_mutations = int(np.floor(self.mutation_prob * total_available_genes))
+
+        if number_of_mutations == 0:
+            return
+
+        # Select random gene indexes across all non-elite members and genes
+        gene_indexes = random.sample(range(total_available_genes), number_of_mutations)
+
+        affected_members = set()
+
+        for gene_index in gene_indexes:
+            # Calculate which member and which gene position within that member
+            member_index = gene_index // self.current_generation.genome_size
+            gene_position = gene_index % self.current_generation.genome_size
+
+            # Generate a complete temporary genome
+            temp_genome = self.genome_generator(self.args)
+
+            # Replace the selected gene with the one from temporary genome
+            self.current_generation.members[member_index].genome[gene_position] = temp_genome[gene_position]
+            affected_members.add(member_index)
+
+        # Re-evaluate all members that had genes mutated
+        for member_index in affected_members:
+            self.current_generation.members[member_index].evaluate()
+
+    def _mutate_gaussian(self):
+        """Gaussian mutation: adds random noise to numeric genes only."""
+        non_elite_members_count = self.current_generation.size - self.elite_size
+        total_available_genes = non_elite_members_count * self.current_generation.genome_size
+
+        number_of_mutations = int(np.floor(self.mutation_prob * total_available_genes))
+
+        if number_of_mutations == 0:
+            return
+
+        gene_indexes = random.sample(range(total_available_genes), number_of_mutations)
+
+        if isinstance(self.genome_spec, dict):
+            spec_list = list(self.genome_spec.values())
+        else:
+            spec_list = self.genome_spec
+
+        affected_members = set()
+
+        for gene_index in gene_indexes:
+            member_index = gene_index // self.current_generation.genome_size
+            gene_position = gene_index % self.current_generation.genome_size
+
+            gene_spec = spec_list[gene_position]
+
+            # Only apply Gaussian mutation to numeric genes (tuples)
+            if isinstance(gene_spec, tuple) and len(gene_spec) == 2:
+                current_value = self.current_generation.members[member_index].genome[gene_position]
+                # Add Gaussian noise (std = 5% of range)
+                range_size = gene_spec[1] - gene_spec[0]
+                noise = np.random.normal(0, range_size * 0.05)
+                new_value = np.clip(current_value + noise, gene_spec[0], gene_spec[1])
+
+                self.current_generation.members[member_index].genome[gene_position] = new_value
+                affected_members.add(member_index)
+
+        for member_index in affected_members:
+            self.current_generation.members[member_index].evaluate()
+
+    def _mutate_swap(self):
+        """Swap mutation: randomly swaps two genes within a Member's genome."""
+        non_elite_members_count = self.current_generation.size - self.elite_size
+        number_of_mutations = int(np.floor(self.mutation_prob * non_elite_members_count))
+
+        if number_of_mutations == 0:
+            return
+
+        member_indexes = random.sample(range(non_elite_members_count), number_of_mutations)
+
+        for member_index in member_indexes:
+            # Randomly select two gene positions to swap
+            pos1, pos2 = random.sample(range(self.current_generation.genome_size), 2)
+
+            # Swap genes
+            genome = self.current_generation.members[member_index].genome
+            genome[pos1], genome[pos2] = genome[pos2], genome[pos1]
+
+            # Re-evaluate
+            self.current_generation.members[member_index].evaluate()
 
     def run(self):
         """This is the main method for an automated run of the Genetic Algorithm, supposed to be used right after this
@@ -635,7 +762,7 @@ class GeneticAlgorithm:
 
             """For fitness evaluation as many workers as the CPU allows are created. All members are distributed
              between these processes to be evaluated:"""
-            no_workers = cpu_count()
+            no_workers = cpu_count()  # TODO: add manual setting of number of workers, like it's done with MPI/OpenMP
             no_members = self.pop_size * len(rival_members_container)
 
             members_per_worker = no_members / no_workers
@@ -678,8 +805,9 @@ class GeneticAlgorithm:
 
             """Last stage of each iteration is to choose the next accepted Generation and mutate it:"""
             self._choose_best_rival_generation()
-            print(self.best_solution())
-            self.mutate()
+            # print(self.best_solution())
+            # print(self.current_generation.members)
+            self.mutate(mutation_type=self.args.get('mutation'))
             self.current_generation.fitness_ranking = []
             self.current_generation.create_fitness_ranking()
             self.best_fit_history[-1] = self.current_generation.fitness_ranking[0].get('fitness value')
