@@ -1,13 +1,13 @@
 """Author: Jakub Gnyp; contact: gnyp.jakub@gmail.com, LinkedIn: https://www.linkedin.com/in/gnypit/
 Script is distributed under the license: https://github.com/gnypit/pyqkd/blob/main/LICENSE
 """
+from __future__ import annotations
+
 import random
 from abc import ABC, abstractmethod
 from collections.abc import \
     Callable  # https://stackoverflow.com/questions/37835179/how-can-i-specify-the-function-type-in-my-type-hints
-from multiprocessing import Process, Manager, cpu_count
-from multiprocessing.managers import ListProxy, DictProxy, SyncManager
-from os import getpid
+from multiprocessing import Pool, cpu_count
 
 import numpy as np
 
@@ -327,12 +327,10 @@ class GeneticAlgorithm:
     no_parents_pairs: int
     mutation_prob: float
     current_gen: Generation
-    workers: list[Process] = []
-    manager: SyncManager
-    rival_gen_pool: DictProxy[int, Generation]
-    members_to_evaluate: ListProxy[Member]
+    rival_gen_pool: dict[int, Generation]
     accepted_gen_list: list[Generation]
     best_fit_history: list[float]
+    parallel_workers: int | None
     args: dict
 
     def __zip_crossover_selection(self, selection_operators: list[Callable], crossover_operators: list[Callable]):
@@ -364,7 +362,7 @@ class GeneticAlgorithm:
                  fitness_function: Callable, genome_generator: Callable,
                  selection: list[Callable] | Callable, crossover: list[Callable] | Callable,
                  no_parents_pairs=None, mutation_prob: float = 0.0,
-                 seed=None):
+                 seed=None, parallel_workers: int | None = None):
         """GeneticAlgorithm class constructor.
 
         Parameters:
@@ -384,6 +382,7 @@ class GeneticAlgorithm:
             mutation_prob (int): 0.0 by default; probability of selecting a Member of a Generation to reset its genome
                 with the genome_generator
             seed (int | float | str | bytes | bytearray | None = None): optional; parameter 'a' for random.seed
+            parallel_workers (int | None): optional; maximum number of worker processes reused by the parallel run.
         """
         self.pop_size = initial_pop_size
         self.no_generations = number_of_generations
@@ -394,11 +393,11 @@ class GeneticAlgorithm:
 
         self.fit_fun = fitness_function
         self.mutation_prob = mutation_prob
+        self.parallel_workers = parallel_workers
         if seed is not None:
             random.seed(a=seed)  # useful for debugging
 
-        self.manager = Manager()
-        self.rival_gen_pool = self.manager.dict()
+        self.rival_gen_pool = {}
 
         """If the provided number of parents pairs would require more Members than the current (initial) generation has,
         it'll be limited to the maximum possible number. Also, if no specific number of parent pairs is provided,
@@ -422,6 +421,13 @@ class GeneticAlgorithm:
 
         self.operators = self.__zip_crossover_selection(selection_operators=selection, crossover_operators=crossover)
 
+    def _get_parallel_worker_count(self, no_members: int) -> int:
+        """Returns the number of long-lived worker processes to use during a run."""
+        if self.parallel_workers is not None:
+            return max(1, min(self.parallel_workers, no_members))
+
+        return max(1, min(cpu_count(), no_members))
+
     def _create_initial_generation(self):
         """Creating the first - initial - generation in this population."""
         global identification
@@ -436,7 +442,6 @@ class GeneticAlgorithm:
             )
             identification += 1
 
-        shared_first_members = self.manager.list(first_members)  # TODO: is this redundant?
         self.current_generation = Generation(
             generation_members=first_members,
             num_parents_pairs=self.no_parents_pairs,
@@ -450,98 +455,66 @@ class GeneticAlgorithm:
     @staticmethod
     def _create_members_for_rival_generation(
             combination_id: int,
-            members_container: DictProxy[int, list[Member]],
             parent_generation: Generation,
             fitness_function: Callable,
             operators: dict,
-            args: dict
-    ):
-        """Method for creating a single new Generation with operators indicated by their combination ID. It has to be
-        static because self-reference to the GeneticAlgorithm class is not pickleable. For better clarity of the
-        algorithm logic, this method is included in the class, but it uses only arguments passed to it directly,
-        including a container for the new members, being a result of this method.
+            args: dict,
+            first_identification_number: int
+    ) -> tuple[int, list[Member]]:
+        """Create and return one rival generation's members.
 
-        Parameters:
-            combination_id (int): an ID matching the key under which a combination of selection and crossover operators
-                is stored in the 'operators'; the new rival Generation is to be created with these operators.
-            members_container (DictProxy): a dictionary in shared memory in which all members of new rival Generations
-                are supposed to be stored under the same key as the respective selection and crossover operators
-                combinations. It serves as a container for the Process which is executing this method, saving results of
-                computation done in parallel, accessible by all Processes and stored in a shared memory.
-            parent_generation (Generation): Generation with members, on which selection is to be applied to get parents
-                of the new (rival) Generation members.
-            fitness_function (Callable): reference to a fitness function specified by the User.
-            operators (dict): a dictionary with selection and crossover operators combinations.
-            args (dict): a dictionary with any arguments that the selection and crossover operators might need.
+        Workers return plain Python objects instead of writing through a multiprocessing.Manager proxy. On Windows,
+        high-frequency Manager proxy traffic uses named pipes and can fail with WinError 231 when the pipe server is
+        saturated.
         """
-        global identification
         selection, crossover = operators.get(combination_id)
+        selection_args = args.get("selection") if isinstance(args, dict) and "selection" in args else args
+        crossover_args = args.get("crossover") if isinstance(args, dict) and "crossover" in args else None
 
-        print(f"Process {getpid()}: Creating a new rival Generation")  # TODO: change from printing to logging
+        try:
+            parents_in_order = selection(parent_generation, selection_args)
+        except TypeError as e:
+            member_details = "\n".join(
+                f"Parent member {member} has fitness function {member.fit_fun}."
+                for member in parent_generation.members
+            )
+            raise TypeError(
+                f"Selection operator failed for operator combination {combination_id}: {e}\n{member_details}"
+            ) from e
 
         new_members = []
-        try:
-            parents_in_order = selection(parent_generation, args)
-        except TypeError as e:
-            for member in parent_generation.members:
-                print(
-                    f"In parent Generation Member = {member} has fitness function {member.fit_fun}. While applying the "
-                    f"selection operator, the following error occurred: {e}")
-            exit()
-
+        next_identification = first_identification_number
         for index in range(parent_generation.num_parents_pairs):
-            """We always take 2 consecutive members from the parents_in_order list and pass them to the crossover
-            operator to get genomes of new members, for the new generation, to be created."""
             child1_genome, child2_genome = crossover(
                 parents_in_order[2 * index].genome,
                 parents_in_order[2 * index + 1].genome,
-                args.get('crossover')
+                crossover_args
             )
             new_members.append(Member(
                 genome=child1_genome,
-                identification_number=identification,
+                identification_number=next_identification,
                 fitness_function=fitness_function)
             )
             new_members.append(Member(
                 genome=child2_genome,
-                identification_number=identification + 1,
+                identification_number=next_identification + 1,
                 fitness_function=fitness_function)
             )
-            identification += 2
+            next_identification += 2
 
-        """Members' pool is created as a DictProxy and each process (worker) will add it's new members under a different 
-        key, so no additional lock is required."""
-        members_container[combination_id] = new_members
+        return combination_id, new_members
 
     @staticmethod
-    def _evaluate_members(
-            index_range: list[int],
-            population_size: int,
-            members_to_evaluate: DictProxy[int, ListProxy[Member]]
-    ):
-        """This method fetches Members across multiple rival Generations, calls their evaluate method and updates them
-        in the container - pool of the rival Generations.
-
-        Parameters:
-            index_range (list[int]): list containing single indexes from which ID of a Generation from the
-                generation_pool and indexes of Members inside it are computed, so that they (Members) can be fetched,
-                evaluated and updated in their Generation.
-            population_size (int): size of a single Generation in the fixed population size GA.
-            members_to_evaluate (DictProxy[int, ListProxy[Member]]): a container with Members to be evaluated.
-        """
-        for index in index_range:
-            generation_id = int(np.floor(index / population_size))  # make int from numpy's float 64 ID
-            member_index = int(index - generation_id * population_size)  # make int from numpy's float 64 ID
-
-            """Copy Member from the container, evaluate it and paste updated one in the container:"""
-            try:
-                member_to_evaluate = members_to_evaluate.get(generation_id)[member_index]
-            except TypeError as e:
-                print(f"With generation_id={generation_id} and member_index={member_index} we have {e}")
-                exit()
-
-            member_to_evaluate.evaluate()
-            members_to_evaluate[generation_id][member_index] = member_to_evaluate
+    def _evaluate_member_batch(
+            combination_id: int,
+            indexed_members: list[tuple[int, Member]]
+    ) -> tuple[int, list[tuple[int, Member]]]:
+        """Evaluate a batch of members and return their original indexes with the updated objects."""
+        evaluated_members = []
+        for member_index, member in indexed_members:
+            member.evaluate()
+            evaluated_members.append((member_index, member))
+        return combination_id, evaluated_members
 
     def best_solution(self):
         """Returns the genome of Member with the highest fitness value with its fitness value,
@@ -718,99 +691,81 @@ class GeneticAlgorithm:
         """This is the main method for an automated run of the Genetic Algorithm, supposed to be used right after this
         class' instance initialisation. It creates the initial Generation and then performs the `no_generations`
         iterations of creating new/rival Generations, choosing the best one and mutation, if necessary."""
-        print(f"Creating the initial population.")
+        global identification
+        # print(f"Creating the initial population.")
         self._create_initial_generation()
 
         operator_combinations_ids = list(self.operators.keys())
+        members_per_rival = 2 * self.no_parents_pairs
+        no_members = members_per_rival * len(operator_combinations_ids)
+        no_workers = self._get_parallel_worker_count(no_members=no_members)
 
-        for _ in range(self.no_generations):
-            """Rival generations are created based on accessible combinations of selection and crossover
-            operators with different processes in parallel:"""
-            rival_members_container = self.manager.dict()
-            print(f"Creating rival generations")
-
-            if len(operator_combinations_ids) == 1:
-                GeneticAlgorithm._create_members_for_rival_generation(
-                    combination_id=0,
-                    members_container=rival_members_container,
-                    parent_generation=self.current_generation,
-                    fitness_function=self.fit_fun,
-                    operators=self.operators, args=self.args.get("selection")
-                )
-            else:
-                for combination_id in operator_combinations_ids:
-                    new_worker = Process(
-                        target=GeneticAlgorithm._create_members_for_rival_generation,
-                        args=(
-                            combination_id, rival_members_container, self.current_generation, self.fit_fun,
-                            self.operators, self.args.get("selection")
-                        )
+        with Pool(processes=no_workers) as worker_pool:
+            for iteration in range(self.no_generations):
+                """Rival generations are created based on accessible combinations of selection and crossover
+                operators with different processes in parallel:"""
+                first_member_id = identification
+                creation_jobs = [
+                    (
+                        combination_id,
+                        self.current_generation,
+                        self.fit_fun,
+                        self.operators,
+                        self.args,
+                        first_member_id + offset * members_per_rival
                     )
-                    new_worker.start()
-                    self.workers.append(new_worker)
-
-                """After work done, processes are collected and their list reset for new batch of workers:"""
-                for worker in self.workers:
-                    worker.join()
-
-            """We rebuild the rival_members_container to hold proxies for lists of particular Generation's Members
-            in the shared memory:"""
-            for key in list(rival_members_container.keys()):
-                rival_members_container[key] = self.manager.list(rival_members_container.get(key))
-
-            self.workers = []
-
-            """For fitness evaluation as many workers as the CPU allows are created. All members are distributed
-             between these processes to be evaluated:"""
-            no_workers = cpu_count()  # TODO: add manual setting of number of workers, like it's done with MPI/OpenMP
-            no_members = self.pop_size * len(rival_members_container)
-
-            members_per_worker = no_members / no_workers
-            if members_per_worker <= 1:
-                no_workers = int(no_members)
-
-            indexes_batches = split_indexes(num_members=no_members, num_workers=no_workers)
-
-            print(
-                f"Evaluating fitness of the rival generations. It is iteration number {_}")  # TODO: change from printing to logging
-
-            for index in range(no_workers):
-                indexes_of_members_to_evaluate = indexes_batches[index]
-                new_worker = Process(
-                    target=GeneticAlgorithm._evaluate_members,
-                    args=(
-                        indexes_of_members_to_evaluate,
-                        self.pop_size,
-                        rival_members_container
-                    ))
-                new_worker.start()
-                self.workers.append(new_worker)
-
-            """After evaluation, processes are again joined:"""
-            for worker in self.workers:
-                worker.join()
-
-            """Reset workers"""
-            self.workers = []
-
-            """Build rival Generations out of members and compose their respective fitness rankings"""
-            for combination_id in operator_combinations_ids:
-                new_rival_generation = Generation(
-                    generation_members=list(rival_members_container.get(combination_id)),
-                    num_parents_pairs=self.current_generation.num_parents_pairs,
-                    elite_size=self.elite_size
+                    for offset, combination_id in enumerate(operator_combinations_ids)
+                ]
+                created_rivals = worker_pool.starmap(
+                    GeneticAlgorithm._create_members_for_rival_generation,
+                    creation_jobs
                 )
-                new_rival_generation.create_fitness_ranking()
-                self.rival_gen_pool[combination_id] = new_rival_generation
+                identification += no_members
+                rival_members_container = dict(created_rivals)
 
-            """Last stage of each iteration is to choose the next accepted Generation and mutate it:"""
-            self._choose_best_rival_generation()
-            # print(self.best_solution())
-            # print(self.current_generation.members)
-            self.mutate(mutation_type=self.args.get('mutation'))
-            self.current_generation.fitness_ranking = []
-            self.current_generation.create_fitness_ranking()
-            self.best_fit_history[-1] = self.current_generation.fitness_ranking[0].get('fitness value')
+                """For fitness evaluation, all members are distributed between the already-running workers."""
+                evaluation_jobs = []
+                for combination_id, members in rival_members_container.items():
+                    indexes_batches = split_indexes(num_members=len(members), num_workers=no_workers)
+                    for indexes_of_members_to_evaluate in indexes_batches:
+                        if indexes_of_members_to_evaluate:
+                            evaluation_jobs.append((
+                                combination_id,
+                                [
+                                    (member_index, members[member_index])
+                                    for member_index in indexes_of_members_to_evaluate
+                                ]
+                            ))
+
+                # print(f"Evaluating fitness of the rival generations. It is iteration number {iteration}")  # TODO: change from printing to logging
+                evaluated_batches = worker_pool.starmap(
+                    GeneticAlgorithm._evaluate_member_batch,
+                    evaluation_jobs
+                )
+                for combination_id, evaluated_members in evaluated_batches:
+                    members = rival_members_container[combination_id]
+                    for member_index, member in evaluated_members:
+                        members[member_index] = member
+
+                """Build rival Generations out of members and compose their respective fitness rankings"""
+                self.rival_gen_pool = {}
+                for combination_id in operator_combinations_ids:
+                    new_rival_generation = Generation(
+                        generation_members=rival_members_container[combination_id],
+                        num_parents_pairs=self.current_generation.num_parents_pairs,
+                        elite_size=self.elite_size
+                    )
+                    new_rival_generation.create_fitness_ranking()
+                    self.rival_gen_pool[combination_id] = new_rival_generation
+
+                """Last stage of each iteration is to choose the next accepted Generation and mutate it:"""
+                self._choose_best_rival_generation()
+                # print(self.best_solution())
+                # print(self.current_generation.members)
+                self.mutate(mutation_type=self.args.get('mutation'))
+                self.current_generation.fitness_ranking = []
+                self.current_generation.create_fitness_ranking()
+                self.best_fit_history[-1] = self.current_generation.fitness_ranking[0].get('fitness value')
 
     def fitness_plot(self):  # TODO: finish with an optional argument for using plotly or matplotlib
         """Method for plotting fitness values history of the best Members from each accepted Generation."""
