@@ -3,20 +3,20 @@ Labyrinth test case for the Genetic Algorithm - script with functions for visual
 Required program: ImageMagick https://www.techspot.com/downloads/5515-imagemagick.html
 Alternatively one can use Pillow instead.
 """
+import copy
+import random
+from time import time
+
+import matplotlib.animation as animation
+import matplotlib.patches as patches
+import matplotlib.pyplot as plt
+import numpy as np
+import pygad
+import tqdm
+
+import crossover_operators
 import genetic_algorithm
 import selection_operators
-import crossover_operators
-import pygad
-import random
-import tqdm
-import copy
-import numpy as np
-import plotly.express as px
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import matplotlib.animation as animation
-
-from time import time
 
 """The labyrinth is encoded using a matrix with elements 0 and 1. A zero represents an allowed field that can be 
 traversed, while a black field represents a wall; these fields cannot be entered. Including the walls on the boundary of 
@@ -399,17 +399,17 @@ def main_pyqkd():
         ga_instance = genetic_algorithm.GeneticAlgorithm(
             initial_pop_size=sol_per_pop,
             number_of_generations=num_generations,
-            elite_size=2,
+            elite_size=2,  # TODO: I don't think it worked if fitness was sometimes dropping
             args={
                 'genome': (gene_space, num_genes),
-                'selection': k_tournament,
-                'crossover': None
+                'selection': {"pool size": k_tournament},
+                'crossover': None,  # for a single point crossover operator
+                'mutation': 'gene'
             },
             fitness_function=fitness_fun_pyqkd,
             genome_generator=genetic_algorithm.uniform_gene_generator,
             selection=selection_operators.tournament_selection,
             crossover=crossover_operators.single_point_crossover,
-            pool_size=k_tournament,
             no_parents_pairs=num_parents_mating,
             mutation_prob=mutation_prob
         )
@@ -478,5 +478,14 @@ def main_pyqkd():
 
 if __name__ == '__main__':
     # main_pygad()
+    """
+    Mean time of PyGAD's GA running: 806.3724499225616
+    Mean fitness value of the PyGAD's GA best solutions: 0.7891666666666666
+    Mean number of generations in the PyGAD's GA to get the best solution: 2618.2
+    """
     main_pyqkd()
+    """
+    Mean time of pyqkd's GA running: 1685.1121108770371
+    Mean fitness value of the pyqkd's GA best solutions: 0.5666666666666667
+    """
     # fitness_fun_pyqkd([1, 1, 4, 3, 4, 3, 3, 2, 4, 0, 0, 1, 1, 1, 1, 2, 0, 4, 0, 2, 2, 2, 1, 2, 2, 3, 4, 3, 2, 4])
