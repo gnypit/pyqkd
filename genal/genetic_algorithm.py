@@ -505,16 +505,8 @@ class GeneticAlgorithm:
         return combination_id, new_members
 
     @staticmethod
-    def _evaluate_member_batch(
-            combination_id: int,
-            indexed_members: list[tuple[int, Member]]
-    ) -> tuple[int, list[tuple[int, Member]]]:
-        """Evaluate a batch of members and return their original indexes with the updated objects."""
-        evaluated_members = []
-        for member_index, member in indexed_members:
-            member.evaluate()
-            evaluated_members.append((member_index, member))
-        return combination_id, evaluated_members
+    def _apply_fitness_function(member_id: int, genome: list | dict, fitness_function: Callable):
+        return member_id, fitness_function(genome)
 
     def best_solution(self):
         """Returns the genome of Member with the highest fitness value with its fitness value,
@@ -701,7 +693,7 @@ class GeneticAlgorithm:
         no_workers = self._get_parallel_worker_count(no_members=no_members)
 
         with Pool(processes=no_workers) as worker_pool:
-            for iteration in range(self.no_generations):
+            for _ in range(self.no_generations):
                 """Rival generations are created based on accessible combinations of selection and crossover
                 operators with different processes in parallel:"""
                 first_member_id = identification
@@ -721,33 +713,9 @@ class GeneticAlgorithm:
                     creation_jobs
                 )
                 identification += no_members
-                rival_members_container = dict(created_rivals)
-
-                """For fitness evaluation, all members are distributed between the already-running workers."""
-                evaluation_jobs = []
-                for combination_id, members in rival_members_container.items():
-                    indexes_batches = split_indexes(num_members=len(members), num_workers=no_workers)
-                    for indexes_of_members_to_evaluate in indexes_batches:
-                        if indexes_of_members_to_evaluate:
-                            evaluation_jobs.append((
-                                combination_id,
-                                [
-                                    (member_index, members[member_index])
-                                    for member_index in indexes_of_members_to_evaluate
-                                ]
-                            ))
-
-                # print(f"Evaluating fitness of the rival generations. It is iteration number {iteration}")  # TODO: change from printing to logging
-                evaluated_batches = worker_pool.starmap(
-                    GeneticAlgorithm._evaluate_member_batch,
-                    evaluation_jobs
-                )
-                for combination_id, evaluated_members in evaluated_batches:
-                    members = rival_members_container[combination_id]
-                    for member_index, member in evaluated_members:
-                        members[member_index] = member
 
                 """Build rival Generations out of members and compose their respective fitness rankings"""
+                rival_members_container = dict(created_rivals)
                 self.rival_gen_pool = {}
                 for combination_id in operator_combinations_ids:
                     new_rival_generation = Generation(
@@ -755,8 +723,32 @@ class GeneticAlgorithm:
                         num_parents_pairs=self.current_generation.num_parents_pairs,
                         elite_size=self.elite_size
                     )
-                    new_rival_generation.create_fitness_ranking()
                     self.rival_gen_pool[combination_id] = new_rival_generation
+
+                """Let's try and rewrite members into dict {"member_id": [genome]} and get {"member_id": fit_val} as a 
+                result of parallel processing"""
+                all_members = {
+                    member.id: member.genome
+                    for generation in self.rival_gen_pool.values()
+                    for member in generation.members
+                }
+
+                fitness_jobs = [
+                    (member_id, genome, self.fit_fun)
+                    for member_id, genome in all_members.items()
+                ]
+
+                evaluated_members = dict(worker_pool.starmap(
+                    GeneticAlgorithm._apply_fitness_function,
+                    fitness_jobs
+                ))
+
+                for generation in self.rival_gen_pool.values():
+                    for member in generation.members:
+                        member.fit_val = evaluated_members[member.id]
+
+                    generation.fitness_ranking = []
+                    generation.create_fitness_ranking()
 
                 """Last stage of each iteration is to choose the next accepted Generation and mutate it:"""
                 self._choose_best_rival_generation()
