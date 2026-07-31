@@ -426,7 +426,7 @@ class GeneticAlgorithm:
         if self.parallel_workers is not None:
             return max(1, min(self.parallel_workers, no_members))
 
-        return max(1, min(cpu_count(), no_members))
+        return max(1, min(cpu_count(), no_members))  # TODO: do we need to subtract 1 for the master process???
 
     def _create_initial_generation(self):
         """Creating the first - initial - generation in this population."""

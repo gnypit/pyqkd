@@ -310,7 +310,7 @@ def main_pygad():
     for i in tqdm.tqdm(range(10)):
         start = time()
 
-        ga_instance = pygad.GA(
+        ga_instance = pygad.GA(  # TODO: add parallel_processing=["process", cpu_count]
             gene_space=gene_space,
             num_genes=num_genes,
             num_generations=num_generations,
@@ -477,11 +477,11 @@ def main_pyqkd():
 
 
 if __name__ == '__main__':
-    # main_pygad()
+    main_pygad()
     """
-    Mean time of PyGAD's GA running: 806.3724499225616
-    Mean fitness value of the PyGAD's GA best solutions: 0.7891666666666666
-    Mean number of generations in the PyGAD's GA to get the best solution: 2618.2
+    Mean time of PyGAD's GA running: 369.9567105293274
+    Mean fitness value of the PyGAD's GA best solutions: 0.75625
+    Mean number of generations in the PyGAD's GA to get the best solution: 2689.1
     """
     main_pyqkd()
     """
