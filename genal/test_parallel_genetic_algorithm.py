@@ -1,10 +1,33 @@
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parent))
 
 import genetic_algorithm
+
+
+class SynchronousPool:
+    """Small Pool stand-in used to count evaluations without cross-process state."""
+
+    def __init__(self, processes, initializer, initargs):
+        self.processes = processes
+        initializer(*initargs)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception, traceback):
+        return False
+
+    @staticmethod
+    def map(function, inputs, chunksize=1):
+        return [function(item) for item in inputs]
+
+    @staticmethod
+    def starmap(function, inputs):
+        return [function(*item) for item in inputs]
 
 
 def fixed_genome(_args):
@@ -23,6 +46,11 @@ def sometimes_failing_fitness(genome):
     if genome[0] < 0:
         raise RuntimeError("expected fitness failure")
     return sum(genome)
+
+
+def expensive_custom_mutation(genome, args):
+    increment = args["custom increment"]
+    return [gene + increment for gene in genome]
 
 
 class ParallelGeneticAlgorithmTests(unittest.TestCase):
@@ -153,6 +181,72 @@ class ParallelGeneticAlgorithmTests(unittest.TestCase):
 
         self.assertEqual([member.genome for member in ga.current_generation.members], [[1, 1]] * 4)
         self.assertEqual([member.fit_val for member in ga.current_generation.members], [2] * 4)
+
+    def test_single_rival_is_evaluated_only_after_mutation(self):
+        fitness_calls = []
+
+        def counting_fitness(genome):
+            fitness_calls.append(tuple(genome))
+            return sum(genome)
+
+        ga = genetic_algorithm.GeneticAlgorithm(
+            initial_pop_size=4,
+            number_of_generations=1,
+            elite_size=0,
+            args={"mutation": "gene"},
+            fitness_function=counting_fitness,
+            genome_generator=fixed_genome,
+            selection=deterministic_selection,
+            crossover=crossover_with_failing_child,
+            mutation_prob=1.0,
+            parallel_workers=2,
+        )
+
+        with patch.object(genetic_algorithm, "Pool", SynchronousPool):
+            ga.run()
+
+        # Four initial members plus four post-mutation children; no four-child pre-mutation pass.
+        self.assertEqual(len(fitness_calls), 8)
+        self.assertEqual(fitness_calls[-4:], [(1, 1)] * 4)
+
+    def test_expensive_custom_mutation_is_fused_with_worker_evaluation(self):
+        ga = genetic_algorithm.GeneticAlgorithm(
+            initial_pop_size=4,
+            number_of_generations=1,
+            elite_size=0,
+            args={"mutation": "custom", "custom increment": 10},
+            fitness_function=sum,
+            genome_generator=fixed_genome,
+            selection=deterministic_selection,
+            crossover=crossover_with_failing_child,
+            mutation_prob=1.0,
+            parallel_workers=2,
+            custom_mutation_operator=expensive_custom_mutation,
+        )
+        ga.run()
+
+        self.assertEqual(
+            [member.genome for member in ga.current_generation.members],
+            [[9, 11], [11, 11]] * 2,
+        )
+        self.assertEqual([member.fit_val for member in ga.current_generation.members], [20, 22] * 2)
+
+    def test_custom_mutation_requires_an_operator(self):
+        ga = genetic_algorithm.GeneticAlgorithm(
+            initial_pop_size=4,
+            number_of_generations=1,
+            elite_size=0,
+            args={"mutation": "custom"},
+            fitness_function=sum,
+            genome_generator=fixed_genome,
+            selection=deterministic_selection,
+            crossover=crossover_with_failing_child,
+            mutation_prob=1.0,
+            parallel_workers=2,
+        )
+
+        with self.assertRaises(ValueError):
+            ga.run()
 
     def test_operator_creation_mode_remains_available(self):
         ga = self.create_ga(creation_parallelism="operators")

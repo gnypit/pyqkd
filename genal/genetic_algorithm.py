@@ -7,6 +7,7 @@ import random
 from abc import ABC, abstractmethod
 from collections.abc import \
     Callable  # https://stackoverflow.com/questions/37835179/how-can-i-specify-the-function-type-in-my-type-hints
+from copy import deepcopy
 from inspect import signature
 from math import ceil
 from multiprocessing import Pool, cpu_count
@@ -25,14 +26,21 @@ has it's ID as the key.
 _worker_fitness_function: Callable | None = None
 _worker_operators: dict[int, tuple[Callable, Callable]] | None = None
 _worker_args: dict | None = None
+_worker_custom_mutation_operator: Callable | None = None
 
 
-def _initialize_parallel_worker(fitness_function: Callable, operators: dict, args: dict):
+def _initialize_parallel_worker(
+        fitness_function: Callable,
+        operators: dict,
+        args: dict,
+        custom_mutation_operator: Callable | None
+):
     """Cache immutable GA configuration in a worker instead of sending it with every task."""
-    global _worker_fitness_function, _worker_operators, _worker_args
+    global _worker_fitness_function, _worker_operators, _worker_args, _worker_custom_mutation_operator
     _worker_fitness_function = fitness_function
     _worker_operators = operators
     _worker_args = args
+    _worker_custom_mutation_operator = custom_mutation_operator
 
 
 def _evaluate_genome(genome: list | dict, fitness_function: Callable) -> float:
@@ -56,6 +64,25 @@ def _evaluate_fitness_batch(batch: list[tuple[int, list | dict]]) -> list[tuple[
         (member_id, _evaluate_genome(genome, _worker_fitness_function))
         for member_id, genome in batch
     ]
+
+
+def _mutate_and_evaluate_batch(
+        batch: list[tuple[int, int, list | dict, bool]]
+) -> list[tuple[int, int, list | dict, float]]:
+    """Apply an expensive custom mutation where requested and evaluate each genome in the same worker task."""
+    if _worker_fitness_function is None or _worker_custom_mutation_operator is None:
+        raise RuntimeError("Parallel worker was not initialized with custom mutation configuration.")
+
+    results = []
+    for member_index, member_id, genome, should_mutate in batch:
+        mutated_genome = deepcopy(genome)
+        if should_mutate:
+            operator_result = _worker_custom_mutation_operator(mutated_genome, _worker_args)
+            if operator_result is not None:
+                mutated_genome = operator_result
+        fitness = _evaluate_genome(mutated_genome, _worker_fitness_function)
+        results.append((member_index, member_id, mutated_genome, fitness))
+    return results
 
 
 def split_indexes(num_members, num_workers):
@@ -352,8 +379,8 @@ class GeneticAlgorithm:
             equal to pop_size // 2.
         mutation_prob (float): 0.0 by default; probability of selecting a Member of a Generation to reset its genome
             with the genome_generator
-        current_gen (Generation): Members constituting population inside the Genetic Algorithm in a given iteration. It
-            is the last accepted Generation from the previous iteration or the initial Generation.
+        current_generation (Generation): Members constituting population inside the Genetic Algorithm in a given
+            iteration. It is the last accepted Generation from the previous iteration or the initial Generation.
         parallel_workers (int | None): positive maximum number of persistent worker processes. If omitted, the worker
             count is limited by the CPU count and the amount of work.
         rival_gen_pool (dict[int, Generation]): parent-process-owned rival Generations keyed by operator-combination ID.
@@ -386,7 +413,7 @@ class GeneticAlgorithm:
     operators: dict[int, tuple[Callable]]
     no_parents_pairs: int
     mutation_prob: float
-    current_gen: Generation
+    current_generation: Generation
     rival_gen_pool: dict[int, Generation]
     accepted_gen_list: list[Generation]
     best_fit_history: list[float]
@@ -425,7 +452,8 @@ class GeneticAlgorithm:
                  selection: list[Callable] | Callable, crossover: list[Callable] | Callable,
                  no_parents_pairs=None, mutation_prob: float = 0.0,
                  seed=None, parallel_workers: int | None = None,
-                 creation_parallelism: Literal["auto", "local", "operators", "parent_pairs"] = "auto"):
+                 creation_parallelism: Literal["auto", "local", "operators", "parent_pairs"] = "auto",
+                 custom_mutation_operator: Callable | None = None):
         """GeneticAlgorithm class constructor.
 
         Parameters:
@@ -451,6 +479,9 @@ class GeneticAlgorithm:
                 creation in the parent process; ``"operators"`` submits one task per selection/crossover combination;
                 ``"parent_pairs"`` selects parents locally and distributes batches of pairs; ``"auto"`` uses operator
                 tasks when multiple rival combinations exist and otherwise avoids IPC for lightweight local creation.
+            custom_mutation_operator (Callable | None): optional expensive mutation callable accepting ``(genome,
+                args)``. It may return a replacement genome or mutate its input in place and return ``None``. Selecting
+                mutation type ``"custom"`` runs this operator in pool workers and fuses mutation with evaluation.
 
         Raises:
             TypeError: if ``parallel_workers`` is not an integer or ``None``.
@@ -465,6 +496,7 @@ class GeneticAlgorithm:
 
         self.fit_fun = fitness_function
         self.mutation_prob = mutation_prob
+        self.custom_mutation_operator = custom_mutation_operator
         if parallel_workers is not None:
             if isinstance(parallel_workers, bool) or not isinstance(parallel_workers, int):
                 raise TypeError("parallel_workers must be a positive integer or None.")
@@ -770,6 +802,7 @@ class GeneticAlgorithm:
         - "gene": Individual genes replaced
         - "gaussian": Numeric genes perturbed (Gaussian noise)
         - "swap": Two random genes swap positions
+        - "custom": Expensive user operator executed and evaluated in worker batches by ``run()``
         
         Parameters:
             mutation_type (str): Type of mutation to apply
@@ -790,6 +823,10 @@ class GeneticAlgorithm:
                 return self._mutate_gaussian()
             case "swap":
                 return self._mutate_swap()
+            case "custom":
+                raise RuntimeError(
+                    "Custom mutation is worker-side only; call run() so it can use the persistent process pool."
+                )
             case _:
                 print(f"Warning: Unknown mutation type '{mutation_type}'. Using 'member' by default.")
                 return self._mutate_members()
@@ -936,12 +973,69 @@ class GeneticAlgorithm:
             member = self.current_generation.members[index]
             member.fit_val = evaluated_members[member.id]
 
+    def _mutate_custom_in_workers(
+            self,
+            worker_pool: Pool,
+            no_workers: int,
+            evaluate_all_members: bool
+    ) -> list[int]:
+        """Run an opt-in expensive custom mutation and fitness evaluation in the same worker batches.
+
+        When a sole, not-yet-evaluated rival is accepted, ``evaluate_all_members`` includes unchanged members so the
+        fused pass initializes every fitness value. For an already-evaluated winner among multiple rivals, only mutated
+        members are sent back through the pool.
+        """
+        if self.custom_mutation_operator is None:
+            raise ValueError(
+                "Mutation type 'custom' requires custom_mutation_operator to be passed to GeneticAlgorithm."
+            )
+
+        non_elite_members_count = self.current_generation.size - self.elite_size
+        number_of_mutations = int(np.floor(self.mutation_prob * non_elite_members_count))
+        mutated_indexes = set(random.sample(range(non_elite_members_count), number_of_mutations))
+        indexes_to_process = (
+            list(range(self.current_generation.size))
+            if evaluate_all_members
+            else sorted(mutated_indexes)
+        )
+        if not indexes_to_process:
+            return []
+
+        jobs = [
+            (
+                index,
+                self.current_generation.members[index].id,
+                self.current_generation.members[index].genome,
+                index in mutated_indexes,
+            )
+            for index in indexes_to_process
+        ]
+        batch_size = max(1, ceil(len(jobs) / (no_workers * 4)))
+        batches = [jobs[index:index + batch_size] for index in range(0, len(jobs), batch_size)]
+        evaluated_batches = worker_pool.map(_mutate_and_evaluate_batch, batches, chunksize=1)
+
+        for member_index, member_id, genome, fitness in (
+                result for batch in evaluated_batches for result in batch
+        ):
+            member = self.current_generation.members[member_index]
+            if member.id != member_id:
+                raise RuntimeError(
+                    f"Custom mutation result ID {member_id} does not match member {member.id} at index {member_index}."
+                )
+            member.genome = genome
+            member.fit_val = fitness
+
+        return sorted(mutated_indexes)
+
     def run(self):
         """Run the GA with one persistent, initialised process pool.
 
         Rival generations are created in parallel. Their genomes are then evaluated in batches, with approximately four
         batches per worker to balance uneven fitness costs while avoiding one IPC task per member. Fitness-function
         exceptions have the same semantics as serial ``Member.evaluate``: the affected member receives fitness ``0.0``.
+        When only one rival exists, it is accepted and mutated before evaluation, avoiding a redundant pre-mutation
+        fitness pass. Multiple rivals are evaluated first because their fitness values determine which one is accepted.
+        Expensive custom mutation is fused with worker-side evaluation; built-in lightweight mutation remains local.
         """
         global identification
         # print(f"Creating the initial population.")
@@ -955,7 +1049,7 @@ class GeneticAlgorithm:
         with Pool(
                 processes=no_workers,
                 initializer=_initialize_parallel_worker,
-                initargs=(self.fit_fun, self.operators, self.args)
+                initargs=(self.fit_fun, self.operators, self.args, self.custom_mutation_operator)
         ) as worker_pool:
             for _ in range(self.no_generations):
                 """Rival generations are created based on accessible combinations of selection and crossover
@@ -982,8 +1076,27 @@ class GeneticAlgorithm:
                     )
                     self.rival_gen_pool[combination_id] = new_rival_generation
 
-                """Let's try and rewrite members into dict {"member_id": [genome]} and get {"member_id": fit_val} as a 
-                result of parallel processing"""
+                if len(self.rival_gen_pool) == 1:
+                    """With no rival choice to make, mutate first and evaluate the resulting generation only once."""
+                    self.current_generation = next(iter(self.rival_gen_pool.values()))
+                    self.accepted_gen_list.append(self.current_generation)
+                    if self.args.get('mutation') == "custom":
+                        self._mutate_custom_in_workers(worker_pool, no_workers, evaluate_all_members=True)
+                    else:
+                        self.mutate(mutation_type=self.args.get('mutation'))
+                        self._evaluate_member_indexes(
+                            worker_pool,
+                            list(range(self.current_generation.size)),
+                            no_workers,
+                        )
+                    self.current_generation.fitness_ranking = []
+                    self.current_generation.create_fitness_ranking()
+                    self.best_fit_history.append(
+                        self.current_generation.fitness_ranking[0].get('fitness value')
+                    )
+                    continue
+
+                """Multiple rivals must be evaluated before the best one can be selected."""
                 all_members = {
                     member.id: member.genome
                     for generation in self.rival_gen_pool.values()
@@ -1005,12 +1118,15 @@ class GeneticAlgorithm:
                     generation.fitness_ranking = []
                     generation.create_fitness_ranking()
 
-                """Last stage of each iteration is to choose the next accepted Generation and mutate it:"""
+                """Choose the best evaluated rival, mutate it, and reevaluate only changed members."""
                 self._choose_best_rival_generation()
                 # print(self.best_solution())
                 # print(self.current_generation.members)
-                affected_member_indexes = self.mutate(mutation_type=self.args.get('mutation'))
-                self._evaluate_member_indexes(worker_pool, affected_member_indexes, no_workers)
+                if self.args.get('mutation') == "custom":
+                    self._mutate_custom_in_workers(worker_pool, no_workers, evaluate_all_members=False)
+                else:
+                    affected_member_indexes = self.mutate(mutation_type=self.args.get('mutation'))
+                    self._evaluate_member_indexes(worker_pool, affected_member_indexes, no_workers)
                 self.current_generation.fitness_ranking = []
                 self.current_generation.create_fitness_ranking()
                 self.best_fit_history[-1] = self.current_generation.fitness_ranking[0].get('fitness value')
