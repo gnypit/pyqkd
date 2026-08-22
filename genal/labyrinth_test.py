@@ -307,7 +307,7 @@ def main_pygad():
     output_list = []
     generations_no = []  # number of generations in which a single GA found it's proposition for a solution
 
-    for i in tqdm.tqdm(range(10)):
+    for i in tqdm.tqdm(range(2)):
         start = time()
 
         ga_instance = pygad.GA(  # TODO: add parallel_processing=["process", cpu_count]
@@ -393,7 +393,7 @@ def main_pyqkd():
     output_list = []
     generations_no = []  # number of generations in which a single GA found it's proposition for a solution
 
-    for i in tqdm.tqdm(range(10)):
+    for i in tqdm.tqdm(range(2)):
         start = time()
 
         ga_instance = genetic_algorithm.GeneticAlgorithm(
@@ -411,7 +411,9 @@ def main_pyqkd():
             selection=selection_operators.tournament_selection,
             crossover=crossover_operators.single_point_crossover,
             no_parents_pairs=num_parents_mating,
-            mutation_prob=mutation_prob
+            mutation_prob=mutation_prob,
+            # Single-point crossover is far cheaper than serializing 500 routes to creation workers.
+            creation_parallelism="local",
         )
 
         ga_instance.run()

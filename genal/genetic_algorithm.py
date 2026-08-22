@@ -9,6 +9,7 @@ from collections.abc import \
     Callable  # https://stackoverflow.com/questions/37835179/how-can-i-specify-the-function-type-in-my-type-hints
 from math import ceil
 from multiprocessing import Pool, cpu_count
+from typing import Literal
 
 import numpy as np
 
@@ -361,6 +362,7 @@ class GeneticAlgorithm:
     accepted_gen_list: list[Generation]
     best_fit_history: list[float]
     parallel_workers: int | None
+    creation_parallelism: Literal["auto", "local", "operators", "parent_pairs"]
     args: dict
 
     @staticmethod
@@ -393,7 +395,8 @@ class GeneticAlgorithm:
                  fitness_function: Callable, genome_generator: Callable,
                  selection: list[Callable] | Callable, crossover: list[Callable] | Callable,
                  no_parents_pairs=None, mutation_prob: float = 0.0,
-                 seed=None, parallel_workers: int | None = None):
+                 seed=None, parallel_workers: int | None = None,
+                 creation_parallelism: Literal["auto", "local", "operators", "parent_pairs"] = "auto"):
         """GeneticAlgorithm class constructor.
 
         Parameters:
@@ -415,10 +418,14 @@ class GeneticAlgorithm:
             seed (int | float | str | bytes | bytearray | None = None): optional; parameter 'a' for random.seed
             parallel_workers (int | None): optional; positive maximum number of worker processes reused by the parallel
                 run. ``None`` selects up to ``cpu_count()`` workers. Zero and negative values are rejected.
+            creation_parallelism (str): strategy for selection, crossover, and child construction. ``"local"`` keeps
+                creation in the parent process; ``"operators"`` submits one task per selection/crossover combination;
+                ``"parent_pairs"`` selects parents locally and distributes batches of pairs; ``"auto"`` uses operator
+                tasks when multiple rival combinations exist and otherwise avoids IPC for lightweight local creation.
 
         Raises:
             TypeError: if ``parallel_workers`` is not an integer or ``None``.
-            ValueError: if ``parallel_workers`` is zero or negative.
+            ValueError: if ``parallel_workers`` is zero or negative, or the creation strategy is unsupported.
         """
         self.pop_size = initial_pop_size
         self.no_generations = number_of_generations
@@ -435,6 +442,12 @@ class GeneticAlgorithm:
             if parallel_workers <= 0:
                 raise ValueError("parallel_workers must be greater than zero.")
         self.parallel_workers = parallel_workers
+        valid_creation_modes = {"auto", "local", "operators", "parent_pairs"}
+        if creation_parallelism not in valid_creation_modes:
+            raise ValueError(
+                f"creation_parallelism must be one of {sorted(valid_creation_modes)}; got {creation_parallelism!r}."
+            )
+        self.creation_parallelism = creation_parallelism
         if seed is not None:
             random.seed(a=seed)  # useful for debugging
 
@@ -482,6 +495,76 @@ class GeneticAlgorithm:
         batch_size = max(1, ceil(len(jobs) / (no_workers * 4)))
         return [jobs[index:index + batch_size] for index in range(0, len(jobs), batch_size)]
 
+    def _resolve_creation_parallelism(self, no_workers: int) -> str:
+        """Resolve ``auto`` without assuming that arbitrary user crossover functions are expensive."""
+        if self.creation_parallelism != "auto":
+            return self.creation_parallelism
+        if no_workers > 1 and len(self.operators) > 1:
+            return "operators"
+        return "local"
+
+    @staticmethod
+    def _select_parent_genome_pairs(
+            combination_id: int,
+            parent_generation: Generation,
+            operators: dict[int, tuple[Callable, Callable]],
+            args: dict
+    ) -> list[tuple[list | dict, list | dict]]:
+        """Select parents once and normalize supported selection results to raw-genome pairs."""
+        selection, _ = operators[combination_id]
+        selection_args = args.get("selection") if isinstance(args, dict) and "selection" in args else args
+
+        try:
+            selected_parents = selection(parent_generation, selection_args)
+        except TypeError as error:
+            member_details = "\n".join(
+                f"Parent member {member} has fitness function {member.fit_fun}."
+                for member in parent_generation.members
+            )
+            raise TypeError(
+                f"Selection operator failed for operator combination {combination_id}: {error}\n{member_details}"
+            ) from error
+
+        if selected_parents and isinstance(selected_parents[0], dict):
+            parent_pairs = [
+                (parents["parent1"].genome, parents["parent2"].genome)
+                for parents in selected_parents
+            ]
+        else:
+            parent_pairs = [
+                (selected_parents[2 * index].genome, selected_parents[2 * index + 1].genome)
+                for index in range(parent_generation.num_parents_pairs)
+            ]
+
+        if len(parent_pairs) < parent_generation.num_parents_pairs:
+            raise ValueError(
+                f"Selection operator for combination {combination_id} returned {len(parent_pairs)} parent pairs; "
+                f"{parent_generation.num_parents_pairs} are required."
+            )
+        return parent_pairs[:parent_generation.num_parents_pairs]
+
+    @staticmethod
+    def _build_members_from_parent_pairs(
+            parent_pairs: list[tuple[list | dict, list | dict]],
+            crossover: Callable,
+            crossover_args,
+            fitness_function: Callable,
+            first_identification_number: int,
+            first_pair_index: int = 0
+    ) -> list[Member]:
+        """Cross parent genomes and assign stable IDs independent of worker completion order."""
+        new_members = []
+        for local_pair_index, (parent1_genome, parent2_genome) in enumerate(parent_pairs):
+            pair_index = first_pair_index + local_pair_index
+            child1_genome, child2_genome = crossover(parent1_genome, parent2_genome, crossover_args)
+            child1_id = first_identification_number + 2 * pair_index
+            new_members.extend([
+                Member(child1_genome, child1_id, fitness_function),
+                Member(child2_genome, child1_id + 1, fitness_function),
+            ])
+            # TODO: Record both selected parent IDs on each child for genealogy tracking.
+        return new_members
+
     def _create_initial_generation(self):
         """Creating the first - initial - generation in this population."""
         global identification
@@ -521,46 +604,104 @@ class GeneticAlgorithm:
         if _worker_fitness_function is None or _worker_operators is None or _worker_args is None:
             raise RuntimeError("Parallel worker was not initialized with GA configuration.")
 
-        selection, crossover = _worker_operators.get(combination_id)
-        selection_args = (_worker_args.get("selection")
-                          if isinstance(_worker_args, dict) and "selection" in _worker_args else _worker_args)
+        _, crossover = _worker_operators[combination_id]
         crossover_args = (_worker_args.get("crossover")
                           if isinstance(_worker_args, dict) and "crossover" in _worker_args else None)
-
-        try:
-            parents_in_order = selection(parent_generation, selection_args)
-        except TypeError as e:
-            member_details = "\n".join(
-                f"Parent member {member} has fitness function {member.fit_fun}."
-                for member in parent_generation.members
-            )
-            raise TypeError(
-                f"Selection operator failed for operator combination {combination_id}: {e}\n{member_details}"
-            ) from e
-
-        new_members = []
-        next_identification = first_identification_number
-        for index in range(parent_generation.num_parents_pairs):
-            # TODO: Standardize built-in crossover operators on either Member or raw-genome arguments.
-            child1_genome, child2_genome = crossover(
-                parents_in_order[2 * index].genome,
-                parents_in_order[2 * index + 1].genome,
-                crossover_args
-            )
-            new_members.append(Member(
-                genome=child1_genome,
-                identification_number=next_identification,
-                fitness_function=_worker_fitness_function)
-            )
-            new_members.append(Member(
-                genome=child2_genome,
-                identification_number=next_identification + 1,
-                fitness_function=_worker_fitness_function)
-            )
-            # TODO: Record both selected parent IDs on each child for genealogy tracking.
-            next_identification += 2
-
+        parent_pairs = GeneticAlgorithm._select_parent_genome_pairs(
+            combination_id, parent_generation, _worker_operators, _worker_args
+        )
+        new_members = GeneticAlgorithm._build_members_from_parent_pairs(
+            parent_pairs, crossover, crossover_args, _worker_fitness_function, first_identification_number
+        )
         return combination_id, new_members
+
+    @staticmethod
+    def _create_member_batch(
+            combination_id: int,
+            first_pair_index: int,
+            parent_pairs: list[tuple[list | dict, list | dict]],
+            first_identification_number: int
+    ) -> tuple[int, int, list[Member]]:
+        """Create one parent-pair batch in a configured pool worker."""
+        if _worker_fitness_function is None or _worker_operators is None or _worker_args is None:
+            raise RuntimeError("Parallel worker was not initialized with GA configuration.")
+        _, crossover = _worker_operators[combination_id]
+        crossover_args = (_worker_args.get("crossover")
+                          if isinstance(_worker_args, dict) and "crossover" in _worker_args else None)
+        members = GeneticAlgorithm._build_members_from_parent_pairs(
+            parent_pairs,
+            crossover,
+            crossover_args,
+            _worker_fitness_function,
+            first_identification_number,
+            first_pair_index,
+        )
+        return combination_id, first_pair_index, members
+
+    def _create_rival_members(
+            self,
+            worker_pool: Pool,
+            operator_combinations_ids: list[int],
+            first_member_id: int,
+            members_per_rival: int,
+            no_workers: int
+    ) -> dict[int, list[Member]]:
+        """Create rival members using the configured local or process-pool strategy."""
+        creation_mode = self._resolve_creation_parallelism(no_workers)
+
+        if creation_mode == "operators":
+            creation_jobs = [
+                (combination_id, self.current_generation, first_member_id + offset * members_per_rival)
+                for offset, combination_id in enumerate(operator_combinations_ids)
+            ]
+            return dict(worker_pool.starmap(self._create_members_for_rival_generation, creation_jobs))
+
+        if creation_mode == "local":
+            rival_members = {}
+            for offset, combination_id in enumerate(operator_combinations_ids):
+                parent_pairs = self._select_parent_genome_pairs(
+                    combination_id, self.current_generation, self.operators, self.args
+                )
+                _, crossover = self.operators[combination_id]
+                crossover_args = (self.args.get("crossover")
+                                  if isinstance(self.args, dict) and "crossover" in self.args else None)
+                rival_members[combination_id] = self._build_members_from_parent_pairs(
+                    parent_pairs,
+                    crossover,
+                    crossover_args,
+                    self.fit_fun,
+                    first_member_id + offset * members_per_rival,
+                )
+            return rival_members
+
+        creation_jobs = []
+        for offset, combination_id in enumerate(operator_combinations_ids):
+            parent_pairs = self._select_parent_genome_pairs(
+                combination_id, self.current_generation, self.operators, self.args
+            )
+            batch_size = max(1, ceil(len(parent_pairs) / (no_workers * 4)))
+            rival_first_id = first_member_id + offset * members_per_rival
+            for first_pair_index in range(0, len(parent_pairs), batch_size):
+                creation_jobs.append((
+                    combination_id,
+                    first_pair_index,
+                    parent_pairs[first_pair_index:first_pair_index + batch_size],
+                    rival_first_id,
+                ))
+
+        created_batches = worker_pool.starmap(self._create_member_batch, creation_jobs)
+        batches_by_rival = {combination_id: [] for combination_id in operator_combinations_ids}
+        for combination_id, first_pair_index, members in created_batches:
+            batches_by_rival[combination_id].append((first_pair_index, members))
+
+        return {
+            combination_id: [
+                member
+                for _, members in sorted(batches, key=lambda batch: batch[0])
+                for member in members
+            ]
+            for combination_id, batches in batches_by_rival.items()
+        }
 
     def best_solution(self):
         """Returns the genome of Member with the highest fitness value with its fitness value,
@@ -758,22 +899,16 @@ class GeneticAlgorithm:
                 """Rival generations are created based on accessible combinations of selection and crossover
                 operators with different processes in parallel:"""
                 first_member_id = identification
-                creation_jobs = [
-                    (
-                        combination_id,
-                        self.current_generation,
-                        first_member_id + offset * members_per_rival
-                    )
-                    for offset, combination_id in enumerate(operator_combinations_ids)
-                ]
-                created_rivals = worker_pool.starmap(
-                    GeneticAlgorithm._create_members_for_rival_generation,
-                    creation_jobs
+                rival_members_container = self._create_rival_members(
+                    worker_pool,
+                    operator_combinations_ids,
+                    first_member_id,
+                    members_per_rival,
+                    no_workers,
                 )
                 identification += no_members
 
                 """Build rival Generations out of members and compose their respective fitness rankings"""
-                rival_members_container = dict(created_rivals)
                 self.rival_gen_pool = {}
                 for combination_id in operator_combinations_ids:
                     # TODO: Copy the configured elite into each rival generation before accepting one.
