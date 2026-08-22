@@ -7,6 +7,7 @@ import random
 from abc import ABC, abstractmethod
 from collections.abc import \
     Callable  # https://stackoverflow.com/questions/37835179/how-can-i-specify-the-function-type-in-my-type-hints
+from inspect import signature
 from math import ceil
 from multiprocessing import Pool, cpu_count
 from typing import Literal
@@ -74,21 +75,48 @@ def sort_dict_by_fit(dictionary: dict) -> float:
     return dictionary['fitness value']
 
 
-def uniform_gene_generator(
-        ga_args: dict):  # TODO: just take a tuple at the start, genome args will be passed directly, not the whole args dict
-    """Simple function for generating a sample of a given length from the gene_space with a uniform probability.
+def uniform_gene_generator(ga_args: dict, gene_position: int | None = None):
+    """Uniformly generate either a complete genome or one gene for mutation.
 
     Parameters:
         ga_args (dict): This dictionary is stored within the GeneticAlgorithm class and contains info about args to be
             used by either genome generator, crossover operators or selection operators. For the genome generation,
-            args are stored under the key 'genome'. There should be gene space and length of chromosomes (their genome).
+            args are stored under the key ``"genome"`` as ``(gene_space, genome_length)``. ``gene_space`` may be a
+            shared sequence for every position or a dictionary mapping each position to its own sequence.
+        gene_position (int | None): Position whose replacement gene should be generated. If omitted, a complete genome
+            is generated for initial-population creation and whole-member mutation.
 
     Returns:
-         ndarray: A numpy array containing genes randomised from the gene space. There should be at least two genes
-            in each chromosome, so this function should never return a single int, str, etc.
+        list | object: A complete genome when ``gene_position`` is ``None``; otherwise one gene sampled from the space
+            associated with that position.
+
+    Raises:
+        IndexError: if ``gene_position`` is outside the configured genome.
     """
-    gene_space, length = ga_args.get('genome')
+    gene_space, length = ga_args["genome"]
+
+    if gene_position is not None:
+        if not 0 <= gene_position < length:
+            raise IndexError(
+                f"gene_position must be between 0 and {length - 1}; got {gene_position}."
+            )
+        position_space = gene_space[gene_position] if isinstance(gene_space, dict) else gene_space
+        return random.choice(position_space)
+
+    if isinstance(gene_space, dict):
+        return [random.choice(gene_space[position]) for position in range(length)]
     return list(np.random.choice(gene_space, length))
+
+
+def uniform_gene_generator_for_position(ga_args: dict, gene_position: int):
+    """Uniform gene generator for a single gene mutation operator. Designed for the labyrinth test."""
+    gene_space, _ = ga_args["genome"]
+
+    if isinstance(gene_space, dict):
+        position_space = gene_space[gene_position]
+        return random.choice(position_space)
+
+    return random.choice(gene_space)
 
 
 class ChromosomeInterface(ABC):
@@ -354,6 +382,7 @@ class GeneticAlgorithm:
     elite_size: int
     fit_fun: Callable
     genome_gen: Callable
+    gene_generator: Callable[[dict, int], object] | None = None
     operators: dict[int, tuple[Callable]]
     no_parents_pairs: int
     mutation_prob: float
@@ -464,6 +493,11 @@ class GeneticAlgorithm:
         """Even though for the initial population we can pass the genome generator with it's arguments
         directly to the __init__ method within the Generation class, we need to memorise it for mutation later on."""
         self.genome_generator = genome_generator
+        try:
+            signature(genome_generator).bind(self.args, gene_position=0)
+            self.genome_generator_supports_single_gene = True
+        except (TypeError, ValueError):
+            self.genome_generator_supports_single_gene = False
 
         """Based on lists of (callable) function selected by the User from selection_operators.py 
         and crossover_operators.py, a more general dict is created with all the possible combinations of the operators.
@@ -728,8 +762,8 @@ class GeneticAlgorithm:
         self.accepted_gen_list.append(self.current_generation)
         self.best_fit_history.append(self.current_generation.fitness_ranking[0].get('fitness value'))
 
-    def mutate(self, mutation_type: str = "member"):  # TODO: add adaptive mutation (diversity measures first?)
-        """Applies mutation to the current generation.
+    def mutate(self, mutation_type: str = "member") -> list[int]:  # TODO: add adaptive mutation
+        """Mutate the current generation and return indexes whose fitness values became stale.
         
         Mutation types:
         - "member": Entire genome reset
@@ -739,24 +773,28 @@ class GeneticAlgorithm:
         
         Parameters:
             mutation_type (str): Type of mutation to apply
+
+        Returns:
+            list[int]: Sorted indexes of members changed by the mutation operator. Evaluation is intentionally handled
+                by :meth:`run` so the same process pool can reevaluate affected genomes in batches.
         """
         if self.mutation_prob == 0.0:
-            return
+            return []
 
         match mutation_type:
             case "member":
-                self._mutate_members()
+                return self._mutate_members()
             case "gene":
-                self._mutate_genes()
+                return self._mutate_genes()
             case "gaussian":
-                self._mutate_gaussian()
+                return self._mutate_gaussian()
             case "swap":
-                self._mutate_swap()
+                return self._mutate_swap()
             case _:
                 print(f"Warning: Unknown mutation type '{mutation_type}'. Using 'member' by default.")
-                self._mutate_members()
+                return self._mutate_members()
 
-    def _mutate_members(self):
+    def _mutate_members(self) -> list[int]:
         """In this case mutation probability is the probability of 'resetting' a member of the current generation, i.e.,
         generating its genome from scratch. For optimisation purposes instead of a loop over the whole generation, the
         number of members to be mutated is calculated, and then a list of member indexes in the current generation to be
@@ -776,14 +814,13 @@ class GeneticAlgorithm:
         """For new (mutated) genome creation I use the generator passed to the superclass in it's initialisation:"""
         for index in indexes:
             self.current_generation.members[index].change_genes(self.genome_generator(self.args))  # self.manager
-            self.current_generation.members[index].evaluate()
+        return sorted(indexes)
 
-    def _mutate_genes(self):
+    def _mutate_genes(self) -> list[int]:
         """Mutates individual genes across members of the current generation.
 
-        Uses mutation_prob to select random gene positions across all non-elite members.
-        For each selected gene index, generates a complete temporary member using genome_generator,
-        then takes the corresponding gene from it to replace the original gene.
+        Selected positions are grouped by member. Generators supporting ``gene_position`` produce each replacement
+        directly; legacy full-genome generators are called once per affected member and provide all its replacements.
         """
         non_elite_members_count = self.current_generation.size - self.elite_size
         total_available_genes = non_elite_members_count * self.current_generation.genome_size
@@ -791,30 +828,31 @@ class GeneticAlgorithm:
         number_of_mutations = int(np.floor(self.mutation_prob * total_available_genes))
 
         if number_of_mutations == 0:
-            return
+            return []
 
         # Select random gene indexes across all non-elite members and genes
         gene_indexes = random.sample(range(total_available_genes), number_of_mutations)
 
-        affected_members = set()
-
+        mutations_by_member: dict[int, list[int]] = {}
         for gene_index in gene_indexes:
-            # Calculate which member and which gene position within that member
-            member_index = gene_index // self.current_generation.genome_size
-            gene_position = gene_index % self.current_generation.genome_size
+            member_index, gene_position = divmod(gene_index, self.current_generation.genome_size)
+            mutations_by_member.setdefault(member_index, []).append(gene_position)
 
-            # Generate a complete temporary genome
-            temp_genome = self.genome_generator(self.args)
+        for member_index, gene_positions in mutations_by_member.items():
+            genome = self.current_generation.members[member_index].genome
+            if self.genome_generator_supports_single_gene:
+                for gene_position in gene_positions:
+                    genome[gene_position] = self.genome_generator(
+                        self.args, gene_position=gene_position
+                    )
+            else:
+                replacement_genome = self.genome_generator(self.args)
+                for gene_position in gene_positions:
+                    genome[gene_position] = replacement_genome[gene_position]
 
-            # Replace the selected gene with the one from temporary genome
-            self.current_generation.members[member_index].genome[gene_position] = temp_genome[gene_position]
-            affected_members.add(member_index)
+        return sorted(mutations_by_member)
 
-        # Re-evaluate all members that had genes mutated
-        for member_index in affected_members:
-            self.current_generation.members[member_index].evaluate()
-
-    def _mutate_gaussian(self):
+    def _mutate_gaussian(self) -> list[int]:
         """Gaussian mutation: adds random noise to numeric genes only."""
         non_elite_members_count = self.current_generation.size - self.elite_size
         total_available_genes = non_elite_members_count * self.current_generation.genome_size
@@ -822,14 +860,15 @@ class GeneticAlgorithm:
         number_of_mutations = int(np.floor(self.mutation_prob * total_available_genes))
 
         if number_of_mutations == 0:
-            return
+            return []
 
         gene_indexes = random.sample(range(total_available_genes), number_of_mutations)
 
-        if isinstance(self.genome_spec, dict):
-            spec_list = list(self.genome_spec.values())
+        genome_spec, _ = self.args["genome"]
+        if isinstance(genome_spec, dict):
+            spec_list = [genome_spec[position] for position in range(self.current_generation.genome_size)]
         else:
-            spec_list = self.genome_spec
+            spec_list = genome_spec
 
         affected_members = set()
 
@@ -850,16 +889,15 @@ class GeneticAlgorithm:
                 self.current_generation.members[member_index].genome[gene_position] = new_value
                 affected_members.add(member_index)
 
-        for member_index in affected_members:
-            self.current_generation.members[member_index].evaluate()
+        return sorted(affected_members)
 
-    def _mutate_swap(self):
+    def _mutate_swap(self) -> list[int]:
         """Swap mutation: randomly swaps two genes within a Member's genome."""
         non_elite_members_count = self.current_generation.size - self.elite_size
         number_of_mutations = int(np.floor(self.mutation_prob * non_elite_members_count))
 
         if number_of_mutations == 0:
-            return
+            return []
 
         member_indexes = random.sample(range(non_elite_members_count), number_of_mutations)
 
@@ -871,8 +909,32 @@ class GeneticAlgorithm:
             genome = self.current_generation.members[member_index].genome
             genome[pos1], genome[pos2] = genome[pos2], genome[pos1]
 
-            # Re-evaluate
-            self.current_generation.members[member_index].evaluate()
+        return sorted(member_indexes)
+
+    def _evaluate_member_indexes(
+            self,
+            worker_pool: Pool,
+            member_indexes: list[int],
+            no_workers: int
+    ) -> None:
+        """Reevaluate selected current-generation members using the persistent worker pool."""
+        if not member_indexes:
+            return
+
+        members_to_evaluate = {
+            self.current_generation.members[index].id: self.current_generation.members[index].genome
+            for index in member_indexes
+        }
+        fitness_batches = self._create_fitness_batches(members_to_evaluate, no_workers)
+        evaluated_batches = worker_pool.map(_evaluate_fitness_batch, fitness_batches, chunksize=1)
+        evaluated_members = dict(
+            evaluated_member
+            for batch in evaluated_batches
+            for evaluated_member in batch
+        )
+        for index in member_indexes:
+            member = self.current_generation.members[index]
+            member.fit_val = evaluated_members[member.id]
 
     def run(self):
         """Run the GA with one persistent, initialised process pool.
@@ -947,7 +1009,8 @@ class GeneticAlgorithm:
                 self._choose_best_rival_generation()
                 # print(self.best_solution())
                 # print(self.current_generation.members)
-                self.mutate(mutation_type=self.args.get('mutation'))
+                affected_member_indexes = self.mutate(mutation_type=self.args.get('mutation'))
+                self._evaluate_member_indexes(worker_pool, affected_member_indexes, no_workers)
                 self.current_generation.fitness_ranking = []
                 self.current_generation.create_fitness_ranking()
                 self.best_fit_history[-1] = self.current_generation.fitness_ranking[0].get('fitness value')

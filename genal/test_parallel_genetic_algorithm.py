@@ -27,18 +27,19 @@ def sometimes_failing_fitness(genome):
 
 class ParallelGeneticAlgorithmTests(unittest.TestCase):
     @staticmethod
-    def create_ga(parallel_workers=2, creation_parallelism="auto"):
+    def create_ga(parallel_workers=2, creation_parallelism="auto", mutation_prob=0.0):
         return genetic_algorithm.GeneticAlgorithm(
             initial_pop_size=4,
             number_of_generations=1,
             elite_size=0,
-            args={},
+            args={"mutation": "gene"},
             fitness_function=sometimes_failing_fitness,
             genome_generator=fixed_genome,
             selection=deterministic_selection,
             crossover=crossover_with_failing_child,
             parallel_workers=parallel_workers,
             creation_parallelism=creation_parallelism,
+            mutation_prob=mutation_prob,
         )
 
     def test_non_positive_parallel_worker_count_is_rejected(self):
@@ -58,6 +59,79 @@ class ParallelGeneticAlgorithmTests(unittest.TestCase):
         self.assertLessEqual(len(batches), 8)
         self.assertEqual(list(members.items()), [job for batch in batches for job in batch])
 
+    def test_uniform_generator_supports_full_genome_and_single_gene_modes(self):
+        args = {"genome": ([0, 1, 2], 4)}
+
+        genome = genetic_algorithm.uniform_gene_generator(args)
+        gene = genetic_algorithm.uniform_gene_generator(args, gene_position=2)
+
+        self.assertEqual(len(genome), 4)
+        self.assertTrue(all(value in args["genome"][0] for value in genome))
+        self.assertIn(gene, args["genome"][0])
+
+    def test_uniform_generator_supports_position_specific_spaces(self):
+        args = {"genome": ({0: [10], 1: [20], 2: [30]}, 3)}
+
+        self.assertEqual(genetic_algorithm.uniform_gene_generator(args), [10, 20, 30])
+        self.assertEqual(genetic_algorithm.uniform_gene_generator(args, gene_position=1), 20)
+
+        with self.assertRaises(IndexError):
+            genetic_algorithm.uniform_gene_generator(args, gene_position=3)
+
+    def test_gene_mutation_uses_single_gene_generator_mode(self):
+        generator_calls = []
+
+        def generator(_args, gene_position=None):
+            generator_calls.append(gene_position)
+            return [0, 0] if gene_position is None else 1
+
+        ga = genetic_algorithm.GeneticAlgorithm(
+            initial_pop_size=4,
+            number_of_generations=0,
+            elite_size=0,
+            args={},
+            fitness_function=sum,
+            genome_generator=generator,
+            selection=deterministic_selection,
+            crossover=crossover_with_failing_child,
+            mutation_prob=1.0,
+        )
+        ga._create_initial_generation()
+        generator_calls.clear()
+
+        affected_indexes = ga._mutate_genes()
+
+        self.assertEqual(affected_indexes, [0, 1, 2, 3])
+        self.assertEqual(sorted(generator_calls), [0, 0, 0, 0, 1, 1, 1, 1])
+        self.assertEqual([member.genome for member in ga.current_generation.members], [[1, 1]] * 4)
+
+    def test_gene_mutation_calls_legacy_generator_once_per_affected_member(self):
+        generator_calls = []
+
+        def legacy_generator(_args):
+            generator_calls.append(1)
+            return [2, 2]
+
+        ga = genetic_algorithm.GeneticAlgorithm(
+            initial_pop_size=4,
+            number_of_generations=0,
+            elite_size=0,
+            args={},
+            fitness_function=sum,
+            genome_generator=legacy_generator,
+            selection=deterministic_selection,
+            crossover=crossover_with_failing_child,
+            mutation_prob=1.0,
+        )
+        ga._create_initial_generation()
+        generator_calls.clear()
+
+        affected_indexes = ga._mutate_genes()
+
+        self.assertEqual(affected_indexes, [0, 1, 2, 3])
+        self.assertEqual(len(generator_calls), 4)
+        self.assertEqual([member.genome for member in ga.current_generation.members], [[2, 2]] * 4)
+
     def test_invalid_creation_parallelism_is_rejected(self):
         with self.assertRaises(ValueError):
             self.create_ga(creation_parallelism="threads")
@@ -72,6 +146,13 @@ class ParallelGeneticAlgorithmTests(unittest.TestCase):
 
         self.assertEqual([member.fit_val for member in ga.current_generation.members], [0.0, 2, 0.0, 2])
         self.assertEqual(ga.best_solution()[1], 2)
+
+    def test_post_mutation_fitness_is_updated_by_worker_pool(self):
+        ga = self.create_ga(mutation_prob=1.0)
+        ga.run()
+
+        self.assertEqual([member.genome for member in ga.current_generation.members], [[1, 1]] * 4)
+        self.assertEqual([member.fit_val for member in ga.current_generation.members], [2] * 4)
 
     def test_operator_creation_mode_remains_available(self):
         ga = self.create_ga(creation_parallelism="operators")
