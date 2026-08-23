@@ -195,9 +195,10 @@ class ParallelGeneticAlgorithmTests(unittest.TestCase):
         self.assertIsNot(ga.generation_snapshots[0], ga.generation_snapshots[2])
         self.assertIsNot(ga.generation_snapshots[2], ga.current_generation)
 
-    def test_auto_creation_is_local_for_one_operator_combination(self):
+    def test_auto_creation_uses_parent_pair_batches_for_one_operator_combination(self):
         ga = self.create_ga(creation_parallelism="auto")
-        self.assertEqual(ga._resolve_creation_parallelism(no_workers=2), "local")
+        self.assertEqual(ga._resolve_creation_parallelism(no_workers=2), "parent_pairs")
+        self.assertEqual(ga._resolve_creation_parallelism(no_workers=1), "local")
 
     def test_parallel_fitness_failure_matches_serial_zero_fallback(self):
         ga = self.create_ga()

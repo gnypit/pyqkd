@@ -479,7 +479,8 @@ class GeneticAlgorithm:
             creation_parallelism (str): strategy for selection, crossover, and child construction. ``"local"`` keeps
                 creation in the parent process; ``"operators"`` submits one task per selection/crossover combination;
                 ``"parent_pairs"`` selects parents locally and distributes batches of pairs; ``"auto"`` uses operator
-                tasks when multiple rival combinations exist and otherwise avoids IPC for lightweight local creation.
+                tasks for multiple rival combinations and parent-pair batches for one combination when multiple workers
+                are available. Explicit ``"local"`` remains preferable for known lightweight crossover functions.
             custom_mutation_operator (Callable | None): optional expensive mutation callable accepting ``(genome,
                 args)``. It may return a replacement genome or mutate its input in place and return ``None``. Selecting
                 mutation type ``"custom"`` runs this operator in pool workers and fuses mutation with evaluation.
@@ -573,11 +574,15 @@ class GeneticAlgorithm:
         return [jobs[index:index + batch_size] for index in range(0, len(jobs), batch_size)]
 
     def _resolve_creation_parallelism(self, no_workers: int) -> str:
-        """Resolve ``auto`` without assuming that arbitrary user crossover functions are expensive."""
+        """Resolve ``auto`` across operator combinations or parent-pair batches."""
         if self.creation_parallelism != "auto":
             return self.creation_parallelism
-        if no_workers > 1 and len(self.operators) > 1:
+        if no_workers <= 1:
+            return "local"
+        if len(self.operators) > 1:
             return "operators"
+        if len(self.operators) == 1:
+            return "parent_pairs"
         return "local"
 
     @staticmethod
