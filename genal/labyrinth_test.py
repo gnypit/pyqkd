@@ -3,7 +3,6 @@ Labyrinth test case for the Genetic Algorithm - script with functions for visual
 Required program: ImageMagick https://www.techspot.com/downloads/5515-imagemagick.html
 Alternatively one can use Pillow instead.
 """
-import copy
 import random
 from time import time
 
@@ -172,50 +171,41 @@ hitting_a_wall_point = 1.25  # punishment for wasting a move to "bounce back" fr
 max_bonus = 10 * bonus_point  # if the GA follows the shortest path, it can wait up to 10 moves at the exit
 
 
-def fitness_fun_pygad(genetic_algorithm_instance, route, route_idx):
-    """We're using the Taxi metric to evaluate path through the labyrinth. Additionally, we give bonuses
-    and punishments for specific behaviours, so that path suggested by chromosomes were as close to actually possible
-    ones as possible, taking into account "bouncing back" from walls.
-    """
-    position = {'y': 1, 'x': 1}  # we're starting in (1,1)
+def _evaluate_labyrinth_route(route):
+    """Evaluate a route using immutable coordinates and O(1) repeated-position checks."""
+    position = (1, 1)  # (y, x)
+    visited_positions = {position}
+    unwanted_behaviour_penalty = 0
+    bonus = 0
 
-    """Not to encounter the 'mutable' attribute of dicts, in the position history list we save copies of positions
-    after each step:"""
-    history = [copy.deepcopy(position)]
-    is_probem = 0  # starting number of unwanted behaviours
-    bonus = 0  # starting bonus value
-
-    for move in route:  # changing position based on moves
-
-        if position.get('x') == exit_labyrinth.get('x') and position.get('y') == exit_labyrinth.get('y') and move == 0:
-            bonus += bonus_point  # bonus for staying at the exit
+    for move in route:
+        if position == (exit_labyrinth['y'], exit_labyrinth['x']) and move == 0:
+            bonus += bonus_point
             continue
 
-        new_y, new_x = position.get('y') + moves_mapping.get(move)[0], position.get('x') + moves_mapping.get(move)[1]
+        delta_y, delta_x = moves_mapping[move]
+        new_position = (position[0] + delta_y, position[1] + delta_x)
 
-        """Checkin, if the new position is an allowed field:"""
-        if labyrinth[new_y, new_x] == 0:
-            position['x'], position['y'] = new_x, new_y
-            history.append(copy.deepcopy(position))
+        if labyrinth[new_position] == 0:
+            position = new_position
+            if position in visited_positions:
+                unwanted_behaviour_penalty += pos_repeat_point
+            visited_positions.add(position)
+        else:
+            unwanted_behaviour_penalty += hitting_a_wall_point
 
-            """Checking, if a punishment for repeating the position is required:"""
-            if history.count(position) > 1:
-                is_probem += pos_repeat_point
-        else:  # field, onto which the chromosome want to step, is not allowed!
-            is_probem += hitting_a_wall_point
+    exit_position = (exit_labyrinth['y'], exit_labyrinth['x'])
+    distance_from_exit = abs(exit_position[0] - position[0]) + abs(exit_position[1] - position[1])
+    sum_exit_coordinates = sum(exit_position)
+    fitness_val = (sum_exit_coordinates - distance_from_exit) * 2
+    fitness_val += bonus
+    fitness_val -= unwanted_behaviour_penalty
+    return fitness_val / (sum_exit_coordinates * 2 + max_bonus)
 
-    """For the final fitness value, first we calculate some additional variables:"""
-    x_distance = abs(exit_labyrinth.get('x') - position.get('x'))
-    y_distance = abs(exit_labyrinth.get('y') - position.get('y'))
-    sum_exit_coordinates = exit_labyrinth.get('x') + exit_labyrinth.get('y')
 
-    """Actual fitness value, max 1:"""
-    fitness_val = (sum_exit_coordinates - x_distance - y_distance) * 2  # using Taxi metric
-    fitness_val += bonus  # adding bonus for waiting at the end
-    fitness_val -= is_probem  # subtracting punishments
-    fitness_val = fitness_val / (sum_exit_coordinates * 2 + max_bonus)
-
-    return fitness_val
+def fitness_fun_pygad(genetic_algorithm_instance, route, route_idx):
+    """PyGAD adapter for the shared labyrinth route fitness implementation."""
+    return _evaluate_labyrinth_route(route)
 
 
 def fitness_fun_pyqkd_simple(route):
@@ -223,23 +213,19 @@ def fitness_fun_pyqkd_simple(route):
     and punishments for specific behaviours, so that path suggested by chromosomes were as close to actually possible
     ones as possible, taking into account "bouncing back" from walls.
     """
-    position = {'y': 1, 'x': 1}  # we're starting in (1,1)
-
-    """Not to encounter the 'mutable' attribute of dicts, in the position history list we save copies of positions
-    after each step:"""
-    history = [copy.deepcopy(position)]
+    position = (1, 1)  # (y, x)
 
     for move in route:  # changing position based on moves
-        new_y, new_x = position.get('y') + moves_mapping.get(move)[0], position.get('x') + moves_mapping.get(move)[1]
+        delta_y, delta_x = moves_mapping[move]
+        new_position = (position[0] + delta_y, position[1] + delta_x)
 
         """Checking, if the new position is inside the labyrinth:"""
-        if 1 <= new_x <= 10 and 1 <= new_y <= 10:
-            position['x'], position['y'] = new_x, new_y
-            history.append(copy.deepcopy(position))
+        if 1 <= new_position[1] <= 10 and 1 <= new_position[0] <= 10:
+            position = new_position
 
     """For the final fitness value, first we calculate some additional variables:"""
-    x_distance = abs(exit_labyrinth.get('x') - position.get('x'))
-    y_distance = abs(exit_labyrinth.get('y') - position.get('y'))
+    x_distance = abs(exit_labyrinth.get('x') - position[1])
+    y_distance = abs(exit_labyrinth.get('y') - position[0])
     sum_exit_coordinates = exit_labyrinth.get('x') + exit_labyrinth.get('y')
 
     """Actual fitness value, max 1:"""
@@ -250,49 +236,8 @@ def fitness_fun_pyqkd_simple(route):
 
 
 def fitness_fun_pyqkd(route):
-    """We're using the Taxi metric to evaluate path through the labyrinth. Additionally, we give bonuses
-    and punishments for specific behaviours, so that path suggested by chromosomes were as close to actually possible
-    ones as possible, taking into account "bouncing back" from walls.
-    """
-    position = {'y': 1, 'x': 1}  # we're starting in (1,1)
-
-    """Not to encounter the 'mutable' attribute of dicts, in the position history list we save copies of positions
-    after each step:"""
-    history = [copy.deepcopy(position)]
-    is_probem = 0  # starting number of unwanted behaviours
-    bonus = 0  # starting bonus value
-
-    for move in route:  # changing position based on moves
-
-        if position.get('x') == exit_labyrinth.get('x') and position.get('y') == exit_labyrinth.get('y') and move == 0:
-            bonus += bonus_point  # bonus for staying at the exit
-            continue
-
-        new_y, new_x = position.get('y') + moves_mapping.get(move)[0], position.get('x') + moves_mapping.get(move)[1]
-
-        """Checkin, if the new position is an allowed field:"""
-        if labyrinth[new_y, new_x] == 0:
-            position['x'], position['y'] = new_x, new_y
-            history.append(copy.deepcopy(position))
-
-            """Checking, if a punishment for repeating the position is required:"""
-            if history.count(position) > 1:
-                is_probem += pos_repeat_point
-        else:  # field, onto which the chromosome want to step, is not allowed!
-            is_probem += hitting_a_wall_point
-
-    """For the final fitness value, first we calculate some additional variables:"""
-    x_distance = abs(exit_labyrinth.get('x') - position.get('x'))
-    y_distance = abs(exit_labyrinth.get('y') - position.get('y'))
-    sum_exit_coordinates = exit_labyrinth.get('x') + exit_labyrinth.get('y')
-
-    """Actual fitness value, max 1:"""
-    fitness_val = (sum_exit_coordinates - x_distance - y_distance) * 2  # using Taxi metric
-    fitness_val += bonus  # adding bonus for waiting at the end
-    fitness_val -= is_probem  # subtracting punishments
-    fitness_val = fitness_val / (sum_exit_coordinates * 2 + max_bonus)
-
-    return fitness_val
+    """pyqkd adapter for the shared labyrinth route fitness implementation."""
+    return _evaluate_labyrinth_route(route)
 
 
 def generator(args):
