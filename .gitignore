@@ -203,3 +203,6 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+# Agents and skills
+.agents/
+.skills/
