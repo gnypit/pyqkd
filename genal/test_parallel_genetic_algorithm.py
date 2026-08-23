@@ -55,10 +55,16 @@ def expensive_custom_mutation(genome, args):
 
 class ParallelGeneticAlgorithmTests(unittest.TestCase):
     @staticmethod
-    def create_ga(parallel_workers=2, creation_parallelism="auto", mutation_prob=0.0):
+    def create_ga(
+            parallel_workers=2,
+            creation_parallelism="auto",
+            mutation_prob=0.0,
+            number_of_generations=1,
+            snapshot_interval=None,
+    ):
         return genetic_algorithm.GeneticAlgorithm(
             initial_pop_size=4,
-            number_of_generations=1,
+            number_of_generations=number_of_generations,
             elite_size=0,
             args={"mutation": "gene"},
             fitness_function=sometimes_failing_fitness,
@@ -68,6 +74,7 @@ class ParallelGeneticAlgorithmTests(unittest.TestCase):
             parallel_workers=parallel_workers,
             creation_parallelism=creation_parallelism,
             mutation_prob=mutation_prob,
+            snapshot_interval=snapshot_interval,
         )
 
     def test_non_positive_parallel_worker_count_is_rejected(self):
@@ -163,6 +170,30 @@ class ParallelGeneticAlgorithmTests(unittest.TestCase):
     def test_invalid_creation_parallelism_is_rejected(self):
         with self.assertRaises(ValueError):
             self.create_ga(creation_parallelism="threads")
+
+    def test_invalid_snapshot_interval_is_rejected(self):
+        for value in (True, 1.5, "2"):
+            with self.subTest(value=value), self.assertRaises(TypeError):
+                self.create_ga(snapshot_interval=value)
+        for value in (0, -1):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                self.create_ga(snapshot_interval=value)
+
+    def test_default_retains_fitness_history_without_population_snapshots(self):
+        ga = self.create_ga(number_of_generations=3)
+        ga.run()
+
+        self.assertEqual(len(ga.best_fit_history), 4)
+        self.assertEqual(ga.generation_snapshots, {})
+
+    def test_snapshot_interval_retains_only_requested_generations(self):
+        ga = self.create_ga(number_of_generations=3, snapshot_interval=2)
+        ga.run()
+
+        self.assertEqual(len(ga.best_fit_history), 4)
+        self.assertEqual(list(ga.generation_snapshots), [0, 2])
+        self.assertIsNot(ga.generation_snapshots[0], ga.generation_snapshots[2])
+        self.assertIsNot(ga.generation_snapshots[2], ga.current_generation)
 
     def test_auto_creation_is_local_for_one_operator_combination(self):
         ga = self.create_ga(creation_parallelism="auto")

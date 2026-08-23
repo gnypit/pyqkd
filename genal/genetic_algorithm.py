@@ -384,10 +384,9 @@ class GeneticAlgorithm:
         parallel_workers (int | None): positive maximum number of persistent worker processes. If omitted, the worker
             count is limited by the CPU count and the amount of work.
         rival_gen_pool (dict[int, Generation]): parent-process-owned rival Generations keyed by operator-combination ID.
-        accepted_gen_list (list[Generation]): the best of the rival Generations is added to a list of the accepted
-            Generations and treated as the current Generation in the next iteration of the algorithm. If there is only
-            one new, 'rival' Generation, then automatically it is appended to the accepted Generations list+.
-        best_fit_history (list[float]): List the best Members' fitness values in each of the accepted Generation.
+        best_fit_history (list[float]): Best fitness for the initial population and every accepted generation.
+        generation_snapshots (dict[int, Generation]): Optional retained populations keyed by generation number. Empty
+            when snapshot retention is disabled; the active/final population is always available as current_generation.
         args (dict): dictionary with argument required by the genome generator and all the selection and crossover
             operators to work.
 
@@ -415,8 +414,9 @@ class GeneticAlgorithm:
     mutation_prob: float
     current_generation: Generation
     rival_gen_pool: dict[int, Generation]
-    accepted_gen_list: list[Generation]
     best_fit_history: list[float]
+    generation_snapshots: dict[int, Generation]
+    snapshot_interval: int | None
     parallel_workers: int | None
     creation_parallelism: Literal["auto", "local", "operators", "parent_pairs"]
     args: dict
@@ -453,7 +453,8 @@ class GeneticAlgorithm:
                  no_parents_pairs=None, mutation_prob: float = 0.0,
                  seed=None, parallel_workers: int | None = None,
                  creation_parallelism: Literal["auto", "local", "operators", "parent_pairs"] = "auto",
-                 custom_mutation_operator: Callable | None = None):
+                 custom_mutation_operator: Callable | None = None,
+                 snapshot_interval: int | None = None):
         """GeneticAlgorithm class constructor.
 
         Parameters:
@@ -482,10 +483,13 @@ class GeneticAlgorithm:
             custom_mutation_operator (Callable | None): optional expensive mutation callable accepting ``(genome,
                 args)``. It may return a replacement genome or mutate its input in place and return ``None``. Selecting
                 mutation type ``"custom"`` runs this operator in pool workers and fuses mutation with evaluation.
+            snapshot_interval (int | None): optional positive interval for retaining complete population snapshots.
+                ``None`` retains no historical generations. ``1`` retains every generation; ``N`` retains generation
+                zero and every Nth accepted generation. The current/final generation is always available separately.
 
         Raises:
-            TypeError: if ``parallel_workers`` is not an integer or ``None``.
-            ValueError: if ``parallel_workers`` is zero or negative, or the creation strategy is unsupported.
+            TypeError: if a worker count or snapshot interval has an invalid type.
+            ValueError: if a worker count or snapshot interval is non-positive, or the creation strategy is unsupported.
         """
         self.pop_size = initial_pop_size
         self.no_generations = number_of_generations
@@ -497,6 +501,13 @@ class GeneticAlgorithm:
         self.fit_fun = fitness_function
         self.mutation_prob = mutation_prob
         self.custom_mutation_operator = custom_mutation_operator
+        if snapshot_interval is not None:
+            if isinstance(snapshot_interval, bool) or not isinstance(snapshot_interval, int):
+                raise TypeError("snapshot_interval must be a positive integer or None.")
+            if snapshot_interval <= 0:
+                raise ValueError("snapshot_interval must be greater than zero.")
+        self.snapshot_interval = snapshot_interval
+        self.generation_snapshots = {}
         if parallel_workers is not None:
             if isinstance(parallel_workers, bool) or not isinstance(parallel_workers, int):
                 raise TypeError("parallel_workers must be a positive integer or None.")
@@ -652,8 +663,8 @@ class GeneticAlgorithm:
         )
         self.current_generation.evaluate()
         self.current_generation.create_fitness_ranking()
-        self.accepted_gen_list = [self.current_generation]
         self.best_fit_history = [self.current_generation.fitness_ranking[0].get('fitness value')]
+        self._retain_generation_snapshot(0)
 
     @staticmethod
     def _create_members_for_rival_generation(
@@ -785,14 +796,21 @@ class GeneticAlgorithm:
         return bf
 
     def _choose_best_rival_generation(self):
-        """This method selects one of the rival generations from the rival_gen dict, based on the highest max fitness
-        value, to be accepted as a new current generation."""
+        """Select the rival generation with the highest best-member fitness."""
         fitness_comparison = {}
         for id_of_rival, generation in self.rival_gen_pool.items():
             fitness_comparison[id_of_rival] = generation.fitness_ranking[0].get('fitness value')
         self.current_generation = self.rival_gen_pool.get(max(fitness_comparison, key=fitness_comparison.get))
-        self.accepted_gen_list.append(self.current_generation)
+
+    def _retain_generation_snapshot(self, generation_number: int) -> None:
+        """Retain an independent generation copy only when its configured interval is reached."""
+        if self.snapshot_interval is not None and generation_number % self.snapshot_interval == 0:
+            self.generation_snapshots[generation_number] = deepcopy(self.current_generation)
+
+    def _record_current_generation(self, generation_number: int) -> None:
+        """Record compact fitness history and, when requested, a complete population snapshot."""
         self.best_fit_history.append(self.current_generation.fitness_ranking[0].get('fitness value'))
+        self._retain_generation_snapshot(generation_number)
 
     def mutate(self, mutation_type: str = "member") -> list[int]:  # TODO: add adaptive mutation
         """Mutate the current generation and return indexes whose fitness values became stale.
@@ -1051,7 +1069,7 @@ class GeneticAlgorithm:
                 initializer=_initialize_parallel_worker,
                 initargs=(self.fit_fun, self.operators, self.args, self.custom_mutation_operator)
         ) as worker_pool:
-            for _ in range(self.no_generations):
+            for generation_number in range(1, self.no_generations + 1):
                 """Rival generations are created based on accessible combinations of selection and crossover
                 operators with different processes in parallel:"""
                 first_member_id = identification
@@ -1079,7 +1097,6 @@ class GeneticAlgorithm:
                 if len(self.rival_gen_pool) == 1:
                     """With no rival choice to make, mutate first and evaluate the resulting generation only once."""
                     self.current_generation = next(iter(self.rival_gen_pool.values()))
-                    self.accepted_gen_list.append(self.current_generation)
                     if self.args.get('mutation') == "custom":
                         self._mutate_custom_in_workers(worker_pool, no_workers, evaluate_all_members=True)
                     else:
@@ -1091,9 +1108,7 @@ class GeneticAlgorithm:
                         )
                     self.current_generation.fitness_ranking = []
                     self.current_generation.create_fitness_ranking()
-                    self.best_fit_history.append(
-                        self.current_generation.fitness_ranking[0].get('fitness value')
-                    )
+                    self._record_current_generation(generation_number)
                     continue
 
                 """Multiple rivals must be evaluated before the best one can be selected."""
@@ -1129,7 +1144,7 @@ class GeneticAlgorithm:
                     self._evaluate_member_indexes(worker_pool, affected_member_indexes, no_workers)
                 self.current_generation.fitness_ranking = []
                 self.current_generation.create_fitness_ranking()
-                self.best_fit_history[-1] = self.current_generation.fitness_ranking[0].get('fitness value')
+                self._record_current_generation(generation_number)
 
     def fitness_plot(self):  # TODO: finish with an optional argument for using plotly or matplotlib
         """Method for plotting fitness values history of the best Members from each accepted Generation."""
