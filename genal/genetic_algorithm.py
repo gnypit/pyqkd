@@ -246,10 +246,10 @@ class Member(Chromosome):
     Attributes:
         id (int): A unique identification number of this member in the particular run of a genetic algorithm, created
             based on a global variable. It is meant for backtracking of members' genealogical tree.
-        parents_id (list): It's a list with IDs of the parents (from previous generations in the GA) of this member
+        parent_ids (list): It's a list with IDs of the parents (from previous generations in the GA) of this member
     """
     id: int
-    parents_id: list = []
+    parent_ids: list = []
 
     def __init__(self, genome: list | dict, identification_number: int, fitness_function: Callable | None = None):
         """Apart from what 'Chromosome' class constructor needs, here identification number should be passed.
@@ -265,13 +265,13 @@ class Member(Chromosome):
         super().__init__(genome=genome, fitness_function=fitness_function)
         self.id = identification_number
 
-    def add_parents_id(self, parents_id: list):
+    def add_parent_ids(self, parent_ids: list):
         """This method is meant for 'genealogical tree' tracking; it assigns to the current member IDs of its parents.
 
         Parameters:
-            parents_id (list): A list with IDs of members which are parents to this member, inside the GA.
+            parents_ids (list): A list with IDs of members which are parents to this member, inside the GA.
         """
-        self.parents_id = parents_id
+        self.parent_ids = parent_ids
 
     def __repr__(self) -> str:
         """Default method for self-representing objects of this class."""
