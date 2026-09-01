@@ -300,7 +300,9 @@ class Generation:  # TODO: add diversity measures
     Attributes:
         members (list[Member]): Parent-process-owned list of chromosomes and their parent IDs. Generations are copied
             to pool workers when selection and crossover work is dispatched; no manager proxy is used.
-        # TODO: add genome size for per-gene mutation
+        genome_size (int): a constant size of Generation's members genome, i.e., number of params specifying a potential
+            solution to a problem being optimised by the Genetic Algorityhm. Used by the mutation operator creating a
+            random mask for all genes in a Generation to select single ones to be mutated.
         num_parents_pairs (int): number of pairs of Members can be parents, e.g., 20 pairs means 40 mating chromosomes.
         elite_size (int): number of Members to be copy-pasted directly into a new Generation.
         size (int): number of Members in the generation.
