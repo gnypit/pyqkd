@@ -5,9 +5,9 @@ import numpy as np
 import pygad
 import tqdm
 
-import crossover_operators
-import genetic_algorithm
-import selection_operators
+from . import crossover_operators
+from . import genetic_algorithm
+from . import selection_operators
 
 
 def endurance(x, y, z, u, v, w):

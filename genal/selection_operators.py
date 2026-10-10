@@ -5,7 +5,7 @@ and return a child (rival) generation.
 import random
 from typing import Protocol
 
-from genetic_algorithm import Generation, Member
+from .genetic_algorithm import Generation, Member
 
 
 class SelectionOperator(Protocol):
