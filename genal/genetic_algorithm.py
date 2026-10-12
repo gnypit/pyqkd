@@ -4,10 +4,7 @@ Script is distributed under the license: https://github.com/gnypit/pyqkd/blob/ma
 from __future__ import annotations
 
 import random
-import pickle
-from abc import ABC, abstractmethod
-from collections.abc import \
-    Callable  # https://stackoverflow.com/questions/37835179/how-can-i-specify-the-function-type-in-my-type-hints
+from collections.abc import Callable
 from copy import deepcopy
 from inspect import signature
 from math import ceil
@@ -16,81 +13,10 @@ from typing import Literal
 
 import numpy as np
 
-"""Global variable to hold IDs of chromosomes for backtracking"""
-identification = 0
+from interfaces import ChromosomeInterface, GenerationInterface
+from parallelisation import _evaluate_genome, ParentGenomePair, _evaluate_fitness_batch, _mutate_and_evaluate_batch
 
-"""Read-only configuration installed once in each process-pool worker.
-
-The _worker_operators is a dictionary with combinations of selection and crossover operators as values. Each combination
-has it's ID as the key. 
-"""
-_worker_fitness_function: Callable | None = None
-_worker_operators: dict[int, tuple[Callable, Callable]] | None = None
-_worker_args: dict | None = None
-_worker_custom_mutation_operator: Callable | None = None
-
-ParentGenomePair = tuple[tuple[int, list | dict], tuple[int, list | dict]]
-
-
-def _initialize_parallel_worker(
-        fitness_function: Callable,
-        operators: dict,
-        args: dict,
-        custom_mutation_operator: Callable | None
-):
-    """Cache immutable GA configuration in a worker instead of sending it with every task."""
-    global _worker_fitness_function, _worker_operators, _worker_args, _worker_custom_mutation_operator
-    _worker_fitness_function = fitness_function
-    _worker_operators = operators
-    _worker_args = args
-    _worker_custom_mutation_operator = custom_mutation_operator
-
-
-def _evaluate_genome(genome: list | dict, fitness_function: Callable) -> float:
-    """Evaluate a genome using the same failure policy as :meth:`Chromosome.evaluate`."""
-    try:
-        result = fitness_function(genome)
-        if result is None:
-            print(f"Warning: fitness function returned None for genome: {genome}")
-            result = 0.0
-        return result
-    except Exception as error:
-        print(f"Error evaluating genome {genome}: {error}")
-        return 0.0
-
-
-def _evaluate_fitness_batch(batch: list[tuple[int, list | dict]]) -> list[tuple[int, float]]:
-    """Evaluate one IPC-efficient batch of ``(member ID, genome)`` pairs in a pool worker."""
-    if _worker_fitness_function is None:
-        raise RuntimeError("Parallel worker was not initialized with a fitness function.")
-    return [
-        (member_id, _evaluate_genome(genome, _worker_fitness_function))
-        for member_id, genome in batch
-    ]
-
-
-def _mutate_and_evaluate_batch(
-        batch: list[tuple[int, int, list | dict, bool]]
-) -> list[tuple[int, int, list | dict, float]]:
-    """Apply an expensive custom mutation where requested and evaluate each genome in the same worker task."""
-    if _worker_fitness_function is None or _worker_custom_mutation_operator is None:
-        raise RuntimeError("Parallel worker was not initialized with custom mutation configuration.")
-
-    results = []
-    for member_index, member_id, genome, should_mutate in batch:
-        mutated_genome = deepcopy(genome)
-        if should_mutate:
-            operator_result = _worker_custom_mutation_operator(mutated_genome, _worker_args)
-            if operator_result is not None:
-                mutated_genome = operator_result
-        fitness = _evaluate_genome(mutated_genome, _worker_fitness_function)
-        results.append((member_index, member_id, mutated_genome, fitness))
-    return results
-
-
-def split_indexes(num_members, num_workers):
-    indexes = list(range(num_members))
-    return [indexes[i::num_workers] for i in range(num_workers)]
+identification = 0  # Global variable to hold IDs of chromosomes for backtracking
 
 
 def sort_dict_by_fit(dictionary: dict) -> float:
@@ -105,64 +31,8 @@ def sort_dict_by_fit(dictionary: dict) -> float:
     return dictionary['fitness value']
 
 
-def uniform_gene_generator(ga_args: dict, gene_position: int | None = None):
-    """Uniformly generate either a complete genome or one gene for mutation.
-
-    Parameters:
-        ga_args (dict): This dictionary is stored within the GeneticAlgorithm class and contains info about args to be
-            used by either genome generator, crossover operators or selection operators. For the genome generation,
-            args are stored under the key ``"genome"`` as ``(gene_space, genome_length)``. ``gene_space`` may be a
-            shared sequence for every position or a dictionary mapping each position to its own sequence.
-        gene_position (int | None): Position whose replacement gene should be generated. If omitted, a complete genome
-            is generated for initial-population creation and whole-member mutation.
-
-    Returns:
-        list | object: A complete genome when ``gene_position`` is ``None``; otherwise one gene sampled from the space
-            associated with that position.
-
-    Raises:
-        IndexError: if ``gene_position`` is outside the configured genome.
-    """
-    gene_space, length = ga_args["genome"]
-
-    if gene_position is not None:
-        if not 0 <= gene_position < length:
-            raise IndexError(
-                f"gene_position must be between 0 and {length - 1}; got {gene_position}."
-            )
-        position_space = gene_space[gene_position] if isinstance(gene_space, dict) else gene_space
-        return random.choice(position_space)
-
-    if isinstance(gene_space, dict):
-        return [random.choice(gene_space[position]) for position in range(length)]
-    return list(np.random.choice(gene_space, length))
-
-
-def uniform_gene_generator_for_position(ga_args: dict, gene_position: int):
-    """Uniform gene generator for a single gene mutation operator. Designed for the labyrinth test."""
-    gene_space, _ = ga_args["genome"]
-
-    if isinstance(gene_space, dict):
-        position_space = gene_space[gene_position]
-        return random.choice(position_space)
-
-    return random.choice(gene_space)
-
-
-class ChromosomeInterface(ABC):
-    """Abstract class representing chromosomes, the most fundamental objects in genetic algorithms."""
-
-    @abstractmethod
-    def evaluate(self, fitness_function: Callable | None):
-        pass
-
-    @abstractmethod
-    def change_genes(self, new_genes: list | dict):
-        pass
-
-
 class Chromosome(ChromosomeInterface):
-    """Simple implementation of chromosomes, the most fundamental objects in genetic algorithms.
+    """Simple implementation of the Chromosome interface.
 
     Apart from genes, in this implementation of the Genetic Algorithm, the Chromosome class also stores the fitness
     function and value. This allows self-evaluation of each chromosome.
@@ -181,8 +51,8 @@ class Chromosome(ChromosomeInterface):
         """Constructor of the Chromosome class.
 
         Each chromosome represents a possible solution to a given problem. Parameters characterising these solutions
-        are called genes; their set is sometimes referred to as 'genome'. They are supposed to be evaluated by the
-        fitness function. Then, based on the fitness (function's) values, they are compared, sorted, selected for
+        are called genes; their ordered set is sometimes referred to as 'genome'. They are supposed to be evaluated by
+        the fitness function. Then, based on the fitness (function's) values, they are compared, sorted, selected for
         crossover, etc. However, this class is limited to storage of genes, fitness function and value, and to fitness
         evaluation.
 
@@ -282,8 +152,8 @@ class Member(Chromosome):
         return f"{type(self).__name__}(genes={self.genome}, id={self.id}, parent_ids={self.parent_ids})"
 
 
-class Generation:  # TODO: add diversity measures
-    """This class is meant to represent a single generation in a genetic algorithm, i.e. a set of Members.
+class Generation(GenerationInterface):  # TODO: add diversity measures
+    """This class is meant to represent a single generation in a genetic algorithm.
 
     Genetic Algorithm evaluates each Generation, selects Members for a crossover, to create Members for a new
     Generation. In the long run the goal is to create a Generation with Members having very high fitness values.
@@ -304,21 +174,21 @@ class Generation:  # TODO: add diversity measures
     Attributes:
         members (list[Member]): Parent-process-owned list of chromosomes and their parent IDs. Generations are copied
             to pool workers when selection and crossover work is dispatched; no manager proxy is used.
-        genome_size (int): a constant size of Generation's members genome, i.e., number of params specifying a potential
-            solution to a problem being optimised by the Genetic Algorityhm. Used by the mutation operator creating a
-            random mask for all genes in a Generation to select single ones to be mutated.
+        genome_size (int): a constant size of this generation's members' genome, i.e., number of params specifying a
+            potential solution to a problem being optimised by the genetic algorithm. Used by the mutation operator
+            creating a random mask for all genes in a Generation to select single ones to be mutated.
         num_parents_pairs (int): number of pairs of Members can be parents, e.g., 20 pairs means 40 mating chromosomes.
         elite_size (int): number of Members to be copy-pasted directly into a new Generation.
         size (int): number of Members in the generation.
-        fitness_ranking (list[dict]): dicts in this list have the index of a Member in the Generation as keys and its
-            fitness value as values.
+        fitness_ranking (list[dict[int, float]]): dicts in this list have the index of a Member in the Generation as
+            keys and its fitness value as values.
     """
     members: list[Member]
     genome_size: int
     num_parents_pairs: int
     elite_size: int
     size: int
-    fitness_ranking: list[dict]
+    fitness_ranking: list[dict[int, float]]
 
     def __init__(self, generation_members: list[Member], num_parents_pairs: int, elite_size: int):
         """Constructor for any Generation inside the GeneticAlgorithm.
@@ -334,11 +204,6 @@ class Generation:  # TODO: add diversity measures
         self.elite_size = elite_size
         self.size = len(generation_members)
         self.fitness_ranking = []
-
-    def mutate_member(self, prob: float):
-        """Method for applying a basic mutation operator to this generation - it randomly chooses a member to have their
-        genome rested with the genome generator based on passed mutation probability `prob`."""
-        pass
 
     def evaluate(self):
         """This method calls the 'evaluate' method on each Member of this Generation."""
@@ -359,117 +224,8 @@ class Generation:  # TODO: add diversity measures
 
         self.fitness_ranking.sort(key=sort_dict_by_fit, reverse=reverse)
 
-
-class LineageTracker:
-    """Compact, append-only genealogy for members of accepted generations."""
-
-    def __init__(self, mode: Literal["parents", "full"], initial_capacity: int = 1024):
-        self.mode = mode
-        self.size = 0
-        self.capacity = max(1, initial_capacity)
-        self.member_ids = np.empty(self.capacity, dtype=np.int64)
-        self.parent_ids = np.full((self.capacity, 2), -1, dtype=np.int64)
-        self.generations = np.empty(self.capacity, dtype=np.int32)
-        self.fitness_values = np.empty(self.capacity, dtype=np.float64)
-        self.id_to_row: dict[int, int] = {}
-        self.genomes: np.ndarray | None = None
-        self.serialized_genomes: list[bytes | None] | None = None
-
-    def _ensure_capacity(self, required_size: int) -> None:
-        if required_size <= self.capacity:
-            return
-        new_capacity = max(required_size, self.capacity * 2)
-
-        def grow(array: np.ndarray, shape: tuple[int, ...], fill_value=None) -> np.ndarray:
-            grown = np.empty(shape, dtype=array.dtype)
-            if fill_value is not None:
-                grown.fill(fill_value)
-            grown[:self.size] = array[:self.size]
-            return grown
-
-        self.member_ids = grow(self.member_ids, (new_capacity,))
-        self.parent_ids = grow(self.parent_ids, (new_capacity, 2), -1)
-        self.generations = grow(self.generations, (new_capacity,))
-        self.fitness_values = grow(self.fitness_values, (new_capacity,))
-        if self.genomes is not None:
-            self.genomes = grow(self.genomes, (new_capacity, *self.genomes.shape[1:]))
-        if self.serialized_genomes is not None:
-            self.serialized_genomes.extend([None] * (new_capacity - self.capacity))
-        self.capacity = new_capacity
-
-    def _initialize_genome_storage(self, generation: Generation) -> None:
-        genomes = [member.genome for member in generation.members]
-        dense_genomes = np.asarray(genomes)
-        if dense_genomes.dtype != object and dense_genomes.ndim >= 2:
-            self.genomes = np.empty((self.capacity, *dense_genomes.shape[1:]), dtype=dense_genomes.dtype)
-        else:
-            self.serialized_genomes = [None] * self.capacity
-
-    def record_generation(self, generation: Generation, generation_number: int) -> None:
-        """Append one accepted generation without retaining its Python object graph."""
-        required_size = self.size + generation.size
-        self._ensure_capacity(required_size)
-        if self.mode == "full" and self.genomes is None and self.serialized_genomes is None:
-            self._initialize_genome_storage(generation)
-
-        for member in generation.members:
-            if member.id in self.id_to_row:
-                raise ValueError(f"Member ID {member.id} has already been recorded in the lineage.")
-            row = self.size
-            self.id_to_row[member.id] = row
-            self.member_ids[row] = member.id
-            self.parent_ids[row] = member.parent_ids if member.parent_ids else (-1, -1)
-            self.generations[row] = generation_number
-            self.fitness_values[row] = member.fit_val
-            if self.mode == "full":
-                if self.genomes is not None:
-                    try:
-                        self.genomes[row] = member.genome
-                    except (TypeError, ValueError) as error:
-                        raise ValueError(
-                            "Full lineage requires consistent numeric genome shapes and dtypes within a run."
-                        ) from error
-                else:
-                    self.serialized_genomes[row] = pickle.dumps(member.genome, protocol=pickle.HIGHEST_PROTOCOL)
-            self.size += 1
-
-    def get_record(self, member_id: int) -> dict:
-        """Return lineage metadata for one recorded member."""
-        row = self.id_to_row[member_id]
-        return {
-            "member_id": int(self.member_ids[row]),
-            "parent_ids": [int(parent_id) for parent_id in self.parent_ids[row] if parent_id >= 0],
-            "generation": int(self.generations[row]),
-            "fitness": float(self.fitness_values[row]),
-        }
-
-    def get_genome(self, member_id: int):
-        """Return an independent ancestral genome copy in full-tracking mode."""
-        if self.mode != "full":
-            raise RuntimeError("Genomes are available only when lineage_tracking='full'.")
-        row = self.id_to_row[member_id]
-        if self.genomes is not None:
-            return self.genomes[row].copy()
-        return pickle.loads(self.serialized_genomes[row])
-
-    def ancestors(self, member_id: int, include_member: bool = True) -> set[int]:
-        """Return all recorded ancestors reachable from a member's two parent links."""
-        if member_id not in self.id_to_row:
-            raise KeyError(member_id)
-        discovered = set()
-        pending = [member_id]
-        while pending:
-            current_id = pending.pop()
-            if current_id in discovered:
-                continue
-            discovered.add(current_id)
-            row = self.id_to_row.get(current_id)
-            if row is None:
-                continue
-            pending.extend(int(parent_id) for parent_id in self.parent_ids[row] if parent_id >= 0)
-        if not include_member:
-            discovered.discard(member_id)
-        return discovered
+    def mutate_members(self, prob: float):
+        pass
 
 
 class GeneticAlgorithm:
@@ -534,39 +290,9 @@ class GeneticAlgorithm:
     current_generation: Generation
     rival_gen_pool: dict[int, Generation]
     best_fit_history: list[float]
-    generation_snapshots: dict[int, Generation]
-    snapshot_interval: int | None
-    lineage_tracking: Literal["none", "parents", "full"]
-    lineage_tracker: LineageTracker | None
     parallel_workers: int | None
     creation_parallelism: Literal["auto", "local", "operators", "parent_pairs"]
     args: dict
-
-    @staticmethod
-    def __zip_crossover_selection(selection_operators: list[Callable], crossover_operators: list[Callable]):
-        """Creates a dict that combines pairs of elements from 'selection_operators' and 'crossover_operators' with
-        an ID as a key. For each index 'i', it adds tuples to the 'operators_combinations_dict' dict, each tuple
-        containing 'selection_operator[i]' and 'crossover_operator[j]' for each index 'j' with a unique ID. This way
-        there are tuples for all combinations of operators, accessible by workers working in parallel under their IDs
-        as keys.
-
-        Parameters:
-            selection_operators (list[Callable]): list of functions which are selection operators
-                for the Genetic Algorithm
-            crossover_operators (list[Callable]): list of functions which are crossover operators
-                for the Genetic Algorithm
-
-        Returns:
-            dict[int, tuple[Callable]]: dict of (Callable) operators tuples, each representing a combination of
-            selection and crossover method for creating a new Generation.
-        """
-        operators_combinations_dict = {}
-        combination_id = 0
-        for i in range(len(selection_operators)):
-            for j in range(len(crossover_operators)):
-                operators_combinations_dict[combination_id] = (selection_operators[i], crossover_operators[j])
-                combination_id += 1
-        return operators_combinations_dict
 
     def __init__(self, initial_pop_size: int, number_of_generations: int, elite_size: int, args: dict,
                  fitness_function: Callable, genome_generator: Callable,
@@ -574,9 +300,7 @@ class GeneticAlgorithm:
                  no_parents_pairs=None, mutation_prob: float = 0.0,
                  seed=None, parallel_workers: int | None = None,
                  creation_parallelism: Literal["auto", "local", "operators", "parent_pairs"] = "auto",
-                 custom_mutation_operator: Callable | None = None,
-                 snapshot_interval: int | None = None,
-                 lineage_tracking: Literal["none", "parents", "full"] = "none"):
+                 custom_mutation_operator: Callable | None = None):
         """GeneticAlgorithm class constructor.
 
         Parameters:
@@ -606,11 +330,6 @@ class GeneticAlgorithm:
             custom_mutation_operator (Callable | None): optional expensive mutation callable accepting ``(genome,
                 args)``. It may return a replacement genome or mutate its input in place and return ``None``. Selecting
                 mutation type ``"custom"`` runs this operator in pool workers and fuses mutation with evaluation.
-            snapshot_interval (int | None): optional positive interval for retaining complete population snapshots.
-                ``None`` retains no historical generations. ``1`` retains every generation; ``N`` retains generation
-                zero and every Nth accepted generation. The current/final generation is always available separately.
-            lineage_tracking (str): ``"none"`` disables genealogy storage; ``"parents"`` stores compact IDs, parent
-                links, generation numbers, and fitness; ``"full"`` additionally stores ancestral genomes.
 
         Raises:
             TypeError: if a worker count or snapshot interval has an invalid type.
@@ -619,37 +338,28 @@ class GeneticAlgorithm:
         self.pop_size = initial_pop_size
         self.no_generations = number_of_generations
         self.elite_size = elite_size
-
-        # self.genome_generator_args = args.get('genome')
         self.args = args
-
         self.fit_fun = fitness_function
         self.mutation_prob = mutation_prob
         self.custom_mutation_operator = custom_mutation_operator
-        if snapshot_interval is not None:
-            if isinstance(snapshot_interval, bool) or not isinstance(snapshot_interval, int):
-                raise TypeError("snapshot_interval must be a positive integer or None.")
-            if snapshot_interval <= 0:
-                raise ValueError("snapshot_interval must be greater than zero.")
-        self.snapshot_interval = snapshot_interval
         self.generation_snapshots = {}
-        valid_lineage_modes = {"none", "parents", "full"}
-        if lineage_tracking not in valid_lineage_modes:
-            raise ValueError(f"lineage_tracking must be one of {sorted(valid_lineage_modes)}; got {lineage_tracking!r}.")
-        self.lineage_tracking = lineage_tracking
-        self.lineage_tracker = None if lineage_tracking == "none" else LineageTracker(lineage_tracking)
+
         if parallel_workers is not None:
             if isinstance(parallel_workers, bool) or not isinstance(parallel_workers, int):
                 raise TypeError("parallel_workers must be a positive integer or None.")
             if parallel_workers <= 0:
                 raise ValueError("parallel_workers must be greater than zero.")
+
         self.parallel_workers = parallel_workers
+
         valid_creation_modes = {"auto", "local", "operators", "parent_pairs"}
         if creation_parallelism not in valid_creation_modes:
             raise ValueError(
                 f"creation_parallelism must be one of {sorted(valid_creation_modes)}; got {creation_parallelism!r}."
             )
+
         self.creation_parallelism = creation_parallelism
+
         if seed is not None:
             random.seed(a=seed)  # useful for debugging
 
@@ -783,8 +493,8 @@ class GeneticAlgorithm:
             new_members.extend([child1, child2])
         return new_members
 
-    def _create_initial_generation(self):
-        """Creating the first - initial - generation in this population."""
+    def _create_initial_generation(self):  # TODO: separate creating initial population from evaluating it
+        """Creating the first initial generation in this population and evaluate it."""
         global identification
         first_members = []
 
@@ -805,9 +515,6 @@ class GeneticAlgorithm:
         self.current_generation.evaluate()
         self.current_generation.create_fitness_ranking()
         self.best_fit_history = [self.current_generation.fitness_ranking[0].get('fitness value')]
-        self._retain_generation_snapshot(0)
-        if self.lineage_tracker is not None:
-            self.lineage_tracker.record_generation(self.current_generation, 0)
 
     @staticmethod
     def _create_members_for_rival_generation(
@@ -938,20 +645,6 @@ class GeneticAlgorithm:
         bf = (best_genome, best_fit_val)
         return bf
 
-    def best_solution_lineage(self) -> list[dict]:
-        """Return the final best member and its recorded ancestors in generation/ID order."""
-        if self.lineage_tracker is None:
-            raise RuntimeError("Enable lineage_tracking='parents' or 'full' before running the algorithm.")
-        best_index = self.current_generation.fitness_ranking[0].get('index')
-        best_member_id = self.current_generation.members[best_index].id
-        ancestor_ids = self.lineage_tracker.ancestors(best_member_id)
-        records = [self.lineage_tracker.get_record(member_id) for member_id in ancestor_ids]
-        records.sort(key=lambda record: (record["generation"], record["member_id"]))
-        if self.lineage_tracking == "full":
-            for record in records:
-                record["genome"] = self.lineage_tracker.get_genome(record["member_id"])
-        return records
-
     def _choose_best_rival_generation(self):
         """Select the rival generation with the highest best-member fitness."""
         fitness_comparison = {}
@@ -963,13 +656,6 @@ class GeneticAlgorithm:
         """Retain an independent generation copy only when its configured interval is reached."""
         if self.snapshot_interval is not None and generation_number % self.snapshot_interval == 0:
             self.generation_snapshots[generation_number] = deepcopy(self.current_generation)
-
-    def _record_current_generation(self, generation_number: int) -> None:
-        """Record compact fitness history and, when requested, a complete population snapshot."""
-        self.best_fit_history.append(self.current_generation.fitness_ranking[0].get('fitness value'))
-        self._retain_generation_snapshot(generation_number)
-        if self.lineage_tracker is not None:
-            self.lineage_tracker.record_generation(self.current_generation, generation_number)
 
     def mutate(self, mutation_type: str = "member") -> list[int]:  # TODO: add adaptive mutation
         """Mutate the current generation and return indexes whose fitness values became stale.
@@ -1204,6 +890,20 @@ class GeneticAlgorithm:
 
         return sorted(mutated_indexes)
 
+    @staticmethod
+    def _initialize_parallel_worker(
+            fitness_function: Callable,
+            operators: dict,
+            args: dict,
+            custom_mutation_operator: Callable | None
+    ):
+        """Cache immutable GA configuration in a worker instead of sending it with every task."""
+        global _worker_fitness_function, _worker_operators, _worker_args, _worker_custom_mutation_operator
+        _worker_fitness_function = fitness_function
+        _worker_operators = operators
+        _worker_args = args
+        _worker_custom_mutation_operator = custom_mutation_operator
+
     def run(self):
         """Run the GA with one persistent, initialised process pool.
 
@@ -1225,7 +925,7 @@ class GeneticAlgorithm:
 
         with Pool(
                 processes=no_workers,
-                initializer=_initialize_parallel_worker,
+                initializer=self._initialize_parallel_worker,
                 initargs=(self.fit_fun, self.operators, self.args, self.custom_mutation_operator)
         ) as worker_pool:
             for generation_number in range(1, self.no_generations + 1):
@@ -1308,3 +1008,29 @@ class GeneticAlgorithm:
     def fitness_plot(self):  # TODO: finish with an optional argument for using plotly or matplotlib
         """Method for plotting fitness values history of the best Members from each accepted Generation."""
         pass
+
+    @staticmethod
+    def __zip_crossover_selection(selection_operators: list[Callable], crossover_operators: list[Callable]):
+        """Creates a dict that combines pairs of elements from 'selection_operators' and 'crossover_operators' with
+        an ID as a key. For each index 'i', it adds tuples to the 'operators_combinations_dict' dict, each tuple
+        containing 'selection_operator[i]' and 'crossover_operator[j]' for each index 'j' with a unique ID. This way
+        there are tuples for all combinations of operators, accessible by workers working in parallel under their IDs
+        as keys.
+
+        Parameters:
+            selection_operators (list[Callable]): list of functions which are selection operators
+                for the Genetic Algorithm
+            crossover_operators (list[Callable]): list of functions which are crossover operators
+                for the Genetic Algorithm
+
+        Returns:
+            dict[int, tuple[Callable]]: dict of (Callable) operators tuples, each representing a combination of
+            selection and crossover method for creating a new Generation.
+        """
+        operators_combinations_dict = {}
+        combination_id = 0
+        for i in range(len(selection_operators)):
+            for j in range(len(crossover_operators)):
+                operators_combinations_dict[combination_id] = (selection_operators[i], crossover_operators[j])
+                combination_id += 1
+        return operators_combinations_dict
