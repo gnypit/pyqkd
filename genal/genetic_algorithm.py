@@ -180,15 +180,15 @@ class Generation(GenerationInterface):  # TODO: add diversity measures
         num_parents_pairs (int): number of pairs of Members can be parents, e.g., 20 pairs means 40 mating chromosomes.
         elite_size (int): number of Members to be copy-pasted directly into a new Generation.
         size (int): number of Members in the generation.
-        fitness_ranking (list[dict[int, float]]): dicts in this list have the index of a Member in the Generation as
-            keys and its fitness value as values.
+        fitness_ranking (list[dict[Literal['index', 'fitness value'], int | float]]): dicts in this list have the index
+            of a Member in the Generation and its fitness value as values.
     """
     members: list[Member]
     genome_size: int
     num_parents_pairs: int
     elite_size: int
     size: int
-    fitness_ranking: list[dict[int, float]]
+    fitness_ranking: list[dict[Literal['index', 'fitness value'], int | float]]
 
     def __init__(self, generation_members: list[Member], num_parents_pairs: int, elite_size: int):
         """Constructor for any Generation inside the GeneticAlgorithm.
