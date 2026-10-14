@@ -2,30 +2,40 @@
 Selection operators in this script take a parent generation from a genetic algorithm
 and return a child (rival) generation.
 """
-import random
-from typing import Protocol
+from __future__ import annotations
 
-from .genetic_algorithm import Generation, Member
+import random
+from typing import Protocol, TYPE_CHECKING
+
+try:
+    from .arguments import as_ga_arguments
+    from .interfaces import GAArgumentsInterface
+except ImportError:
+    from arguments import as_ga_arguments
+    from interfaces import GAArgumentsInterface
+
+if TYPE_CHECKING:
+    from .genetic_algorithm import Generation, Member
 
 
 class SelectionOperator(Protocol):
-    def __call__(self, parent_generation: Generation, args: dict) -> list[Member]:
+    def __call__(self, parent_generation: Generation, args: GAArgumentsInterface) -> list[Member] | list[dict[str, Member]]:
         """A selection operator must take a Generation with Members (parents) & args from the GeneticAlgorithm"""
         ...
 
 
-def tournament_selection(parent_generation: Generation, args: dict):
+def tournament_selection(parent_generation: Generation, args: GAArgumentsInterface):
     """
     Performs tournament selection to choose parent candidates for mating.
     
     Args:
         parent_generation (Generation): An instance of the Generation class containing members and mating configuration.
-        args (dict): A dictionary from the GeneticAlgorithm attributes with arguments necessary for this selection
-            operator to run on the parent generation.
+        args (GAArgumentsInterface): Shared configuration; selection requires ``pool size`` in its selection section.
                 
     Returns:
         list[Member]: A list of selected parent candidates.
     """
+    args = as_ga_arguments(args)
     parents = []
 
     # Initialize a list to store the best candidates from each tournament
@@ -34,7 +44,7 @@ def tournament_selection(parent_generation: Generation, args: dict):
     for _ in range(num_parents_pairs * 2):
         # Randomly select a subset of members for the tournament
         try:
-            pool_size = args.get("pool size")
+            pool_size = args.selection["pool size"]
             if 0 < pool_size <= num_parents_pairs:
                 # We must apply list() on the ListProxy object
                 tournament_members = random.sample(list(parent_generation.members), pool_size)
@@ -59,7 +69,7 @@ def tournament_selection(parent_generation: Generation, args: dict):
     return parents
 
 
-def ranking_selection(parent_generation: Generation):  # deterministic
+def ranking_selection(parent_generation: Generation, args: GAArgumentsInterface):  # deterministic
     """We use 'member_counter' as an index for the fitness ranking. While it's smaller than the elite
     size for the whole population, we simply copy-paste the old members into the new generation. That's why
     we automatically calculate it and focus on selecting pairs of members from the current generation as parents
@@ -87,7 +97,7 @@ def ranking_selection(parent_generation: Generation):  # deterministic
     return parents_candidates
 
 
-def roulette_wheel_selection(parent_generation: Generation):  # probability-based
+def roulette_wheel_selection(parent_generation: Generation, args: GAArgumentsInterface):  # probability-based
     """The conspicuous characteristic of this selection method is the fact that it gives to each member i of the current
     generation a probability p(i) of being selected, proportional to its fitness value f(i). Each member in the
     generation occupies an area on the roulette wheel proportional to its fitness. Then, conceptually, the roulette
@@ -147,7 +157,7 @@ def roulette_wheel_selection(parent_generation: Generation):  # probability-base
     return parents_candidates
 
 
-def stochastic_universal_sampling(parent_generation: Generation):  # probability-based
+def stochastic_universal_sampling(parent_generation: Generation, args: GAArgumentsInterface):  # probability-based
     """It is an improved version of the roulette-wheel selection operator, as described in 'Introduction to
     Evolutionary Computing' in section 5.2.3. We begin similarly to the roulette wheel, because we still base
     the probabilities of selection on the cumulative probability distribution, associated with the fitness values.

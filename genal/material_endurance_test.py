@@ -80,7 +80,7 @@ if __name__ == '__main__':
                 'genome': (np.linspace(start=0, stop=1, num=100000), 6),  # six genes
                 'selection': {"pool size": 3},
                 'crossover': None,  # for a single point crossover operator
-                'mutation': 'gene'
+                'mutation': {'type': 'gene'}
             },
             fitness_function=fitness_function_pyqkd,
             genome_generator=genetic_algorithm.uniform_gene_generator,

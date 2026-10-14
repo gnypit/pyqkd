@@ -349,7 +349,7 @@ def main_pyqkd():
                 'genome': (gene_space, num_genes),
                 'selection': {"pool size": k_tournament},
                 'crossover': None,  # for a single point crossover operator
-                'mutation': 'gene'
+                'mutation': {'type': 'gene'}
             },
             fitness_function=fitness_fun_pyqkd,
             genome_generator=genetic_algorithm.uniform_gene_generator,

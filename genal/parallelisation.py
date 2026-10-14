@@ -1,6 +1,10 @@
 """Private parallelisation utilities."""
 from collections.abc import Callable
 from copy import deepcopy
+try:
+    from .interfaces import GAArgumentsInterface
+except ImportError:
+    from interfaces import GAArgumentsInterface
 
 """Read-only configuration installed once in each process-pool worker.
 
@@ -9,7 +13,7 @@ has it's ID as the key.
 """
 _worker_fitness_function: Callable | None = None
 _worker_operators: dict[int, tuple[Callable, Callable]] | None = None
-_worker_args: dict | None = None
+_worker_args: GAArgumentsInterface | None = None
 _worker_custom_mutation_operator: Callable | None = None
 
 ParentGenomePair = tuple[tuple[int, list | dict], tuple[int, list | dict]]

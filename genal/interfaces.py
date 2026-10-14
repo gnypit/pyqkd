@@ -1,6 +1,50 @@
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from typing import Literal
+
+
+class GAArgumentsInterface(Mapping[str, object], ABC):
+    """Common configuration contract received by every GA operator.
+
+    Implementations must support process-pool pickling. Sections are read-only
+    through this API; mutable objects within sections are not deeply frozen.
+    Operator-specific validation belongs to the operator using a section.
+    """
+
+    @property
+    @abstractmethod
+    def genome(self) -> tuple[object, int]:
+        """Gene space and genome length; required by built-in generators."""
+        ...
+
+    @property
+    @abstractmethod
+    def selection(self) -> Mapping[str, object]:
+        ...
+
+    @property
+    @abstractmethod
+    def crossover(self) -> Mapping[str, object] | Sequence | None:
+        ...
+
+    @property
+    @abstractmethod
+    def mutation(self) -> Mapping[str, object]:
+        """Mutation settings, including the optional ``type`` key."""
+        ...
+
+    @property
+    def mutation_type(self) -> str:
+        return self.mutation.get("type", "member")
+
+    def crossover_parameter(self, name: str, position: int, default: object) -> object:
+        """Read named settings, with support for legacy positional sequences."""
+        section = self.crossover
+        if section is None:
+            return default
+        if isinstance(section, Mapping):
+            return section.get(name, default)
+        return section[position]
 
 
 class ChromosomeInterface(ABC):

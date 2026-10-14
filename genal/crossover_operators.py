@@ -7,20 +7,22 @@ Parents passed to function should be of class Member from genal.py
 """
 
 from numpy.random import binomial as np_binom
+try:
+    from .arguments import as_ga_arguments
+    from .interfaces import GAArgumentsInterface
+except ImportError:
+    from arguments import as_ga_arguments
+    from interfaces import GAArgumentsInterface
 
 
-# TODO: we need a more universal handling of arguments passed to the crossover operators
 # TODO: we need more detailed comments
 # TODO: perhaps specific crossover operators should be children of a general class 'CrossoverOperator'?
 
-def single_point_crossover(parent1_genes, parent2_genes, args):
+def single_point_crossover(parent1_genes, parent2_genes, args: GAArgumentsInterface):
     """Parents will be crossed such that genes from first one (numbered from 0) up to crossover_point
     included shall go to one child, and the rest to the other."""
 
-    if args is None:
-        crossover_point = None
-    else:
-        crossover_point = args[0]  # TODO in here we need one argument, so I assume a one-element list... be better
+    crossover_point = args.crossover_parameter("point", 0, None)
 
     if crossover_point is None:
         crossover_point = max(0, len(parent1_genes) // 2 - 1)
@@ -44,7 +46,7 @@ def single_point_crossover(parent1_genes, parent2_genes, args):
     return [child1_genes, child2_genes]
 
 
-def uniform_crossover(parent1, parent2, args):
+def uniform_crossover(parent1_genes, parent2_genes, args: GAArgumentsInterface):
     """In this crossover method a gene mask is randomised. By default, there is 2 children. For the first one
     0 indicates genes from the first parent, while 1 - from the second one. For the second one contrarily.
 
@@ -52,13 +54,7 @@ def uniform_crossover(parent1, parent2, args):
 
     choice_prob is the probability of choosing a gene from the first parent in a single Bernoulli trial.
     """
-    parent1_genes = list(parent1.genome)
-    parent2_genes = list(parent2.genome)
-
-    if args is None:
-        choice_prob = 0.5
-    else:
-        choice_prob = args[0]  # TODO in here we need one argument, so I assume a one-element list... be better
+    choice_prob = args.crossover_parameter("choice_prob", 0, 0.5)
 
     # TODO: different working with genes whether it's a dict or a list
 
@@ -80,7 +76,7 @@ def uniform_crossover(parent1, parent2, args):
     return [child1_genes, child2_genes]
 
 
-def plco(parent1, parent2, args):  # partially linear crossover operator
+def plco(parent1_genes, parent2_genes, args: GAArgumentsInterface):  # partially linear crossover operator
     """Two children are created; integer-valued genes are exchanged as in single crossover operator,
     while the real-valued genes are linearly combined using formula:
 
@@ -88,24 +84,18 @@ def plco(parent1, parent2, args):  # partially linear crossover operator
 
     transit point is the index from which crossover is linear; beforehand it's single point
     """
-    parent1_genes = list(parent1.genome)
-    parent2_genes = list(parent2.genome)
     no_genes = len(parent1_genes)
 
-    if args is None:
-        transit_point = no_genes // 2
-        alfa = 0.5
-        beta = 0.5
-    else:
-        transit_point = args[0]
-        alfa = args[1]
-        beta = args[2]
+    transit_point = args.crossover_parameter("transit_point", 0, no_genes // 2)
+    alfa = args.crossover_parameter("alfa", 1, 0.5)
+    beta = args.crossover_parameter("beta", 2, 0.5)
 
     # TODO: different working with genes whether it's a dict or a list
 
     child1_genes = []
     child2_genes = []
 
+    # TODO: Handle transit_point=0 without duplicating the first gene.
     for index in range(transit_point // 2 + 1):  # single-point crossover part 1
         child1_genes.append(parent1_genes[index])
         child2_genes.append(parent2_genes[index])
@@ -120,6 +110,6 @@ def plco(parent1, parent2, args):  # partially linear crossover operator
 
 
 if __name__ == '__main__':
-    a, b = single_point_crossover([1, 2, 3, 4], [5, 6, 7, 8], None)
+    a, b = single_point_crossover([1, 2, 3, 4], [5, 6, 7, 8], as_ga_arguments({}))
     print(a)
     print(b)
